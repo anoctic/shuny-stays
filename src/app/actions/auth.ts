@@ -29,7 +29,14 @@ export async function signInAction(formData: FormData) {
     return { error: error.message };
   }
 
-  redirect("/dashboard");
+  const sess = await getCurrentUserSession();
+  if (sess.is_super_admin) {
+    redirect("/super-admin");
+  } else if (sess.role === "owner") {
+    redirect("/owner");
+  } else {
+    redirect("/resident");
+  }
 }
 
 /**
@@ -57,7 +64,18 @@ export async function switchDemoPersonaAction(role: MembershipRole): Promise<voi
     sameSite: "lax",
   });
 
-  redirect("/dashboard");
+  // If switching away from super_admin, clear any view_as org cookie
+  if (role !== "super_admin") {
+    cookieStore.delete("pg_active_tenant_id");
+  }
+
+  if (role === "super_admin") {
+    redirect("/super-admin");
+  } else if (role === "owner") {
+    redirect("/owner");
+  } else {
+    redirect("/resident");
+  }
 }
 
 /**
@@ -79,6 +97,45 @@ export async function switchOrganizationAction(organizationId: string): Promise<
   });
 
   revalidatePath("/", "layout");
+}
+
+/**
+ * Super Admin enters 'View as Organization' mode with explicit banner
+ */
+export async function enterViewAsOrgAction(formData: FormData): Promise<void> {
+  const session = await getCurrentUserSession();
+  if (!session.is_super_admin) {
+    throw new Error("Unauthorized: Super admin privilege required.");
+  }
+
+  const orgId = formData.get("organization_id") as string;
+  if (!orgId) return;
+
+  const cookieStore = await cookies();
+  cookieStore.set("pg_active_tenant_id", orgId, {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+  });
+
+  revalidatePath("/super-admin");
+  redirect("/super-admin");
+}
+
+/**
+ * Super Admin exits 'View as Organization' mode
+ */
+export async function exitViewAsOrgAction(): Promise<void> {
+  const session = await getCurrentUserSession();
+  if (!session.is_super_admin) {
+    throw new Error("Unauthorized: Super admin privilege required.");
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.delete("pg_active_tenant_id");
+
+  revalidatePath("/super-admin");
+  redirect("/super-admin");
 }
 
 /**
@@ -117,5 +174,6 @@ export async function createOrganizationAction(formData: FormData): Promise<void
     throw new Error(error.message);
   }
 
-  revalidatePath("/admin/organizations");
+  revalidatePath("/super-admin");
+  revalidatePath("/super-admin/organizations");
 }
