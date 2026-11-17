@@ -1,3 +1,5 @@
+"use client";
+
 import { Receipt, CheckCircle2, Download, QrCode } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 
