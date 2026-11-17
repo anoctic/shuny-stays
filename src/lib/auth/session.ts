@@ -40,36 +40,39 @@ export const DEMO_PROFILES: Record<MembershipRole, UserSessionProfile> = {
 export async function getCurrentUserSession(): Promise<UserSessionProfile> {
   const cookieStore = await cookies();
 
-  // 1. Try real Supabase Auth
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+  // 1. Try real Supabase Auth if a non-placeholder URL is configured
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (supabaseUrl && !supabaseUrl.includes("placeholder")) {
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
 
-    if (user) {
-      // Fetch membership row
-      const { data: membership } = await (supabase
-        .from("memberships" as any) as any)
-        .select("role, organization_id, organizations(name)")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .single();
+      if (user) {
+        // Fetch membership row
+        const { data: membership } = await (supabase
+          .from("memberships" as any) as any)
+          .select("role, organization_id, organizations(name)")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .single();
 
-      if (membership) {
-        const isSuperAdmin = membership.role === "super_admin";
-        const orgData = membership.organizations as any;
-        return {
-          id: user.id,
-          email: user.email || "",
-          full_name: user.user_metadata?.full_name || user.email || "Authenticated User",
-          role: membership.role as MembershipRole,
-          organization_id: membership.organization_id,
-          organization_name: orgData?.name || (isSuperAdmin ? "All Organizations" : "Assigned PG"),
-          is_super_admin: isSuperAdmin,
-        };
+        if (membership) {
+          const isSuperAdmin = membership.role === "super_admin";
+          const orgData = membership.organizations as any;
+          return {
+            id: user.id,
+            email: user.email || "",
+            full_name: user.user_metadata?.full_name || user.email || "Authenticated User",
+            role: membership.role as MembershipRole,
+            organization_id: membership.organization_id,
+            organization_name: orgData?.name || (isSuperAdmin ? "All Organizations" : "Assigned PG"),
+            is_super_admin: isSuperAdmin,
+          };
+        }
       }
+    } catch {
+      // Continue to cookie-based persona resolution
     }
-  } catch {
-    // Continue to cookie-based persona resolution
   }
 
   // 2. Demo role switcher (allows testing super_admin, owner, and resident roles)

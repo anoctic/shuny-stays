@@ -30,8 +30,14 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refresh user session if present
-  await supabase.auth.getUser();
+  // Refresh user session if present and valid URL configured
+  if (!supabaseUrl.includes("placeholder")) {
+    try {
+      await supabase.auth.getUser();
+    } catch {
+      // Ignore network timeouts for unconfigured development environments
+    }
+  }
 
   return supabaseResponse;
 }
