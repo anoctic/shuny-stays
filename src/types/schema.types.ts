@@ -1,0 +1,223 @@
+// ==============================================================================
+// ApnaPG SaaS — Complete TypeScript Types for Database Schema
+// Hierarchy: PG -> Buildings -> Floors -> Rooms -> Beds
+// Roles: super_admin, owner, admin, tenant
+// ==============================================================================
+
+export type UserRole = 'super_admin' | 'owner' | 'admin' | 'tenant';
+export type PgStatus = 'pending' | 'active' | 'suspended';
+export type GenderType = 'boys' | 'girls' | 'coliving';
+export type BedStatus = 'vacant' | 'occupied' | 'maintenance' | 'notice';
+export type PaymentStatus = 'pending' | 'paid' | 'verified' | 'rejected';
+export type PaymentMode = 'upi' | 'cash' | 'bank_transfer';
+export type ComplaintStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type ComplaintPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type MealType = 'breakfast' | 'lunch' | 'snacks' | 'dinner';
+export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
+export interface Profile {
+  id: string; // uuid references auth.users
+  role: UserRole;
+  full_name: string;
+  phone: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Pg {
+  id: string;
+  owner_id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  contact_email: string;
+  contact_phone: string;
+  status: PgStatus;
+  subscription_tier: string;
+  subscription_valid_until: string | null;
+  upi_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Building {
+  id: string;
+  pg_id: string;
+  name: string; // e.g., "Block A", "Krishna Bhawan"
+  gender_type: GenderType;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  warden_name: string | null;
+  warden_phone: string | null;
+  total_floors: number;
+  amenities: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Floor {
+  id: string;
+  pg_id: string;
+  building_id: string;
+  floor_number: number;
+  floor_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Room {
+  id: string;
+  pg_id: string;
+  building_id: string;
+  floor_id: string;
+  room_number: string;
+  sharing_type: number; // 1, 2, 3, etc.
+  room_type: string;
+  is_ac: boolean;
+  has_attached_bathroom: boolean;
+  has_balcony: boolean;
+  base_rent_monthly: number;
+  default_deposit: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Bed {
+  id: string;
+  pg_id: string;
+  building_id: string;
+  room_id: string;
+  bed_name: string; // 'Bed A', 'Bed B', etc.
+  status: BedStatus;
+  monthly_rent: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PgStaff {
+  id: string;
+  user_id: string;
+  pg_id: string;
+  assigned_building_ids: string[]; // UUID[]
+  permissions: string[]; // ['manage_tenants', 'collect_cash', 'resolve_complaints', 'manage_mess']
+  designation: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Tenant {
+  id: string;
+  user_id: string | null;
+  pg_id: string;
+  building_id: string;
+  room_id: string;
+  bed_id: string;
+  full_name: string;
+  phone: string;
+  email: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  work_or_college: string | null;
+  id_proof_type: string | null;
+  id_proof_number: string | null;
+  id_proof_doc_url: string | null;
+  rent_amount: number;
+  deposit_amount: number;
+  check_in_date: string;
+  check_out_date: string | null;
+  is_on_notice: boolean;
+  notice_vacate_date: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RentPayment {
+  id: string;
+  pg_id: string;
+  building_id: string;
+  tenant_id: string;
+  invoice_number: string;
+  billing_month: string;
+  due_date: string;
+  rent_amount: number;
+  electricity_amount: number;
+  maintenance_amount: number;
+  other_charges: number;
+  total_amount: number;
+  amount_paid: number;
+  status: PaymentStatus;
+  payment_mode: PaymentMode | null;
+  utr_number: string | null;
+  screenshot_url: string | null;
+  payment_date: string | null;
+  verified_by: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Complaint {
+  id: string;
+  pg_id: string;
+  building_id: string;
+  room_id: string | null;
+  tenant_id: string;
+  category: string;
+  title: string;
+  description: string;
+  image_url: string | null;
+  priority: ComplaintPriority;
+  status: ComplaintStatus;
+  assigned_to: string | null;
+  resolved_at: string | null;
+  resolution_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MessMenu {
+  id: string;
+  pg_id: string;
+  building_id: string | null; // NULL = all buildings in PG; UUID = specific building
+  day_of_week: DayOfWeek;
+  meal_type: MealType;
+  menu_items: string;
+  start_time: string | null;
+  end_time: string | null;
+  is_special: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Expense {
+  id: string;
+  pg_id: string;
+  building_id: string | null; // NULL = all PG; UUID = specific building
+  category: string;
+  title: string;
+  amount: number;
+  expense_date: string;
+  receipt_url: string | null;
+  recorded_by: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AuditLog {
+  id: string;
+  pg_id: string | null;
+  building_id: string | null;
+  user_id: string | null;
+  action: string;
+  entity_table: string;
+  entity_id: string | null;
+  details: Record<string, any>;
+  ip_address: string | null;
+  created_at: string;
+}

@@ -4,11 +4,17 @@ import { getCurrentUserSession } from "@/lib/auth/session";
 export default async function RootPage() {
   const session = await getCurrentUserSession();
 
-  if (session.is_super_admin) {
+  if (session.role === "super_admin") {
     redirect("/super-admin");
   } else if (session.role === "owner") {
-    redirect("/owner");
+    if (!session.has_pg) {
+      redirect("/onboarding");
+    } else {
+      redirect("/dashboard");
+    }
+  } else if (session.role === "admin") {
+    redirect("/dashboard");
   } else {
-    redirect("/resident");
+    redirect("/tenant");
   }
 }

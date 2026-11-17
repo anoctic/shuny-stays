@@ -1,46 +1,96 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { UserSessionProfile, MembershipRole } from "@/types/pg-domain.types";
-import { DEFAULT_TENANT_ID, DEMO_TENANTS } from "@/lib/tenant/constants";
+import { UserRole } from "@/types/schema.types";
 
-export const DEMO_PROFILES: Record<MembershipRole, UserSessionProfile> = {
+export interface CurrentUserSession {
+  id: string;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  phone?: string | null;
+  // PG Owner details
+  pg_id?: string | null;
+  pg_name?: string | null;
+  has_pg: boolean;
+  // Staff/Admin details
+  assigned_building_ids?: string[];
+  permissions?: string[];
+  // Tenant details
+  building_id?: string | null;
+  room_id?: string | null;
+  bed_id?: string | null;
+}
+
+export const DEMO_USERS: Record<UserRole, CurrentUserSession> = {
   super_admin: {
     id: "90000000-0000-0000-0000-000000000001",
-    email: "superadmin@pgmanager.com",
-    full_name: "Alexander Vance (Super Admin)",
+    email: "superadmin@apnapg.com",
+    full_name: "Super Administrator",
     role: "super_admin",
-    organization_id: null,
-    organization_name: "Platform Governance (All Orgs)",
-    is_super_admin: true,
+    phone: "+91 99999 00001",
+    has_pg: true,
   },
   owner: {
     id: "90000000-0000-0000-0000-000000000002",
-    email: "owner@zenithpg.com",
-    full_name: "Rajesh Mittal (PG Owner)",
+    email: "owner@stanzaliving.com",
+    full_name: "Rajesh Sharma",
     role: "owner",
-    organization_id: "00000000-0000-0000-0000-000000000001",
-    organization_name: "Zenith Luxury PG & Hostels",
-    is_super_admin: false,
+    phone: "+91 98765 43210",
+    pg_id: "10000000-0000-0000-0000-000000000001",
+    pg_name: "Stanza Living Residency",
+    has_pg: true,
   },
-  resident: {
+  admin: {
     id: "90000000-0000-0000-0000-000000000003",
-    email: "resident@zenithpg.com",
-    full_name: "Aditya Sharma (Resident)",
-    role: "resident",
-    organization_id: "00000000-0000-0000-0000-000000000001",
-    organization_name: "Zenith Luxury PG & Hostels",
-    is_super_admin: false,
+    email: "warden@stanzaliving.com",
+    full_name: "Manoj Kumar (Warden)",
+    role: "admin",
+    phone: "+91 98765 12345",
+    pg_id: "10000000-0000-0000-0000-000000000001",
+    pg_name: "Stanza Living Residency",
+    has_pg: true,
+    assigned_building_ids: ["20000000-0000-0000-0000-000000000001"],
+    permissions: ["manage_tenants", "collect_cash", "resolve_complaints", "manage_mess"],
+  },
+  tenant: {
+    id: "90000000-0000-0000-0000-000000000004",
+    email: "aarav.patel@student.com",
+    full_name: "Aarav Patel",
+    role: "tenant",
+    phone: "+91 91234 56789",
+    pg_id: "10000000-0000-0000-0000-000000000001",
+    pg_name: "Stanza Living Residency",
+    has_pg: true,
+    building_id: "20000000-0000-0000-0000-000000000001",
+    room_id: "30000000-0000-0000-0000-000000000001",
+    bed_id: "40000000-0000-0000-0000-000000000001",
   },
 };
 
 /**
- * Retrieves the current authenticated user session and their membership role.
- * Works seamlessly with live Supabase Auth and supports demo personas in development.
+ * Retrieves the current authenticated user session and their role.
+ * Queries Supabase `profiles` & `pgs` tables, with fallback to demo personas for development.
  */
-export async function getCurrentUserSession(): Promise<UserSessionProfile> {
+export async function getCurrentUserSession(): Promise<CurrentUserSession> {
   const cookieStore = await cookies();
 
-  // 1. Try real Supabase Auth if a non-placeholder URL is configured
+  // 1. Check if demo persona override cookie is set
+  const demoRole = cookieStore.get("pg_demo_role")?.value as UserRole | undefined;
+  if (demoRole && DEMO_USERS[demoRole]) {
+    // If owner has demo no-pg cookie, simulate first-time onboarding
+    const noPgCookie = cookieStore.get("pg_demo_no_pg")?.value;
+    if (demoRole === "owner" && noPgCookie === "true") {
+      return {
+        ...DEMO_USERS.owner,
+        pg_id: null,
+        pg_name: null,
+        has_pg: false,
+      };
+    }
+    return DEMO_USERS[demoRole];
+  }
+
+  // 2. Real Supabase Auth Session
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (supabaseUrl && !supabaseUrl.includes("placeholder")) {
     try {
@@ -48,58 +98,92 @@ export async function getCurrentUserSession(): Promise<UserSessionProfile> {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-        // Fetch membership row
-        const { data: membership } = await (supabase
-          .from("memberships" as any) as any)
-          .select("role, organization_id, organizations(name)")
-          .eq("user_id", user.id)
-          .eq("is_active", true)
+        // Fetch profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id, role, full_name, phone")
+          .eq("id", user.id)
           .single();
 
-        if (membership) {
-          const isSuperAdmin = membership.role === "super_admin";
-          const orgData = membership.organizations as any;
-          return {
-            id: user.id,
-            email: user.email || "",
-            full_name: user.user_metadata?.full_name || user.email || "Authenticated User",
-            role: membership.role as MembershipRole,
-            organization_id: membership.organization_id,
-            organization_name: orgData?.name || (isSuperAdmin ? "All Organizations" : "Assigned PG"),
-            is_super_admin: isSuperAdmin,
-          };
+        const role = (profile?.role as UserRole) || "tenant";
+        const fullName = profile?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "User";
+
+        let pgId: string | null = null;
+        let pgName: string | null = null;
+        let hasPg = false;
+        let assignedBuildings: string[] = [];
+        let permissions: string[] = [];
+        let buildingId: string | null = null;
+        let roomId: string | null = null;
+        let bedId: string | null = null;
+
+        if (role === "owner") {
+          const { data: pg } = await supabase
+            .from("pgs")
+            .select("id, name")
+            .eq("owner_id", user.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (pg) {
+            pgId = pg.id;
+            pgName = pg.name;
+            hasPg = true;
+          }
+        } else if (role === "admin") {
+          const { data: staff } = await supabase
+            .from("pg_staff")
+            .select("pg_id, assigned_building_ids, permissions")
+            .eq("user_id", user.id)
+            .eq("is_active", true)
+            .maybeSingle();
+
+          if (staff) {
+            pgId = staff.pg_id;
+            assignedBuildings = staff.assigned_building_ids || [];
+            permissions = staff.permissions || [];
+            hasPg = true;
+          }
+        } else if (role === "tenant") {
+          const { data: tenant } = await supabase
+            .from("tenants")
+            .select("pg_id, building_id, room_id, bed_id")
+            .eq("user_id", user.id)
+            .eq("is_active", true)
+            .maybeSingle();
+
+          if (tenant) {
+            pgId = tenant.pg_id;
+            buildingId = tenant.building_id;
+            roomId = tenant.room_id;
+            bedId = tenant.bed_id;
+            hasPg = true;
+          }
+        } else if (role === "super_admin") {
+          hasPg = true;
         }
+
+        return {
+          id: user.id,
+          email: user.email || "",
+          full_name: fullName,
+          role,
+          phone: profile?.phone || user.user_metadata?.phone,
+          pg_id: pgId,
+          pg_name: pgName,
+          has_pg: hasPg,
+          assigned_building_ids: assignedBuildings,
+          permissions,
+          building_id: buildingId,
+          room_id: roomId,
+          bed_id: bedId,
+        };
       }
     } catch {
-      // Continue to cookie-based persona resolution
+      // Fallback to default owner demo profile if network or session check fails
     }
   }
 
-  // 2. Demo role switcher (allows testing super_admin, owner, and resident roles)
-  const demoRoleCookie = cookieStore.get("pg_demo_role")?.value as MembershipRole;
-  if (demoRoleCookie && DEMO_PROFILES[demoRoleCookie]) {
-    return DEMO_PROFILES[demoRoleCookie];
-  }
-
-  // Default to Super Admin for initial setup exploration
-  return DEMO_PROFILES.super_admin;
-}
-
-/**
- * Resolves the effective organization ID for data queries:
- * - If user is super_admin: allows switching between organizations via cookie.
- * - If user is owner or resident: STRICTLY enforces their membership organization_id.
- *   (Cannot be overridden by dropdowns, query params, or client cookies).
- */
-export async function getEffectiveTenantId(): Promise<string> {
-  const user = await getCurrentUserSession();
-  const cookieStore = await cookies();
-
-  if (user.is_super_admin) {
-    const selectedCookie = cookieStore.get("pg_active_tenant_id")?.value;
-    return selectedCookie || DEFAULT_TENANT_ID;
-  }
-
-  // Regular users are locked to their assigned membership organization
-  return user.organization_id || DEFAULT_TENANT_ID;
+  // Default fallback for development preview
+  return DEMO_USERS.owner;
 }
