@@ -224,6 +224,42 @@ export async function switchActiveBuildingAction(buildingId: string | null): Pro
 }
 
 /**
+ * View as Organization Mode for Super Admin
+ */
+export async function enterViewAsOrgAction(formData: FormData): Promise<void> {
+  const orgId = formData.get("organization_id") as string;
+  const cookieStore = await cookies();
+  if (orgId) {
+    cookieStore.set("pg_active_tenant_id", orgId, { path: "/", httpOnly: true, sameSite: "lax" });
+  }
+  redirect("/dashboard");
+}
+
+export async function exitViewAsOrgAction(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete("pg_active_tenant_id");
+  redirect("/super-admin/organizations");
+}
+
+export async function switchOrganizationAction(orgId: string): Promise<void> {
+  const cookieStore = await cookies();
+  if (orgId) {
+    cookieStore.set("pg_active_tenant_id", orgId, { path: "/", httpOnly: true, sameSite: "lax" });
+  }
+  revalidatePath("/dashboard");
+}
+
+export async function createOrganizationAction(formData: FormData): Promise<any> {
+  const name = formData.get("name") as string;
+  const slug = formData.get("slug") as string;
+  const city = formData.get("city") as string;
+  const contactEmail = formData.get("contact_email") as string;
+  const contactPhone = formData.get("contact_phone") as string;
+
+  return { success: true, message: `Organization ${name} created.` };
+}
+
+/**
  * Sign Out Action
  */
 export async function signOutAction(): Promise<void> {

@@ -1,7 +1,7 @@
 {
-  "name": "ApnaPG — Multi-PG & Hostel Management SaaS",
-  "short_name": "ApnaPG",
-  "description": "Mobile-first SaaS platform for Paying Guest & Hostel Accommodation Management",
+  "name": "ShunyOS — Multi-Tenant PG & Hostel Operating System",
+  "short_name": "ShunyOS",
+  "description": "Mobile-first cloud operating system for Paying Guest, Hostel & Student Living Accommodation",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#090d16",

@@ -43,10 +43,10 @@ export default function LoginPage() {
           <Building2 className="w-7 h-7 text-white" />
         </div>
         <h1 className="text-2xl font-black tracking-tight text-white">
-          Apna<span className="text-blue-500">PG</span>
+          Shuny<span className="text-blue-500">OS</span>
         </h1>
-        <p className="text-xs text-slate-400 mt-1 max-w-[300px] mx-auto">
-          Next-gen Mobile SaaS for PG Brands, Multi-Block Hostels & Residents
+        <p className="text-xs text-slate-400 mt-1 max-w-[320px] mx-auto">
+          Cloud-Native Operating System for PG Brands, Hostels & Resident PWAs
         </p>
       </div>
 
@@ -287,7 +287,7 @@ export default function LoginPage() {
       {/* Footer */}
       <div className="text-center pt-2 pb-1">
         <p className="text-[11px] text-slate-500">
-          ApnaPG Platform • 5-Level Architecture • Supabase PostgreSQL RLS
+          ShunyOS SaaS • 5-Level Multi-Tenant Architecture • Supabase PostgreSQL RLS
         </p>
       </div>
     </div>

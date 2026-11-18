@@ -170,7 +170,7 @@ export default function SignUpPage() {
       {/* Footer */}
       <div className="text-center pt-2 pb-1">
         <p className="text-[11px] text-slate-500">
-          ApnaPG Platform • 5-Level Architecture • Supabase PostgreSQL RLS
+          ShunyOS SaaS • 5-Level Multi-Tenant Architecture • Supabase PostgreSQL RLS
         </p>
       </div>
     </div>

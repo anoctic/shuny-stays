@@ -73,6 +73,7 @@ CREATE TABLE public.pgs (
   name TEXT NOT NULL,
   slug TEXT UNIQUE NOT NULL,
   logo_url TEXT,
+  primary_color TEXT DEFAULT '#4F46E5',
   contact_email TEXT NOT NULL,
   contact_phone TEXT NOT NULL,
   status public.pg_status NOT NULL DEFAULT 'active',

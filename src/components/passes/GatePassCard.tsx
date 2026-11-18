@@ -56,16 +56,17 @@ export function GatePassCard({ pass, viewerRole }: GatePassCardProps) {
   // WhatsApp share link generator
   const getWhatsAppShareUrl = () => {
     const text = encodeURIComponent(
-      `*ApnaPG Gate Pass Authorization*\n` +
+      `*Gate Pass Authorization • ${pass.building_name || "Resident Stay"}*\n` +
       `Pass No: ${pass.pass_number}\n` +
       `Resident: ${pass.tenant_name}\n` +
-      `Hostel: ${pass.building_name || "Stanza Residency"}\n` +
+      `Property: ${pass.building_name || "Stanza Residency"}\n` +
       `Pass Type: ${isDayPass ? "Day Pass (Same Day Outing)" : "Night Pass (Overnight Stay)"}\n` +
       `Outing Date: ${pass.outing_date}\n` +
       `Expected Return: ${pass.expected_return_date} by ${pass.expected_return_time || "20:00"}\n` +
       `Destination: ${pass.destination || "City Outing"}\n` +
-      `Status: APPROVED & VERIFIED BY PG MANAGEMENT ✅\n` +
-      `Emergency Contact: ${pass.emergency_phone || "Hostel Desk"}`
+      `Status: APPROVED & ACTIVE ✅\n` +
+      `Emergency Contact: ${pass.emergency_phone || "Hostel Desk"}\n\n` +
+      `_Powered by ShunyOS Cloud PG OS_`
     );
     return `https://wa.me/?text=${text}`;
   };

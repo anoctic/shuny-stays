@@ -14,13 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ApnaPG — Mobile-First PG Management SaaS",
-  description: "Next-gen PG, hostel & co-living property management platform with 5-level hierarchy and role-based access.",
+  title: "ShunyOS — Multi-Tenant PG & Hostel Operating System",
+  description: "Cloud-native PG, hostel & co-living property management operating system with 5-level hierarchy, white-label branding, and role-based access.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "ApnaPG",
+    title: "ShunyOS",
   },
   icons: {
     icon: "/icons/icon-192.svg",

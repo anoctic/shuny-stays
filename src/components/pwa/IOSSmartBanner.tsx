@@ -11,7 +11,7 @@ export function IOSSmartBanner() {
     if (typeof window === "undefined") return;
 
     // Check if dismissed in this session
-    const isDismissed = sessionStorage.getItem("apnapg_ios_prompt_dismissed");
+    const isDismissed = sessionStorage.getItem("shunyos_ios_prompt_dismissed");
     if (isDismissed) return;
 
     // Detect iOS devices (iPhone, iPad, iPod)
@@ -32,7 +32,7 @@ export function IOSSmartBanner() {
 
   const handleDismiss = () => {
     setShowBanner(false);
-    sessionStorage.setItem("apnapg_ios_prompt_dismissed", "true");
+    sessionStorage.setItem("shunyos_ios_prompt_dismissed", "true");
   };
 
   return (
@@ -43,7 +43,7 @@ export function IOSSmartBanner() {
         </div>
         <div className="flex-1 text-xs leading-relaxed">
           <div className="font-semibold text-sm text-slate-100 flex items-center gap-1.5">
-            Install ApnaPG App
+            Install ShunyOS PWA
           </div>
           <p className="text-slate-300 mt-0.5">
             Tap <Share className="w-3.5 h-3.5 inline mx-0.5 text-blue-400" /> Share icon and select{" "}

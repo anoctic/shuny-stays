@@ -31,6 +31,7 @@ export interface Pg {
   name: string;
   slug: string;
   logo_url: string | null;
+  primary_color?: string | null;
   contact_email: string;
   contact_phone: string;
   status: PgStatus;

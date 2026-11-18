@@ -18,6 +18,7 @@ import { getCurrentUserSession } from "@/lib/auth/session";
 import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 import { getPassesForTenant } from "@/lib/data/gate-passes";
 import { getTenantAttendanceStatus } from "@/lib/data/attendance";
+import { getPgById } from "@/lib/data/pgs";
 import { ActiveBroadcastBanner } from "@/components/broadcasts/ActiveBroadcastBanner";
 import { GatePassCard } from "@/components/passes/GatePassCard";
 import { RequestPassModal } from "@/components/passes/RequestPassModal";
@@ -28,19 +29,36 @@ export default async function TenantDashboardPage() {
   const broadcasts = await getActiveBroadcastsForRole("tenant");
   const passes = await getPassesForTenant(session.id);
   const attendance = await getTenantAttendanceStatus(session.id);
+  const pg = await getPgById(session.pg_id || "00000000-0000-0000-0000-000000000001");
+
+  const brandColor = pg?.primary_color || "#4F46E5";
+  const brandName = pg?.name || "Royal Stay PG";
 
   return (
     <div className="space-y-4">
       {/* Targeted Platform Broadcast Banner (Super Admin announcements for Tenants) */}
       <ActiveBroadcastBanner broadcasts={broadcasts} userRole="tenant" />
 
-      {/* Resident Welcome Card */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-indigo-700 to-slate-900 text-white p-5 shadow-lg shadow-blue-500/15">
+      {/* Resident Welcome Card with Dynamic PG Branding */}
+      <div
+        className="relative overflow-hidden rounded-3xl text-white p-5 shadow-lg shadow-indigo-500/15 transition-colors"
+        style={{
+          background: `linear-gradient(135deg, ${brandColor} 0%, #1e1b4b 100%)`,
+        }}
+      >
         <div className="relative z-10">
-          <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-[11px] font-semibold mb-2">
-            <Sparkles className="w-3 h-3 text-amber-300" />
-            Resident Self-Service PWA
+          <div className="flex items-center justify-between mb-2">
+            <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-[11px] font-semibold">
+              <Sparkles className="w-3 h-3 text-amber-300" />
+              {brandName} Resident PWA
+            </div>
+            {pg?.logo_url && (
+              <div className="w-7 h-7 rounded-lg overflow-hidden bg-white/20 backdrop-blur-md border border-white/20">
+                <img src={pg.logo_url} alt={brandName} className="w-full h-full object-cover" />
+              </div>
+            )}
           </div>
+
           <h1 className="text-xl font-black tracking-tight">
             Welcome, {session.full_name.split(" ")[0]} 👋
           </h1>
@@ -48,6 +66,9 @@ export default async function TenantDashboardPage() {
             Track your stay, apply for Day & Night Outing Passes, and view mess schedule.
           </p>
         </div>
+
+        {/* Decorative circle */}
+        <div className="absolute -right-8 -bottom-8 w-36 h-36 rounded-full bg-white/10 blur-xl pointer-events-none" />
       </div>
 
       {/* TODAY'S LIVE ATTENDANCE CARD */}
@@ -176,6 +197,20 @@ export default async function TenantDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Subtle White-Label Footer: Powered by ShunyOS */}
+      <footer className="pt-4 pb-2 text-center space-y-1">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[11px] font-semibold">
+          <Sparkles className="w-3 h-3 text-purple-500" />
+          <span>Powered by</span>
+          <span className="font-extrabold text-slate-900 dark:text-white tracking-tight">
+            ShunyOS
+          </span>
+        </div>
+        <p className="text-[10px] text-slate-400">
+          Cloud-Native Multi-Tenant PG & Hostel Operating System
+        </p>
+      </footer>
     </div>
   );
 }
