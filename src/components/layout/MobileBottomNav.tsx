@@ -13,6 +13,7 @@ import {
   Home,
   CreditCard,
   MessageSquareWarning,
+  QrCode,
 } from "lucide-react";
 import { UserRole } from "@/types/schema.types";
 import { cn } from "@/lib/utils";
@@ -44,16 +45,17 @@ export function MobileBottomNav({
       active: pathname === "/dashboard",
     },
     {
+      label: "Passes",
+      href: "/dashboard/passes",
+      icon: QrCode,
+      active: pathname.startsWith("/dashboard/passes"),
+      badge: 1, // 1 pending approval
+    },
+    {
       label: "Rooms",
       href: "/dashboard/rooms",
       icon: BedDouble,
       active: pathname.startsWith("/dashboard/rooms"),
-    },
-    {
-      label: "Tenants",
-      href: "/dashboard/tenants",
-      icon: Users,
-      active: pathname.startsWith("/dashboard/tenants"),
     },
     {
       label: "Finance",
@@ -72,6 +74,13 @@ export function MobileBottomNav({
       active: pathname === "/dashboard",
     },
     {
+      label: "Passes",
+      href: "/dashboard/passes",
+      icon: QrCode,
+      active: pathname.startsWith("/dashboard/passes"),
+      badge: 1,
+    },
+    {
       label: "Complaints",
       href: "/dashboard/complaints",
       icon: AlertCircle,
@@ -84,12 +93,6 @@ export function MobileBottomNav({
       icon: Utensils,
       active: pathname.startsWith("/dashboard/mess"),
     },
-    {
-      label: "Tenants",
-      href: "/dashboard/tenants",
-      icon: Users,
-      active: pathname.startsWith("/dashboard/tenants"),
-    },
   ];
 
   // 3. Tenant Nav Tabs (4 Max)
@@ -101,17 +104,17 @@ export function MobileBottomNav({
       active: pathname === "/tenant",
     },
     {
+      label: "Passes",
+      href: "/tenant/passes",
+      icon: QrCode,
+      active: pathname.startsWith("/tenant/passes"),
+    },
+    {
       label: "Pay Rent",
       href: "/tenant/dues",
       icon: CreditCard,
       active: pathname.startsWith("/tenant/dues"),
       badge: pendingDuesCount > 0 ? pendingDuesCount : null,
-    },
-    {
-      label: "Complaints",
-      href: "/tenant/complaints",
-      icon: MessageSquareWarning,
-      active: pathname.startsWith("/tenant/complaints"),
     },
     {
       label: "Mess Menu",
@@ -155,7 +158,7 @@ export function MobileBottomNav({
                   )}
                 />
                 {"badge" in tab && tab.badge && (
-                  <span className="absolute -top-1 -right-2 bg-rose-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse shadow-sm">
+                  <span className="absolute -top-1 -right-2 bg-amber-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse shadow-sm">
                     {tab.badge}
                   </span>
                 )}

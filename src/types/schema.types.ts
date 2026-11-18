@@ -221,3 +221,51 @@ export interface AuditLog {
   ip_address: string | null;
   created_at: string;
 }
+
+export type BroadcastPriority = 'info' | 'warning' | 'urgent';
+
+export interface PlatformBroadcast {
+  id: string;
+  title: string;
+  message: string;
+  priority: BroadcastPriority;
+  target_roles: UserRole[]; // 'owner' | 'admin' | 'tenant' | 'super_admin'
+  created_by?: string | null;
+  is_active: boolean;
+  starts_at: string;
+  expires_at?: string | null;
+  created_at: string;
+}
+
+export type GatePassType = 'day_pass' | 'night_pass';
+export type GatePassApprovalStatus = 'pending_warden' | 'pending_owner' | 'approved' | 'rejected' | 'completed';
+
+export interface GatePass {
+  id: string;
+  pg_id: string;
+  building_id: string;
+  tenant_id: string;
+  tenant_name: string;
+  tenant_phone?: string;
+  room_number?: string;
+  building_name?: string;
+  pass_type: GatePassType;
+  pass_number: string;
+  outing_date: string;
+  expected_return_date: string;
+  departure_time?: string | null;
+  expected_return_time?: string | null;
+  reason: string;
+  destination?: string | null;
+  emergency_phone?: string | null;
+  approval_status: GatePassApprovalStatus;
+  warden_approved_by?: string | null;
+  warden_approved_at?: string | null;
+  owner_approved_by?: string | null;
+  owner_approved_at?: string | null;
+  rejection_reason?: string | null;
+  created_by_role: UserRole;
+  created_at: string;
+  updated_at: string;
+}
+

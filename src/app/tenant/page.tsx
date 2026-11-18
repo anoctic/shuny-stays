@@ -10,14 +10,27 @@ import {
   Calendar,
   Sparkles,
   Clock,
+  QrCode,
+  AlertCircle,
+  Share2,
 } from "lucide-react";
 import { getCurrentUserSession } from "@/lib/auth/session";
+import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
+import { getPassesForTenant } from "@/lib/data/gate-passes";
+import { ActiveBroadcastBanner } from "@/components/broadcasts/ActiveBroadcastBanner";
+import { GatePassCard } from "@/components/passes/GatePassCard";
+import { RequestPassModal } from "@/components/passes/RequestPassModal";
 
 export default async function TenantDashboardPage() {
   const session = await getCurrentUserSession();
+  const broadcasts = await getActiveBroadcastsForRole("tenant");
+  const passes = await getPassesForTenant(session.id);
 
   return (
     <div className="space-y-4">
+      {/* Targeted Platform Broadcast Banner (Super Admin announcements for Tenants) */}
+      <ActiveBroadcastBanner broadcasts={broadcasts} userRole="tenant" />
+
       {/* Resident Welcome Card */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-indigo-700 to-slate-900 text-white p-5 shadow-lg shadow-blue-500/15">
         <div className="relative z-10">
@@ -29,8 +42,39 @@ export default async function TenantDashboardPage() {
             Welcome, {session.full_name.split(" ")[0]} 👋
           </h1>
           <p className="text-xs text-blue-100/90 mt-1">
-            Track your stay, rent invoices, submit complaints, and view today&apos;s mess menu.
+            Track your stay, apply for Day & Night Outing Passes, and view mess schedule.
           </p>
+        </div>
+      </div>
+
+      {/* DUAL DAY PASS & NIGHT PASS SYSTEM SECTION */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center">
+              <QrCode className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                Outing & Gate Passes
+              </h2>
+              <p className="text-[10px] text-slate-400">
+                Yellow: Pending Owner • Green: Approved & Active
+              </p>
+            </div>
+          </div>
+          <RequestPassModal
+            userRole="tenant"
+            defaultTenantName={session.full_name}
+            defaultRoomNumber={session.room_id ? "Room 101 • Bed A" : "Room 101"}
+          />
+        </div>
+
+        {/* Passes List (Yellow, Green, Red) */}
+        <div className="space-y-3">
+          {passes.map((pass) => (
+            <GatePassCard key={pass.id} pass={pass} viewerRole="tenant" />
+          ))}
         </div>
       </div>
 
@@ -119,31 +163,6 @@ export default async function TenantDashboardPage() {
               Special
             </span>
           </div>
-        </div>
-      </div>
-
-      {/* Raise Complaint Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 shadow-xs">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-              <MessageSquareWarning className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-xs font-bold text-slate-900 dark:text-white">
-                Facing an Issue in your Room?
-              </h2>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                WiFi, Plumbing, Electrical, Cleaning
-              </p>
-            </div>
-          </div>
-          <Link
-            href="/tenant/complaints"
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
-          >
-            <ArrowRight className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-          </Link>
         </div>
       </div>
     </div>

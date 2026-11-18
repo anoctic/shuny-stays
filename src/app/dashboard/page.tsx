@@ -14,8 +14,15 @@ import {
   Utensils,
   Receipt,
   Sparkles,
+  QrCode,
+  CheckCircle2,
 } from "lucide-react";
 import { getCurrentUserSession } from "@/lib/auth/session";
+import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
+import { getPassesForManagement } from "@/lib/data/gate-passes";
+import { ActiveBroadcastBanner } from "@/components/broadcasts/ActiveBroadcastBanner";
+import { GatePassCard } from "@/components/passes/GatePassCard";
+import { RequestPassModal } from "@/components/passes/RequestPassModal";
 
 export default async function DashboardPage() {
   const session = await getCurrentUserSession();
@@ -28,8 +35,22 @@ export default async function DashboardPage() {
     ? "Filtered: Block A - Krishna Bhawan (Boys)"
     : "Scope: All Buildings (Block A & Block B)";
 
+  // Targeted broadcasts for Owner or Admin
+  const broadcasts = await getActiveBroadcastsForRole(session.role);
+
+  // Gate passes requiring approval
+  const passes = await getPassesForManagement({
+    pgId: session.pg_id || undefined,
+    buildingId: activeBuildingId || undefined,
+  });
+
+  const pendingPassesCount = passes.filter((p) => p.approval_status === "pending_owner").length;
+
   return (
     <div className="space-y-4">
+      {/* Targeted Broadcast Banner (Super Admin announcements for Owners/Admins) */}
+      <ActiveBroadcastBanner broadcasts={broadcasts} userRole={session.role} />
+
       {/* Scope Badge Banner */}
       <div className="flex items-center justify-between bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3 shadow-xs">
         <div className="flex items-center gap-2">
@@ -62,6 +83,47 @@ export default async function DashboardPage() {
 
         {/* Decorative background circle */}
         <div className="absolute -right-8 -bottom-8 w-36 h-36 rounded-full bg-white/10 blur-xl pointer-events-none" />
+      </div>
+
+      {/* DUAL DAY PASS & NIGHT PASS REVIEW & 1-TAP APPROVAL SECTION */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center">
+              <QrCode className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                  Gate Passes & Approvals
+                </h2>
+                {pendingPassesCount > 0 && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500 text-white animate-pulse">
+                    {pendingPassesCount} Pending
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] text-slate-400">
+                {isOwner
+                  ? "1-Tap approve Warden-verified passes to turn them Green"
+                  : "Issue or verify Day/Night passes for residents"}
+              </p>
+            </div>
+          </div>
+
+          <RequestPassModal
+            userRole={session.role}
+            defaultTenantName="Aarav Patel"
+            defaultRoomNumber="Room 101 • Bed A"
+          />
+        </div>
+
+        {/* Passes List */}
+        <div className="space-y-3">
+          {passes.slice(0, 3).map((pass) => (
+            <GatePassCard key={pass.id} pass={pass} viewerRole={session.role} />
+          ))}
+        </div>
       </div>
 
       {/* KPI Metric Cards */}
@@ -213,69 +275,6 @@ export default async function DashboardPage() {
               {isOwner ? "Finance" : "Complaints"}
             </span>
           </Link>
-        </div>
-      </div>
-
-      {/* Auto-Bed Generation Feature Callout */}
-      <div className="bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-2xl p-3.5 flex items-start gap-3">
-        <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-          <BedDouble className="w-4 h-4" />
-        </div>
-        <div className="flex-1 text-xs">
-          <p className="font-bold text-blue-950 dark:text-blue-100">
-            Smart Auto-Bed Generator Active
-          </p>
-          <p className="text-blue-800/80 dark:text-blue-300/80 text-[11px] mt-0.5 leading-relaxed">
-            Whenever you add a Room with sharing type N (e.g. 2 or 3), PostgreSQL database triggers instantly generate Bed A, Bed B, and Bed C automatically.
-          </p>
-        </div>
-      </div>
-
-      {/* Recent Activity List */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 shadow-xs">
-        <div className="flex items-center justify-between mb-3 px-1">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-            Recent Activity
-          </h2>
-          <span className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold">
-            View All
-          </span>
-        </div>
-
-        <div className="space-y-2.5">
-          <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-2.5 truncate">
-              <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center shrink-0">
-                <Receipt className="w-4 h-4" />
-              </div>
-              <div className="truncate text-left">
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                  Rent Paid by Aarav Patel
-                </p>
-                <p className="text-[10px] text-slate-400">Block A • Room 101 • Bed A</p>
-              </div>
-            </div>
-            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
-              +₹10,650
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-2.5 truncate">
-              <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center shrink-0">
-                <AlertCircle className="w-4 h-4" />
-              </div>
-              <div className="truncate text-left">
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                  WiFi Speed Complaint
-                </p>
-                <p className="text-[10px] text-slate-400">Room 101 • In Progress</p>
-              </div>
-            </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
-              Medium
-            </span>
-          </div>
         </div>
       </div>
     </div>
