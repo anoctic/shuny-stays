@@ -2,6 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUserSession } from "@/lib/auth/session";
 import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
+import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 
 export default async function SuperAdminLayout({
   children,
@@ -26,7 +27,8 @@ export default async function SuperAdminLayout({
         role="super_admin"
         pgName="ShunyOS Governance (All Hosted PGs)"
       />
-      <main className="flex-1 p-4 pb-12 overflow-y-auto">{children}</main>
+      <main className="flex-1 p-4 pb-24 overflow-y-auto">{children}</main>
+      <MobileBottomNav role="super_admin" />
     </div>
   );
 }

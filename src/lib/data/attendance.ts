@@ -233,6 +233,7 @@ const MOCK_BUILDINGS_HIERARCHY = [
  * Fetch hierarchical attendance sheet for today, automatically checking active gate passes!
  */
 export async function getTodayAttendanceSheet(options?: {
+  pgId?: string;
   buildingId?: string | null;
   userRole?: UserRole;
   assignedBuildingIds?: string[];

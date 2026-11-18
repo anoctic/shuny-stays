@@ -2,26 +2,127 @@
 @source "../../src";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-app: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --bg-subtle: #F1F5F9;
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+  --border-color: #E2E8F0;
+  --accent: #4F46E5;
+  --accent-soft: #EEF2FF;
+  --accent-text: #4338CA;
+  --card-radius: 16px;
+  --pill-radius: 12px;
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.05);
+  --nav-bg: rgba(255, 255, 255, 0.96);
+
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+
+  --font-plus-jakarta: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-inter: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-plus-jakarta), var(--font-inter), sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #060913;
+  color: #0F172A;
+  font-family: var(--font-plus-jakarta), var(--font-inter), sans-serif;
 }
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Theme-aware surfaces inside the Mobile PWA Frame */
+.t-screen {
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.t-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow-card);
+  transition: all 0.2s ease;
+}
+
+.t-subtle {
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--pill-radius);
+}
+
+.t-text-main { color: var(--text-main); }
+.t-text-muted { color: var(--text-muted); }
+.t-border { border-color: var(--border-color); }
+.t-accent-bg { background-color: var(--accent); color: #FFFFFF; }
+.t-accent-soft { background-color: var(--accent-soft); color: var(--accent-text); }
+.t-accent-text { color: var(--accent); }
+.t-btn { border-radius: var(--pill-radius); }
+.t-nav {
+  background-color: var(--nav-bg);
+  border-top: 1px solid var(--border-color);
+}
+
+/* Exact Badge Styles from Blueprint */
+.badge-emerald {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-amber {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.badge-rose {
+  background-color: rgba(244, 63, 94, 0.15);
+  color: #e11d48;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.badge-indigo {
+  background-color: rgba(79, 70, 229, 0.15);
+  color: #4f46e5;
+  border: 1px solid rgba(79, 70, 229, 0.3);
+}
+
+/* Clean Custom Scrollbars */
+.phone-scroll::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.phone-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.phone-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45);
+  border-radius: 9999px;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0.4; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up {
+  animation: slideUp 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fadeIn 0.16s ease-out forwards;
+}
+

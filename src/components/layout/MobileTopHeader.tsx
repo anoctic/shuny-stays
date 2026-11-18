@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LogOut, UserCircle2, Bell, Shield, KeyRound, Sparkles } from "lucide-react";
+import { LogOut, Sparkles, Building2, Ticket, PhoneCall, ChevronDown } from "lucide-react";
 import { UserRole, Building } from "@/types/schema.types";
 import { BuildingSwitcher } from "./BuildingSwitcher";
 import { signOutAction, switchDemoPersonaAction } from "@/app/actions/auth";
@@ -23,90 +23,145 @@ export function MobileTopHeader({
 }: MobileTopHeaderProps) {
   const [showPersonaMenu, setShowPersonaMenu] = useState(false);
 
-  // Role Badge Styling
+  // Fintech Indigo Exact Badge Styling from Blueprint
   const roleBadgeConfig = {
     super_admin: {
       label: "Super Admin",
-      className: "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200",
-      dot: "bg-purple-500",
+      className: "bg-indigo-500/15 text-indigo-700 border border-indigo-500/30",
+      dot: "bg-indigo-600",
     },
     owner: {
       label: "PG Owner",
-      className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200",
-      dot: "bg-emerald-500",
+      className: "bg-emerald-500/15 text-emerald-700 border border-emerald-500/30",
+      dot: "bg-emerald-600",
     },
     admin: {
       label: "Warden / Admin",
-      className: "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200",
-      dot: "bg-amber-500",
+      className: "bg-amber-500/20 text-amber-800 border border-amber-500/40",
+      dot: "bg-amber-600",
     },
     tenant: {
       label: "Tenant",
-      className: "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200",
-      dot: "bg-blue-500",
+      className: "bg-indigo-500/15 text-indigo-700 border border-indigo-500/30",
+      dot: "bg-indigo-600",
     },
   };
 
   const badge = roleBadgeConfig[role] || roleBadgeConfig.tenant;
 
+  // Initials for avatar
+  const initials = fullName
+    ? fullName
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "U";
+
   return (
-    <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 py-3">
-      <div className="flex items-center justify-between gap-3">
-        {/* Left: User or PG Info & Building Switcher */}
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
-            {fullName ? fullName.charAt(0).toUpperCase() : "U"}
-          </div>
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-3.5 py-2.5 shadow-xs transition-colors">
+      <div className="flex items-center justify-between gap-2.5">
+        {/* Left: Role-Specific Monogram & Brand / Identity */}
+        <div className="flex items-center gap-2 min-w-0">
+          {role === "owner" && (
+            <div className="w-8 h-8 rounded-xl bg-[#4F46E5] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
+              {pgName ? pgName.slice(0, 2).toUpperCase() : "PG"}
+            </div>
+          )}
+          {role === "admin" && (
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
+              {initials}
+            </div>
+          )}
+          {role === "tenant" && (
+            <div className="w-8 h-8 rounded-xl bg-[#4F46E5] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
+              {pgName ? pgName.slice(0, 2).toUpperCase() : "RS"}
+            </div>
+          )}
+          {role === "super_admin" && (
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
+              S
+            </div>
+          )}
 
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                {fullName}
-              </h2>
+            <div className="text-xs font-extrabold text-[#0F172A] truncate">
+              {role === "super_admin"
+                ? "ShunyOS Super Admin"
+                : role === "tenant"
+                ? pgName || "Royal Stay PG"
+                : role === "admin"
+                ? `Warden ${fullName}`
+                : pgName || "ShunyOS Properties"}
             </div>
-            {pgName && (
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate -mt-0.5">
-                {pgName}
-              </p>
-            )}
+            <div className="text-[10px] font-semibold text-[#64748B] truncate">
+              {role === "super_admin"
+                ? "SaaS Platform Control"
+                : role === "owner"
+                ? "Owner • ShunyOS"
+                : role === "admin"
+                ? "Scoped Admin • ShunyOS"
+                : `${fullName} • Tenant`}
+            </div>
           </div>
         </div>
 
-        {/* Right: Role Badge & Quick Switcher / Sign Out */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Role Badge */}
+        {/* Right: Quick Building Switcher / Role Badge / Sign Out */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* For Owners with buildings: Compact inline switcher if single bar */}
+          {role === "owner" && buildings.length > 0 && (
+            <div className="hidden sm:block">
+              <BuildingSwitcher buildings={buildings} activeBuildingId={activeBuildingId} />
+            </div>
+          )}
+
+          {/* Role Pill with pulsating live dot */}
           <button
             onClick={() => setShowPersonaMenu(!showPersonaMenu)}
             title="Click to test other role personas"
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-transform active:scale-95 shadow-xs ${badge.className}`}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-extrabold border transition-all active:scale-95 shadow-xs ${badge.className}`}
           >
             <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${badge.dot}`} />
             <span>{badge.label}</span>
           </button>
 
-          {/* Sign Out */}
+          {/* Emergency Call Icon for Tenant */}
+          {role === "tenant" && (
+            <a
+              href="tel:+919876543210"
+              title="Emergency Helpdesk"
+              className="p-1.5 rounded-xl bg-rose-500/10 text-rose-600 border border-rose-500/20 hover:bg-rose-500/20 transition-colors"
+            >
+              <PhoneCall className="w-3.5 h-3.5" />
+            </a>
+          )}
+
+          {/* Sign Out Action */}
           <button
             onClick={() => signOutAction()}
             title="Sign Out"
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* For Owners: Top Building Switcher Dropdown */}
-      {role === "owner" && buildings.length > 0 && (
-        <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-          <span className="text-[11px] font-semibold text-slate-400">Current Building:</span>
+      {/* Building Switcher Sub-bar on Mobile for Owner & Admin */}
+      {(role === "owner" || role === "admin") && buildings.length > 0 && (
+        <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between sm:hidden">
+          <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">
+            Scope:
+          </span>
           <BuildingSwitcher buildings={buildings} activeBuildingId={activeBuildingId} />
         </div>
       )}
 
       {/* Demo Persona Switcher Dropdown (Dev Testing) */}
       {showPersonaMenu && (
-        <div className="absolute right-4 top-14 w-60 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-          <div className="flex items-center justify-between px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+        <div className="absolute right-3.5 top-14 w-64 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2.5 z-50 animate-fade-in">
+          <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider">
             <span className="flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-amber-500" /> Switch Demo Role
             </span>
@@ -118,11 +173,11 @@ export function MobileTopHeader({
                 setShowPersonaMenu(false);
                 switchDemoPersonaAction("owner");
               }}
-              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
+              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-[#F1F5F9] transition-colors text-left"
             >
               <div>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">PG Owner</span>
-                <p className="text-[10px] text-slate-400">Full business & financial superset</p>
+                <span className="font-extrabold text-emerald-700">PG Owner</span>
+                <p className="text-[10px] text-[#64748B]">Full business & financial superset</p>
               </div>
             </button>
 
@@ -131,11 +186,11 @@ export function MobileTopHeader({
                 setShowPersonaMenu(false);
                 switchDemoPersonaAction("owner", { noPg: true });
               }}
-              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left border border-dashed border-emerald-200/80 dark:border-emerald-800/80 bg-emerald-50/30"
+              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-[#F1F5F9] transition-colors text-left border border-dashed border-emerald-300 bg-emerald-50/50"
             >
               <div>
-                <span className="font-semibold text-emerald-700 dark:text-emerald-300">New Owner (First-Time)</span>
-                <p className="text-[10px] text-slate-500">Test /onboarding wizard</p>
+                <span className="font-extrabold text-emerald-800">New Owner (First-Time)</span>
+                <p className="text-[10px] text-emerald-700">Test /onboarding wizard</p>
               </div>
             </button>
 
@@ -144,11 +199,11 @@ export function MobileTopHeader({
                 setShowPersonaMenu(false);
                 switchDemoPersonaAction("admin");
               }}
-              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
+              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-[#F1F5F9] transition-colors text-left"
             >
               <div>
-                <span className="font-semibold text-amber-600 dark:text-amber-400">Admin / Warden</span>
-                <p className="text-[10px] text-slate-400">Assigned building ops & mess</p>
+                <span className="font-extrabold text-amber-700">Admin / Warden</span>
+                <p className="text-[10px] text-[#64748B]">Assigned building ops & gate passes</p>
               </div>
             </button>
 
@@ -157,11 +212,11 @@ export function MobileTopHeader({
                 setShowPersonaMenu(false);
                 switchDemoPersonaAction("tenant");
               }}
-              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
+              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-[#F1F5F9] transition-colors text-left"
             >
               <div>
-                <span className="font-semibold text-blue-600 dark:text-blue-400">Tenant (Resident)</span>
-                <p className="text-[10px] text-slate-400">Bed, rent dues & mess menu</p>
+                <span className="font-extrabold text-[#4F46E5]">Tenant / Student</span>
+                <p className="text-[10px] text-[#64748B]">Bed, rent dues, QR gate passes</p>
               </div>
             </button>
 
@@ -170,11 +225,11 @@ export function MobileTopHeader({
                 setShowPersonaMenu(false);
                 switchDemoPersonaAction("super_admin");
               }}
-              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
+              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-[#F1F5F9] transition-colors text-left"
             >
               <div>
-                <span className="font-semibold text-purple-600 dark:text-purple-400">Super Admin</span>
-                <p className="text-[10px] text-slate-400">Platform governance & subscriptions</p>
+                <span className="font-extrabold text-purple-700">Super Admin</span>
+                <p className="text-[10px] text-[#64748B]">Platform governance & subscriptions</p>
               </div>
             </button>
           </div>

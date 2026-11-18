@@ -1,16 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import "./globals.css";
 import { IOSSmartBanner } from "@/components/pwa/IOSSmartBanner";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -33,7 +37,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#2563eb",
+  themeColor: "#4F46E5",
 };
 
 export default function RootLayout({
@@ -42,14 +46,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="en" className={`${plusJakartaSans.variable} ${inter.variable} h-full antialiased`}>
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-touch-fullscreen" content="yes" />
       </head>
-      <body className="min-h-full bg-slate-900 flex justify-center text-slate-900 selection:bg-blue-600 selection:text-white">
+      <body className="min-h-full bg-[#060913] flex justify-center text-[#0F172A] selection:bg-indigo-600 selection:text-white">
         {/* Mobile-first PWA Container: max-w-[480px] on desktop, full width on mobile */}
-        <div className="w-full max-w-[480px] mx-auto min-h-screen bg-slate-50 shadow-2xl relative pb-20 flex flex-col overflow-x-hidden border-x border-slate-200/60 dark:border-slate-800">
+        <div className="w-full max-w-[480px] mx-auto min-h-screen bg-[#F8FAFC] shadow-2xl relative pb-20 flex flex-col overflow-x-hidden border-x border-[#E2E8F0]">
           <IOSSmartBanner />
           <main className="flex-1 flex flex-col">{children}</main>
         </div>
