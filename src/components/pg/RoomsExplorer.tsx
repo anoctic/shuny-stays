@@ -9,6 +9,7 @@ import {
   ChevronRight,
   UserPlus,
   BedDouble,
+  Sparkles,
 } from "lucide-react";
 import { BuildingItem, FloorItem, RoomItem, BedItem } from "@/lib/data/rooms";
 import { BedProfileSheet } from "./BedProfileSheet";
@@ -71,12 +72,21 @@ export function RoomsExplorer({
   // Stats calculation
   let totalBeds = 0;
   let occupiedBeds = 0;
+  let expectedRent = 0;
+  let collectedRent = 0;
+
   visibleBuildings.forEach((b) => {
     b.floors.forEach((f) => {
       f.rooms.forEach((r) => {
         r.beds.forEach((bed) => {
           totalBeds++;
-          if (bed.occupied) occupiedBeds++;
+          if (bed.occupied) {
+            occupiedBeds++;
+            expectedRent += r.rent;
+            if (bed.tenant?.rentPaid) {
+              collectedRent += r.rent;
+            }
+          }
         });
       });
     });
@@ -90,51 +100,67 @@ export function RoomsExplorer({
 
   return (
     <div className="space-y-3.5">
-      {/* 1. Quick Occupancy Strip + CSV Import */}
-      <div className="p-3 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs flex items-center justify-between gap-2">
-        <div>
-          <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">
+      {/* 1. 2-Column Compact KPI Strip */}
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-sm">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
             Live Occupancy
           </div>
-          <div className="text-sm font-extrabold text-[#0F172A] tabular-nums">
-            {occupiedBeds}/{totalBeds} Beds{" "}
-            <span className="text-xs font-bold text-emerald-600">({vacantBeds} Vacant)</span>
+          <div className="text-sm font-extrabold text-slate-900 tabular-nums mt-0.5">
+            {occupiedBeds}/{totalBeds} Beds
+          </div>
+          <div className="text-[10px] font-bold text-emerald-600 mt-0.5">
+            {vacantBeds} Beds Vacant
           </div>
         </div>
 
-        {!isAdminScoped ? (
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Rent Pipeline
+            </div>
+            <div className="text-sm font-extrabold text-indigo-600 tabular-nums mt-0.5">
+              ₹{collectedRent.toLocaleString("en-IN")}
+            </div>
+          </div>
+          <div className="text-[10px] text-slate-400">
+            Expected: ₹{expectedRent.toLocaleString("en-IN")}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Action Strip (Bldg Builder & CSV) */}
+      {!isAdminScoped && (
+        <div className="flex items-center justify-between gap-2 px-0.5">
+          <span className="text-[11px] font-extrabold text-slate-700">Property Blocks</span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setIsAutoBuildingOpen(true)}
-              className="px-2 py-1.5 rounded-xl bg-[#4F46E5] text-white text-[10.5px] font-extrabold flex items-center gap-1 shrink-0 shadow-xs active:scale-95 transition"
+              className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[10.5px] font-extrabold flex items-center gap-1 shadow-xs active:scale-95 transition"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Bldg</span>
+              <span>+ Add Block</span>
             </button>
             <button
               onClick={() => setIsCsvImportOpen(true)}
-              className="px-2.5 py-1.5 rounded-xl bg-[#EEF2FF] text-[#4338CA] hover:bg-indigo-100 border border-indigo-200 text-[10.5px] font-extrabold flex items-center gap-1 shrink-0 transition"
+              className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[10.5px] font-extrabold flex items-center gap-1 transition"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" />
               <span>Import CSV</span>
             </button>
           </div>
-        ) : (
-          <span className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-600 text-[10px] font-extrabold">
-            Block A Scoped
-          </span>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* 2. Building Filter Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto phone-scroll pb-0.5">
+      {/* 2. Horizontal Building Filter Pills */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
         {!isAdminScoped && (
           <button
             onClick={() => setSelectedBuildingId("all")}
             className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold shrink-0 border transition ${
               selectedBuildingId === "all"
-                ? "bg-[#4F46E5] text-white border-transparent shadow-xs"
-                : "bg-white text-[#0F172A] border-[#E2E8F0]"
+                ? "bg-indigo-600 text-white border-transparent shadow-xs"
+                : "bg-white text-slate-800 border-slate-200"
             }`}
           >
             All ({initialBuildings.length})
@@ -153,14 +179,14 @@ export function RoomsExplorer({
               }}
               className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold shrink-0 flex items-center gap-1 border transition ${
                 selected
-                  ? "bg-[#4F46E5] text-white border-transparent shadow-xs"
+                  ? "bg-indigo-600 text-white border-transparent shadow-xs"
                   : locked
-                  ? "opacity-50 bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0]"
-                  : "bg-white text-[#0F172A] border-[#E2E8F0]"
+                  ? "opacity-50 bg-slate-100 text-slate-400 border-slate-200"
+                  : "bg-white text-slate-800 border-slate-200"
               }`}
             >
               <span>{b.name}</span>
-              {locked && <Lock className="w-3 h-3 text-[#64748B]" />}
+              {locked && <Lock className="w-3 h-3 text-slate-400" />}
             </button>
           );
         })}
@@ -178,9 +204,9 @@ export function RoomsExplorer({
           return (
             <section
               key={building.id}
-              className="rounded-2xl border border-[#E2E8F0] bg-white shadow-xs overflow-hidden"
+              className="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden"
             >
-              {/* Building Dark Header */}
+              {/* Building Header */}
               <div className="p-3 bg-slate-900 text-white flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
@@ -206,7 +232,7 @@ export function RoomsExplorer({
               </div>
 
               {/* Floor Tabs */}
-              <div className="px-3 py-2 border-b border-[#E2E8F0] bg-[#F1F5F9] flex items-center gap-1.5 overflow-x-auto phone-scroll">
+              <div className="px-3 py-2 border-b border-slate-100 bg-slate-50 flex items-center gap-1.5 overflow-x-auto">
                 {building.floors.map((fl, idx) => (
                   <button
                     key={fl.id}
@@ -218,8 +244,8 @@ export function RoomsExplorer({
                     }
                     className={`px-2.5 py-1 rounded-xl text-[10.5px] font-extrabold shrink-0 transition ${
                       floorIdx === idx
-                        ? "bg-[#4F46E5] text-white shadow-xs"
-                        : "bg-white text-[#0F172A] border border-[#E2E8F0]"
+                        ? "bg-indigo-600 text-white shadow-xs"
+                        : "bg-white text-slate-700 border border-slate-200"
                     }`}
                   >
                     {fl.name} ({fl.rooms.length})
@@ -227,17 +253,22 @@ export function RoomsExplorer({
                 ))}
               </div>
 
-              {/* Active Floor Rooms */}
+              {/* Active Floor Rooms & Beds */}
               {activeFloor ? (
-                <div className="p-3 space-y-2.5">
-                  <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0]">
-                    <span className="text-[11px] font-extrabold text-[#0F172A]">
+                <div className="p-3.5 space-y-3">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+                    <span className="text-xs font-extrabold text-slate-800">
                       {activeFloor.name} Rooms
                     </span>
                     {!isAdminScoped && (
                       <button
-                        onClick={() => setAddRoomTarget({ building, floorIdx })}
-                        className="px-2.5 py-1 rounded-lg bg-[#EEF2FF] text-[#4338CA] border border-indigo-200 text-[10px] font-extrabold flex items-center gap-1 transition active:scale-95"
+                        onClick={() =>
+                          setAddRoomTarget({
+                            building,
+                            floorIdx,
+                          })
+                        }
+                        className="px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-extrabold flex items-center gap-1 hover:bg-indigo-100 transition active:scale-95"
                       >
                         <Plus className="w-3 h-3" />
                         <span>Add Room</span>
@@ -248,19 +279,19 @@ export function RoomsExplorer({
                   {activeFloor.rooms.map((room) => (
                     <div
                       key={room.id}
-                      className="p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2"
+                      className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-2.5"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <span className="px-2 py-0.5 rounded bg-slate-900 text-white text-[11px] font-extrabold">
                             Room {room.number}
                           </span>
-                          <span className="text-[10px] font-bold text-[#64748B]">
-                            {room.sharing}-Seater
+                          <span className="text-[10px] font-bold text-slate-400">
+                            {room.beds.length}-Seater
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] font-extrabold text-[#4F46E5] tabular-nums">
+                          <span className="text-[11px] font-extrabold text-indigo-600 tabular-nums">
                             ₹{room.rent.toLocaleString("en-IN")}/mo
                           </span>
                           {!isAdminScoped && (
@@ -272,7 +303,7 @@ export function RoomsExplorer({
                                   roomId: room.id,
                                 })
                               }
-                              className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 text-[9.5px] font-extrabold border border-emerald-500/30 transition active:scale-95"
+                              className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[9.5px] font-extrabold border border-emerald-200 transition active:scale-95"
                             >
                               + Bed
                             </button>
@@ -280,7 +311,7 @@ export function RoomsExplorer({
                         </div>
                       </div>
 
-                      {/* Color-Coded Bed Pills */}
+                      {/* Clean Color-Coded Bed Grid Pills */}
                       <div className="grid grid-cols-2 gap-1.5">
                         {room.beds.map((bed, bIdx) => {
                           if (bed.occupied && bed.tenant) {
@@ -298,27 +329,27 @@ export function RoomsExplorer({
                                     bedIdx: bIdx,
                                   })
                                 }
-                                className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/25 text-left transition flex items-center justify-between gap-1 active:scale-95"
+                                className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100/70 border border-rose-200 text-left transition flex items-center justify-between gap-1 active:scale-95"
                               >
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1">
                                     <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
-                                    <span className="text-[9.5px] font-extrabold text-rose-500">
+                                    <span className="text-[9.5px] font-extrabold text-rose-700">
                                       {bed.label}
                                     </span>
                                     {activePass && (
                                       <span
                                         className={`px-1 rounded text-[8px] font-extrabold ${
                                           activePass.status === "approved"
-                                            ? "bg-emerald-500/20 text-emerald-600"
-                                            : "bg-amber-500/25 text-amber-700"
+                                            ? "bg-emerald-100 text-emerald-700"
+                                            : "bg-amber-100 text-amber-700"
                                         }`}
                                       >
                                         {activePass.passType === "day_pass" ? "DAY" : "NIGHT"}
                                       </span>
                                     )}
                                   </div>
-                                  <div className="text-[11px] font-extrabold text-[#0F172A] truncate mt-0.5">
+                                  <div className="text-[11px] font-extrabold text-slate-900 truncate mt-0.5">
                                     {bed.tenant.name}
                                   </div>
                                 </div>
@@ -338,16 +369,16 @@ export function RoomsExplorer({
                                     bedIdx: bIdx,
                                   })
                                 }
-                                className="p-2 rounded-xl text-left transition flex items-center justify-between gap-1 border border-dashed bg-emerald-500/10 hover:bg-emerald-500/15 border-emerald-500/40 active:scale-95"
+                                className="p-2 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 border border-dashed border-emerald-300 text-left transition flex items-center justify-between gap-1 active:scale-95"
                               >
                                 <div>
                                   <div className="flex items-center gap-1">
                                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                                    <span className="text-[9.5px] font-extrabold text-emerald-600">
+                                    <span className="text-[9.5px] font-extrabold text-emerald-700">
                                       {bed.label}
                                     </span>
                                   </div>
-                                  <div className="text-[11px] font-bold text-emerald-600 mt-0.5">
+                                  <div className="text-[11px] font-bold text-emerald-700 mt-0.5">
                                     + Walk-In
                                   </div>
                                 </div>
@@ -366,7 +397,7 @@ export function RoomsExplorer({
         })}
       </div>
 
-      {/* Slide-Up Bottom Sheets & Modals */}
+      {/* 360 Occupied Bed Profile Bottom Sheet */}
       {activeProfileBed && (
         <BedProfileSheet
           isOpen={true}
@@ -381,6 +412,7 @@ export function RoomsExplorer({
         />
       )}
 
+      {/* Walk-In Sheet */}
       {activeWalkInBed && (
         <WalkInSheet
           isOpen={true}
@@ -393,32 +425,43 @@ export function RoomsExplorer({
         />
       )}
 
+      {/* Auto-Building Sheet */}
       <AutoBuildingSheet
         isOpen={isAutoBuildingOpen}
         onClose={() => setIsAutoBuildingOpen(false)}
       />
 
-      <AddFloorSheet
-        isOpen={Boolean(addFloorBuilding)}
-        onClose={() => setAddFloorBuilding(null)}
-        building={addFloorBuilding}
-      />
+      {/* Add Floor Sheet */}
+      {addFloorBuilding && (
+        <AddFloorSheet
+          isOpen={true}
+          onClose={() => setAddFloorBuilding(null)}
+          building={addFloorBuilding}
+        />
+      )}
 
-      <AddRoomSheet
-        isOpen={Boolean(addRoomTarget)}
-        onClose={() => setAddRoomTarget(null)}
-        building={addRoomTarget?.building || null}
-        floorIdx={addRoomTarget?.floorIdx || 0}
-      />
+      {/* Add Room Sheet */}
+      {addRoomTarget && (
+        <AddRoomSheet
+          isOpen={true}
+          onClose={() => setAddRoomTarget(null)}
+          building={addRoomTarget.building}
+          floorIdx={addRoomTarget.floorIdx}
+        />
+      )}
 
-      <AddBedSheet
-        isOpen={Boolean(addBedTarget)}
-        onClose={() => setAddBedTarget(null)}
-        building={addBedTarget?.building || null}
-        floorIdx={addBedTarget?.floorIdx || 0}
-        roomId={addBedTarget?.roomId || null}
-      />
+      {/* Add Bed Sheet */}
+      {addBedTarget && (
+        <AddBedSheet
+          isOpen={true}
+          onClose={() => setAddBedTarget(null)}
+          building={addBedTarget.building}
+          floorIdx={addBedTarget.floorIdx}
+          roomId={addBedTarget.roomId}
+        />
+      )}
 
+      {/* CSV Import Modal */}
       <CsvImportModal
         isOpen={isCsvImportOpen}
         onClose={() => setIsCsvImportOpen(false)}

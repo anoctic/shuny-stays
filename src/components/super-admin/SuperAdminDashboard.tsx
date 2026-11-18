@@ -17,6 +17,10 @@ import {
   Pause,
   ArrowRight,
   Crown,
+  KeyRound,
+  Copy,
+  Check,
+  Plus,
 } from "lucide-react";
 import { PgDetailItem } from "@/lib/data/pgs";
 import { PlatformBroadcast, UserRole } from "@/types/schema.types";
@@ -45,6 +49,19 @@ export function SuperAdminDashboard({
   const [broadcastsList, setBroadcastsList] = useState<PlatformBroadcast[]>(initialBroadcasts);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // New Onboarded Owner Credentials Banner state
+  const [newOwnerCredentials, setNewOwnerCredentials] = useState<{
+    pgName: string;
+    email: string;
+    tempPass: string;
+    portalUrl: string;
+  } | null>({
+    pgName: "Royal Stay PG",
+    email: "owner@stanzaliving.com",
+    tempPass: "StayRoyal#2026",
+    portalUrl: "/dashboard",
+  });
+
   // Broadcast Creator Form State
   const [targetOwner, setTargetOwner] = useState(true);
   const [targetAdmin, setTargetAdmin] = useState(false);
@@ -58,6 +75,11 @@ export function SuperAdminDashboard({
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    showToast(`${label} copied!`);
   };
 
   // Status toggle handler
@@ -178,13 +200,13 @@ export function SuperAdminDashboard({
       )}
 
       {/* Sub-Tab Navigation Bar */}
-      <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-2xl text-[11px] font-extrabold text-slate-600 dark:text-slate-300">
+      <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-2xl text-[11px] font-extrabold text-slate-600 border border-slate-200/80">
         <button
           type="button"
           onClick={() => setActiveTab("overview")}
           className={`py-1.5 rounded-xl transition ${
             activeTab === "overview"
-              ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs"
+              ? "bg-white text-indigo-600 shadow-xs"
               : "hover:text-slate-900"
           }`}
         >
@@ -195,7 +217,7 @@ export function SuperAdminDashboard({
           onClick={() => setActiveTab("pgs")}
           className={`py-1.5 rounded-xl transition ${
             activeTab === "pgs"
-              ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs"
+              ? "bg-white text-indigo-600 shadow-xs"
               : "hover:text-slate-900"
           }`}
         >
@@ -206,7 +228,7 @@ export function SuperAdminDashboard({
           onClick={() => setActiveTab("broadcast")}
           className={`py-1.5 rounded-xl transition ${
             activeTab === "broadcast"
-              ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs"
+              ? "bg-white text-indigo-600 shadow-xs"
               : "hover:text-slate-900"
           }`}
         >
@@ -217,7 +239,7 @@ export function SuperAdminDashboard({
           onClick={() => setActiveTab("billing")}
           className={`py-1.5 rounded-xl transition ${
             activeTab === "billing"
-              ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs"
+              ? "bg-white text-indigo-600 shadow-xs"
               : "hover:text-slate-900"
           }`}
         >
@@ -225,21 +247,72 @@ export function SuperAdminDashboard({
         </button>
       </div>
 
+      {/* Instant Owner Credentials Card (if available) */}
+      {newOwnerCredentials && (
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <KeyRound className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-xs font-extrabold text-slate-900">
+                  {newOwnerCredentials.pgName} Owner Credentials
+                </h3>
+                <p className="text-[10px] text-slate-400">Handover access for instant login</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => copyToClipboard(`Login: ${newOwnerCredentials.email} | Pass: ${newOwnerCredentials.tempPass}`, "Credentials")}
+              className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-extrabold flex items-center gap-1 hover:bg-indigo-100"
+            >
+              <Copy className="w-3 h-3" />
+              <span>Copy Access</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-50 rounded-xl text-[11px] font-mono">
+            <div>
+              <span className="text-[9px] font-bold text-slate-400 uppercase font-sans block">
+                Owner Email
+              </span>
+              <strong className="text-slate-900 truncate block">
+                {newOwnerCredentials.email}
+              </strong>
+            </div>
+            <div>
+              <span className="text-[9px] font-bold text-slate-400 uppercase font-sans block">
+                Temporary Password
+              </span>
+              <strong className="text-indigo-600 block">
+                {newOwnerCredentials.tempPass}
+              </strong>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TAB 1: OVERVIEW */}
       {activeTab === "overview" && (
         <div className="space-y-3">
+          {/* MRR & Platform Beds KPI Cards */}
           <div className="grid grid-cols-2 gap-2.5">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3.5 shadow-sm">
-              <div className="text-[10.5px] font-semibold text-slate-400">ShunyOS MRR</div>
-              <div className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400 tabular-nums mt-1">
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+              <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
+                ShunyOS MRR
+              </div>
+              <div className="text-xl font-extrabold text-indigo-600 tabular-nums mt-1">
                 ₹{totalMrr.toLocaleString("en-IN")}
               </div>
-              <div className="text-[10px] font-bold text-emerald-500 mt-0.5">+28% MoM SaaS</div>
+              <div className="text-[10px] font-bold text-emerald-600 mt-0.5">+28% MoM SaaS</div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3.5 shadow-sm">
-              <div className="text-[10.5px] font-semibold text-slate-400">Active Platform Beds</div>
-              <div className="text-xl font-extrabold text-slate-900 dark:text-white tabular-nums mt-1">
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+              <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
+                Active Platform Beds
+              </div>
+              <div className="text-xl font-extrabold text-slate-900 tabular-nums mt-1">
                 {totalBeds}
               </div>
               <div className="text-[10px] font-bold text-slate-400 mt-0.5">
@@ -248,29 +321,31 @@ export function SuperAdminDashboard({
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3.5 space-y-2 shadow-sm">
-            <h3 className="text-xs font-extrabold text-slate-900 dark:text-white">City Footprint</h3>
+          {/* City Footprint Card */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-sm">
+            <h3 className="text-xs font-extrabold text-slate-900">City Footprint</h3>
             <div className="space-y-1.5 text-[11px]">
-              <div className="flex justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                <span className="text-slate-600 dark:text-slate-300">Noida & Greater Noida</span>
-                <strong className="text-slate-900 dark:text-white">140 Beds</strong>
+              <div className="flex justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                <span className="text-slate-700">Noida & Greater Noida</span>
+                <strong className="text-slate-900">140 Beds</strong>
               </div>
-              <div className="flex justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                <span className="text-slate-600 dark:text-slate-300">Gurugram Cyber Hub</span>
-                <strong className="text-slate-900 dark:text-white">95 Beds</strong>
+              <div className="flex justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                <span className="text-slate-700">Gurugram Cyber Hub</span>
+                <strong className="text-slate-900">95 Beds</strong>
               </div>
-              <div className="flex justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                <span className="text-slate-600 dark:text-slate-300">Kota & Pune</span>
-                <strong className="text-slate-900 dark:text-white">70 Beds</strong>
+              <div className="flex justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                <span className="text-slate-700">Kota & Pune</span>
+                <strong className="text-slate-900">70 Beds</strong>
               </div>
             </div>
           </div>
 
+          {/* + Onboard New PG Button */}
           <OnboardPgModal
             triggerButton={
               <button
                 type="button"
-                className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 transition active:scale-[0.99]"
+                className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-sm transition active:scale-[0.99]"
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
                 <span>+ Onboard White-Label PG & Custom Branding</span>
@@ -292,7 +367,7 @@ export function SuperAdminDashboard({
             return (
               <div
                 key={pg.id}
-                className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3.5 space-y-2.5 shadow-sm"
+                className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-3 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -300,11 +375,11 @@ export function SuperAdminDashboard({
                       <img
                         src={pg.logo_url}
                         alt={pg.name}
-                        className="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                        className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0"
                       />
                     ) : (
                       <div
-                        className="w-9 h-9 rounded-xl text-white flex items-center justify-center font-black text-xs shrink-0"
+                        className="w-10 h-10 rounded-xl text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs"
                         style={{ backgroundColor: primaryColor }}
                       >
                         {pg.name.slice(0, 2).toUpperCase()}
@@ -313,22 +388,22 @@ export function SuperAdminDashboard({
 
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
+                        <span className="text-xs font-extrabold text-slate-900 truncate">
                           {pg.name}
                         </span>
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
+                          className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${
                             isActive
-                              ? "bg-emerald-500/15 text-emerald-600"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                               : isPending
-                              ? "bg-amber-500/20 text-amber-600"
-                              : "bg-rose-500/15 text-rose-500"
+                              ? "bg-amber-50 text-amber-700 border-amber-200"
+                              : "bg-rose-50 text-rose-700 border-rose-200"
                           }`}
                         >
                           {isActive ? "Active" : isPending ? "Pending" : "Suspended"}
                         </span>
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">
+                      <div className="text-[10px] text-slate-400 truncate mt-0.5">
                         /pg/{pg.slug} • {pg.owner_name} • {pg.subscription_tier}
                       </div>
                     </div>
@@ -339,7 +414,7 @@ export function SuperAdminDashboard({
                     triggerButton={
                       <button
                         type="button"
-                        className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-extrabold shrink-0"
+                        className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-extrabold shrink-0 border border-slate-200"
                       >
                         Branding
                       </button>
@@ -352,7 +427,7 @@ export function SuperAdminDashboard({
                     <button
                       type="button"
                       onClick={() => handleToggleStatus(pg.id, "pending")}
-                      className="py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-extrabold shadow-xs transition"
+                      className="py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold shadow-xs transition"
                     >
                       Approve PG
                     </button>
@@ -360,10 +435,10 @@ export function SuperAdminDashboard({
                     <button
                       type="button"
                       onClick={() => handleToggleStatus(pg.id, pg.status)}
-                      className={`py-1.5 rounded-xl text-[10px] font-extrabold transition shadow-xs ${
+                      className={`py-2 rounded-xl text-[11px] font-extrabold transition border ${
                         isActive
-                          ? "bg-rose-500/15 hover:bg-rose-500/20 text-rose-600"
-                          : "bg-emerald-500 hover:bg-emerald-600 text-white"
+                          ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
+                          : "bg-emerald-600 text-white border-transparent hover:bg-emerald-500 shadow-xs"
                       }`}
                     >
                       {isActive ? "Suspend Kill-Switch" : "Re-Activate PG"}
@@ -373,7 +448,7 @@ export function SuperAdminDashboard({
                   <button
                     type="button"
                     onClick={() => handleViewAsOwner(pg.name)}
-                    className="py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 text-[10px] font-extrabold transition"
+                    className="py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-extrabold transition"
                   >
                     View as Owner →
                   </button>
@@ -388,9 +463,9 @@ export function SuperAdminDashboard({
       {activeTab === "broadcast" && (
         <div className="space-y-3">
           {/* Targeted Platform Broadcast Creator */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3.5 space-y-3 shadow-sm">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-3 shadow-sm">
             <div>
-              <h3 className="text-xs font-extrabold text-slate-900 dark:text-white">
+              <h3 className="text-xs font-extrabold text-slate-900">
                 Targeted Platform Broadcast
               </h3>
               <p className="text-[10px] text-slate-400">
@@ -403,32 +478,32 @@ export function SuperAdminDashboard({
                 Target Audience Roles
               </label>
               <div className="grid grid-cols-3 gap-1.5 text-[10px] font-extrabold">
-                <label className="p-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl flex items-center gap-1.5 cursor-pointer">
+                <label className="p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-1.5 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={targetOwner}
                     onChange={(e) => setTargetOwner(e.target.checked)}
                     className="w-3.5 h-3.5 accent-indigo-600"
                   />
-                  <span className="text-slate-800 dark:text-slate-200">PG Owners</span>
+                  <span className="text-slate-800">PG Owners</span>
                 </label>
-                <label className="p-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl flex items-center gap-1.5 cursor-pointer">
+                <label className="p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-1.5 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={targetAdmin}
                     onChange={(e) => setTargetAdmin(e.target.checked)}
                     className="w-3.5 h-3.5 accent-indigo-600"
                   />
-                  <span className="text-slate-800 dark:text-slate-200">Wardens</span>
+                  <span className="text-slate-800">Wardens</span>
                 </label>
-                <label className="p-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl flex items-center gap-1.5 cursor-pointer">
+                <label className="p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-1.5 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={targetTenant}
                     onChange={(e) => setTargetTenant(e.target.checked)}
                     className="w-3.5 h-3.5 accent-indigo-600"
                   />
-                  <span className="text-slate-800 dark:text-slate-200">Tenants</span>
+                  <span className="text-slate-800">Tenants</span>
                 </label>
               </div>
             </div>
@@ -439,13 +514,13 @@ export function SuperAdminDashboard({
                 value={bcTitle}
                 onChange={(e) => setBcTitle(e.target.value)}
                 placeholder="Announcement Title"
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white focus:outline-indigo-500"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-indigo-500"
               />
               <textarea
                 rows={2}
                 value={bcMsg}
                 onChange={(e) => setBcMsg(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-indigo-500"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-indigo-500"
               />
               <button
                 type="submit"
@@ -459,38 +534,38 @@ export function SuperAdminDashboard({
           </div>
 
           {/* Active Platform Broadcasts List */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3.5 space-y-2 shadow-sm">
-            <h3 className="text-xs font-extrabold text-slate-900 dark:text-white">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2 shadow-sm">
+            <h3 className="text-xs font-extrabold text-slate-900">
               Active Platform Broadcasts
             </h3>
 
             {broadcastsList.map((b) => (
               <div
                 key={b.id}
-                className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800/80 space-y-1"
+                className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-slate-900 dark:text-white">
+                  <span className="text-xs font-extrabold text-slate-900">
                     {b.title}
                   </span>
                   <button
                     type="button"
                     onClick={() => handleToggleBroadcast(b.id)}
-                    className={`px-2 py-0.5 rounded text-[9px] font-extrabold transition ${
+                    className={`px-2 py-0.5 rounded text-[9px] font-extrabold transition border ${
                       b.is_active
-                        ? "bg-emerald-500/15 text-emerald-600"
-                        : "bg-slate-500/20 text-slate-400"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-slate-200 text-slate-600 border-slate-300"
                     }`}
                   >
                     {b.is_active ? "Live" : "Paused"}
                   </button>
                 </div>
-                <p className="text-[10.5px] text-slate-500 dark:text-slate-400">{b.message}</p>
+                <p className="text-[10.5px] text-slate-500">{b.message}</p>
                 <div className="flex gap-1 pt-0.5">
                   {b.target_roles.map((r) => (
                     <span
                       key={r}
-                      className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-500 text-[8.5px] font-extrabold uppercase"
+                      className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 text-[8.5px] font-extrabold uppercase"
                     >
                       {r}
                     </span>
@@ -504,30 +579,30 @@ export function SuperAdminDashboard({
 
       {/* TAB 4: BILLING */}
       {activeTab === "billing" && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3.5 space-y-2.5 shadow-sm">
-          <h3 className="text-xs font-extrabold text-slate-900 dark:text-white">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-sm">
+          <h3 className="text-xs font-extrabold text-slate-900">
             ShunyOS SaaS Subscription Tiers
           </h3>
 
-          <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
+          <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
             <div>
-              <strong className="block text-slate-900 dark:text-white">Free Trial</strong>
+              <strong className="block text-slate-900">Free Trial</strong>
               <span className="text-[10px] text-slate-400">Up to 30 Beds • 14 Days</span>
             </div>
-            <span className="font-extrabold text-slate-900 dark:text-white">₹0</span>
+            <span className="font-extrabold text-slate-900">₹0</span>
           </div>
 
-          <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
+          <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
             <div>
-              <strong className="block text-slate-900 dark:text-white">Starter White-Label</strong>
+              <strong className="block text-slate-900">Starter White-Label</strong>
               <span className="text-[10px] text-slate-400">Up to 100 Beds • Custom Slug</span>
             </div>
-            <span className="font-extrabold text-indigo-600 dark:text-indigo-400">₹999 / mo</span>
+            <span className="font-extrabold text-indigo-600">₹999 / mo</span>
           </div>
 
-          <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
+          <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
             <div>
-              <strong className="block text-slate-900 dark:text-white">Pro Unlimited</strong>
+              <strong className="block text-slate-900">Pro Unlimited</strong>
               <span className="text-[10px] text-slate-400">Unlimited Beds + Cloud WhatsApp</span>
             </div>
             <span className="font-extrabold text-emerald-600">₹2,499 / mo</span>
@@ -535,10 +610,10 @@ export function SuperAdminDashboard({
         </div>
       )}
 
-      {/* Subtle Platform Footer */}
+      {/* Platform Governance Footer */}
       <footer className="pt-3 pb-1 text-center space-y-1">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[11px] font-semibold border border-slate-200/50 dark:border-slate-700/50">
-          <Crown className="w-3 h-3 text-purple-500" />
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-slate-500 text-[11px] font-semibold border border-slate-200 shadow-2xs">
+          <Crown className="w-3 h-3 text-purple-600" />
           <span>ShunyOS SaaS Engine</span>
           <span className="text-slate-400">• v2.4 Production</span>
         </div>

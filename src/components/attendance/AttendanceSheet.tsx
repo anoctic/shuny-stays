@@ -100,24 +100,29 @@ export function AttendanceSheet({
     });
   });
 
-  // Handle single bed status change
-  const handleStatusChange = (bedId: string, tenantId: string, status: AttendanceStatus) => {
+  // Status toggle handler
+  const handleStatusChange = (
+    bedId: string,
+    tenantId: string,
+    newStatus: AttendanceStatus
+  ) => {
     setBedStatuses((prev) => ({
       ...prev,
-      [bedId]: { status, tenant_id: tenantId },
+      [bedId]: { status: newStatus, tenant_id: tenantId },
     }));
   };
 
-  // Mark all remaining beds on a floor as Present
-  const handleMarkFloorRemainingPresent = (beds: BedAttendanceItem[]) => {
+  // Mark all remaining beds on a floor as "present"
+  const handleMarkFloorRemainingPresent = (floorBeds: BedAttendanceItem[]) => {
     setBedStatuses((prev) => {
       const next = { ...prev };
-      beds.forEach((b) => {
-        const current = next[b.bed_id]?.status || b.status;
+      floorBeds.forEach((bed) => {
+        const current = next[bed.bed_id]?.status || bed.status;
+        // Don't overwrite if they are on pass
         if (current !== "day_pass" && current !== "night_pass") {
-          next[b.bed_id] = {
+          next[bed.bed_id] = {
             status: "present",
-            tenant_id: b.tenant_id,
+            tenant_id: bed.tenant_id,
           };
         }
       });
@@ -125,56 +130,69 @@ export function AttendanceSheet({
     });
   };
 
-  // Save & Sync all attendance to tenant apps
+  // Save & Sync all attendance
   const handleSaveAndSync = () => {
-    const payload = Object.entries(bedStatuses).map(([bedId, val]) => ({
-      bed_id: bedId,
-      tenant_id: val.tenant_id,
-      status: val.status,
-    }));
-
     startTransition(async () => {
-      const res = await saveAttendanceAction(payload);
-      if (res?.success) {
-        setSaveSuccessMsg(`Attendance saved & synced for ${res.count} residents!`);
-        setTimeout(() => setSaveSuccessMsg(null), 3500);
-      }
+      const itemsToSave: {
+        tenant_id: string;
+        bed_id: string;
+        status: AttendanceStatus;
+      }[] = [];
+
+      filteredBuildings.forEach((b) => {
+        b.floors.forEach((f) => {
+          f.beds.forEach((bed) => {
+            const entry = bedStatuses[bed.bed_id];
+            if (entry) {
+              itemsToSave.push({
+                tenant_id: entry.tenant_id,
+                bed_id: bed.bed_id,
+                status: entry.status,
+              });
+            }
+          });
+        });
+      });
+
+      await saveAttendanceAction(itemsToSave, userRole);
+      setSaveSuccessMsg("Attendance saved & synced live to all Tenant apps!");
+      setTimeout(() => setSaveSuccessMsg(null), 4000);
     });
   };
 
   return (
-    <div className="space-y-3.5">
-      {/* 1. Top Attendance Summary Bar */}
-      <div className="p-3 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs flex items-center justify-between gap-2">
+    <div className="space-y-3.5 pb-20">
+      {/* 1. Daily Roll Call Summary Header Card */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex items-center justify-between gap-2">
         <div>
-          <div className="text-xs font-extrabold text-[#0F172A]">Daily Bed Roll Call</div>
-          <div className="text-[10px] text-[#64748B]">Auto-detects active Day & Night passes</div>
+          <div className="text-xs font-extrabold text-slate-900">Daily Bed Roll Call</div>
+          <div className="text-[10px] text-slate-400">Auto-detects active Day & Night passes</div>
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] font-extrabold tabular-nums">
-          <span className="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">
-            {presentCnt} P
+        <div className="flex items-center gap-1 text-[10px] font-extrabold tabular-nums">
+          <span className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+            {presentCnt} Present
           </span>
-          <span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-600 border border-amber-500/30">
+          <span className="px-2 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
             {passCnt} Pass
           </span>
-          <span className="px-2 py-1 rounded-lg bg-rose-500/15 text-rose-500 border border-rose-500/30">
-            {absentCnt} A
+          <span className="px-2 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200">
+            {absentCnt} Absent
           </span>
         </div>
       </div>
 
-      {/* Building Filter Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto phone-scroll pb-0.5">
+      {/* 2. Building Switcher Tabs */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
         {!isAdminScoped && (
           <button
             onClick={() => setSelectedBuildingId("all")}
             className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold shrink-0 border transition ${
               selectedBuildingId === "all"
-                ? "bg-[#4F46E5] text-white border-transparent shadow-xs"
-                : "bg-white text-[#0F172A] border-[#E2E8F0]"
+                ? "bg-indigo-600 text-white border-transparent shadow-xs"
+                : "bg-white text-slate-800 border-slate-200"
             }`}
           >
-            All Buildings ({initialBuildings.length})
+            All Buildings
           </button>
         )}
 
@@ -190,45 +208,36 @@ export function AttendanceSheet({
               }}
               className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold shrink-0 flex items-center gap-1 border transition ${
                 selected
-                  ? "bg-[#4F46E5] text-white border-transparent shadow-xs"
+                  ? "bg-indigo-600 text-white border-transparent shadow-xs"
                   : locked
-                  ? "opacity-50 bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0]"
-                  : "bg-white text-[#0F172A] border-[#E2E8F0]"
+                  ? "opacity-50 bg-slate-100 text-slate-400 border-slate-200"
+                  : "bg-white text-slate-800 border-slate-200"
               }`}
             >
-              <span>{b.building_name.split(" - ")[0]}</span>
-              {locked && <Lock className="w-3 h-3 text-[#64748B]" />}
+              <span>{b.building_name}</span>
+              {locked && <Lock className="w-3 h-3 text-slate-400" />}
             </button>
           );
         })}
       </div>
 
-      {saveSuccessMsg && (
-        <div className="p-3 rounded-2xl bg-slate-900 text-white text-xs font-semibold flex items-center gap-2 animate-fade-in shadow-md">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>{saveSuccessMsg}</span>
-        </div>
-      )}
-
-      {/* 2. Building Sections -> Floor Sections -> All Occupied Beds */}
+      {/* 3. Building Sections -> Floor Sections -> Occupied Bed Rows */}
       <div className="space-y-3.5">
         {filteredBuildings.map((building) => (
           <div
             key={building.building_id}
-            className="rounded-2xl border border-[#E2E8F0] bg-white shadow-xs overflow-hidden"
+            className="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden"
           >
             {/* Building Header */}
             <div className="px-3.5 py-2.5 bg-slate-900 text-white flex items-center justify-between">
-              <span className="text-xs font-extrabold">
-                {building.building_name} ({building.gender_type})
-              </span>
+              <span className="text-xs font-extrabold">{building.building_name}</span>
               <span className="text-[10px] text-slate-300">
-                {building.floors.length} Floors
+                {building.floors.length} Floors • {building.gender_type}
               </span>
             </div>
 
             {/* Floors List */}
-            <div className="p-3 space-y-3">
+            <div className="p-3.5 space-y-3">
               {building.floors.map((floor) => {
                 const flPresent = floor.beds.filter(
                   (bed) => (bedStatuses[bed.bed_id]?.status || bed.status) === "present"
@@ -237,16 +246,17 @@ export function AttendanceSheet({
                 return (
                   <div key={floor.floor_id} className="space-y-2">
                     {/* Floor Sub-header */}
-                    <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0]">
-                      <span className="text-[11px] font-extrabold text-[#0F172A]">
+                    <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                      <span className="text-[11px] font-extrabold text-slate-900">
                         {floor.floor_name}{" "}
-                        <span className="text-emerald-600">
+                        <span className="text-emerald-700">
                           ({flPresent}/{floor.beds.length} Present)
                         </span>
                       </span>
                       <button
+                        type="button"
                         onClick={() => handleMarkFloorRemainingPresent(floor.beds)}
-                        className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 text-[9.5px] font-extrabold border border-emerald-500/30 active:scale-95 transition"
+                        className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[9.5px] font-extrabold border border-emerald-200 active:scale-95 transition"
                       >
                         Mark Remaining Present
                       </button>
@@ -254,7 +264,7 @@ export function AttendanceSheet({
 
                     {/* Beds on Floor */}
                     {floor.beds.length === 0 ? (
-                      <p className="text-[10.5px] text-[#64748B] px-2">
+                      <p className="text-[10.5px] text-slate-400 px-2">
                         No occupied beds on this floor.
                       </p>
                     ) : (
@@ -265,14 +275,14 @@ export function AttendanceSheet({
                         return (
                           <div
                             key={bed.bed_id}
-                            className="p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2"
+                            className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-2"
                           >
                             <div className="flex items-center justify-between">
                               <div>
-                                <div className="text-xs font-extrabold text-[#0F172A]">
+                                <div className="text-xs font-extrabold text-slate-900">
                                   {bed.tenant_name}
                                 </div>
-                                <div className="text-[10px] text-[#64748B]">
+                                <div className="text-[10px] text-slate-400">
                                   Room {bed.room_number} • {bed.bed_name}
                                 </div>
                               </div>
@@ -280,8 +290,8 @@ export function AttendanceSheet({
                                 <span
                                   className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
                                     bed.active_pass_type === "day_pass"
-                                      ? "bg-amber-500/20 text-amber-700 border border-amber-500/30"
-                                      : "bg-indigo-500/20 text-indigo-600 border border-indigo-500/30"
+                                      ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                      : "bg-indigo-50 text-indigo-700 border border-indigo-200"
                                   }`}
                                 >
                                   Active {bed.active_pass_type === "day_pass" ? "Day Pass" : "Night Pass"}
@@ -296,8 +306,8 @@ export function AttendanceSheet({
                                 onClick={() => handleStatusChange(bed.bed_id, bed.tenant_id, "present")}
                                 className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition ${
                                   st === "present"
-                                    ? "bg-emerald-500 text-white border-emerald-500 shadow-xs"
-                                    : "bg-white text-[#64748B] border-[#E2E8F0] hover:text-[#0F172A]"
+                                    ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                                    : "bg-white text-slate-600 border-slate-200 hover:text-slate-900"
                                 }`}
                               >
                                 Present
@@ -308,8 +318,8 @@ export function AttendanceSheet({
                                 onClick={() => handleStatusChange(bed.bed_id, bed.tenant_id, "absent")}
                                 className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition ${
                                   st === "absent"
-                                    ? "bg-rose-500 text-white border-rose-500 shadow-xs"
-                                    : "bg-white text-[#64748B] border-[#E2E8F0] hover:text-[#0F172A]"
+                                    ? "bg-rose-600 text-white border-rose-600 shadow-xs"
+                                    : "bg-white text-slate-600 border-slate-200 hover:text-slate-900"
                                 }`}
                               >
                                 Absent
@@ -321,7 +331,7 @@ export function AttendanceSheet({
                                 className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition ${
                                   st === "day_pass"
                                     ? "bg-amber-500 text-slate-950 border-amber-500 shadow-xs"
-                                    : "bg-white text-[#64748B] border-[#E2E8F0] hover:text-[#0F172A]"
+                                    : "bg-white text-slate-600 border-slate-200 hover:text-slate-900"
                                 }`}
                               >
                                 Day Pass
@@ -332,8 +342,8 @@ export function AttendanceSheet({
                                 onClick={() => handleStatusChange(bed.bed_id, bed.tenant_id, "night_pass")}
                                 className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition ${
                                   st === "night_pass"
-                                    ? "bg-[#4F46E5] text-white border-[#4F46E5] shadow-xs"
-                                    : "bg-white text-[#64748B] border-[#E2E8F0] hover:text-[#0F172A]"
+                                    ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
+                                    : "bg-white text-slate-600 border-slate-200 hover:text-slate-900"
                                 }`}
                               >
                                 Night Pass
@@ -351,16 +361,28 @@ export function AttendanceSheet({
         ))}
       </div>
 
-      {/* 3. Sticky Save & Sync Attendance Button */}
-      <button
-        type="button"
-        disabled={isPending}
-        onClick={handleSaveAndSync}
-        className="w-full py-3 rounded-2xl bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs font-extrabold shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-1.5 active:scale-98 transition disabled:opacity-50"
-      >
-        <CheckCircle2 className="w-4 h-4" />
-        <span>{isPending ? "Syncing to Tenant Apps..." : "Save & Sync Attendance to Tenant Apps"}</span>
-      </button>
+      {/* Save Success Toast */}
+      {saveSuccessMsg && (
+        <div className="p-3 rounded-2xl bg-slate-900 text-white text-xs font-semibold flex items-center justify-between gap-2 shadow-lg animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{saveSuccessMsg}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Sticky Save & Sync Attendance Bottom Bar */}
+      <div className="sticky bottom-20 z-20 pt-2">
+        <button
+          type="button"
+          onClick={handleSaveAndSync}
+          disabled={isPending}
+          className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-1.5 transition active:scale-[0.99]"
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          <span>{isPending ? "Syncing to Student Apps..." : "Save & Sync Attendance to Tenant Apps"}</span>
+        </button>
+      </div>
     </div>
   );
 }

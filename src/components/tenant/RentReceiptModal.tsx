@@ -22,6 +22,7 @@ interface RentReceiptModalProps {
   invoiceNumber?: string;
   amount: string;
   dueDate: string;
+  triggerButton?: React.ReactNode;
 }
 
 export function RentReceiptModal({
@@ -33,6 +34,7 @@ export function RentReceiptModal({
   invoiceNumber = "INV-2026-11-001",
   amount,
   dueDate,
+  triggerButton,
 }: RentReceiptModalProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -42,14 +44,20 @@ export function RentReceiptModal({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
-      >
-        <Receipt className="w-4 h-4 text-indigo-600" />
-        View & Download Official PDF Receipt
-      </button>
+      {triggerButton ? (
+        <div onClick={() => setIsOpen(true)} className="cursor-pointer">
+          {triggerButton}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+        >
+          <Receipt className="w-4 h-4 text-indigo-600" />
+          View & Download Official PDF Receipt
+        </button>
+      )}
 
       {isOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 print:p-0 print:bg-white">
