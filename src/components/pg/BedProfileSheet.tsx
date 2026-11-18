@@ -98,10 +98,10 @@ export function BedProfileSheet({
   // Build WhatsApp Message
   const getWhatsappMessage = () => {
     if (whatsappTemplate === "rent_reminder") {
-      return `Namaste ${t.name}, ShunyOS Stay (${building.name}, Room ${room.number}) ka aapka rent ₹${room.rent.toLocaleString("en-IN")} due hai. Kripya UPI ID royalstaypg@okicici par pay karein.`;
+      return `Namaste ${t.name}, Shuny Stays (${building.name}, Room ${room.number}) ka aapka rent ₹${room.rent.toLocaleString("en-IN")} due hai. Kripya UPI ID royalstaypg@okicici par pay karein.`;
     }
     if (whatsappTemplate === "welcome_info") {
-      return `Welcome ${t.name} to ShunyOS Stay (${building.name}, Room ${room.number})! Wi-Fi: ShunyOS_5G | Pass: ShunyOS@2026.`;
+      return `Welcome ${t.name} to Shuny Stays (${building.name}, Room ${room.number})! Wi-Fi: ShunyStays_5G | Pass: ShunyStays@2026.`;
     }
     return customMsg;
   };

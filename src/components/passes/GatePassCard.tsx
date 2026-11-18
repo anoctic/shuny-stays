@@ -66,7 +66,7 @@ export function GatePassCard({ pass, viewerRole }: GatePassCardProps) {
       `Destination: ${pass.destination || "City Outing"}\n` +
       `Status: APPROVED & ACTIVE ✅\n` +
       `Emergency Contact: ${pass.emergency_phone || "Hostel Desk"}\n\n` +
-      `_Powered by ShunyOS Cloud PG OS_`
+      `_Powered by Shuny Stays Software_`
     );
     return `https://wa.me/?text=${text}`;
   };

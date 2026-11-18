@@ -25,7 +25,7 @@ export default async function SuperAdminOrganizationsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 text-[10px] font-bold mb-1">
-            <Sparkles className="w-3 h-3" /> ShunyOS Multi-Tenancy
+            <Sparkles className="w-3 h-3" /> Shuny Stays Multi-Tenancy
           </div>
           <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             PG Brands & Tenant Scopes

@@ -11,6 +11,7 @@ import {
   Home,
   Crown,
 } from "lucide-react";
+import { RoofAndZeroIcon } from "@/components/common/ShunyStaysLogo";
 import { signInAction, switchDemoPersonaAction } from "@/app/actions/auth";
 
 export default function LoginPage() {
@@ -36,12 +37,13 @@ export default function LoginPage() {
       {/* Sticky Translucent Header matching Blueprint */}
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#4F46E5] text-white flex items-center justify-center font-black text-xs shadow-xs">
-            <Building2 className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200/80 text-[#4F46E5] flex items-center justify-center font-black text-xs shadow-xs">
+            <RoofAndZeroIcon className="w-4.5 h-4.5" color="#4F46E5" />
           </div>
           <div>
-            <div className="text-xs font-black tracking-tight text-[#0F172A]">
-              Shuny<span className="text-[#4F46E5]">OS</span>
+            <div className="text-xs font-black tracking-tight">
+              <span className="text-[#0F172A]">Shuny</span>
+              <span className="text-[#4F46E5] ml-0.5">Stays</span>
             </div>
             <div className="text-[10px] font-semibold text-[#64748B]">
               Direct Sign-In Portal
@@ -218,7 +220,7 @@ export default function LoginPage() {
       <footer className="text-center pt-2 pb-3 border-t border-slate-200/80">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200/80 text-slate-500 text-[10.5px] font-semibold shadow-2xs">
           <span className="w-1.5 h-1.5 rounded-full bg-[#4F46E5]" />
-          <span>Powered by <strong className="text-slate-900 font-extrabold">ShunyOS</strong></span>
+          <span>Powered by <strong className="text-slate-900 font-extrabold">Shuny Stays Software</strong></span>
         </div>
       </footer>
     </div>

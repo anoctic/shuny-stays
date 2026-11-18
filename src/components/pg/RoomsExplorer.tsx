@@ -216,7 +216,7 @@ export function RoomsExplorer({
                     </span>
                   </div>
                   <p className="text-[10px] text-slate-300 truncate mt-0.5">
-                    ShunyOS Managed • {building.floors.length} Floors
+                    Shuny Stays Managed • {building.floors.length} Floors
                   </p>
                 </div>
 

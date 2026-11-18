@@ -269,7 +269,7 @@ export function SuperAdminDashboard({
           <div className="grid grid-cols-2 gap-2.5">
             <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
               <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
-                ShunyOS MRR
+                Shuny Stays MRR
               </div>
               <div className="text-xl font-extrabold text-indigo-600 tabular-nums mt-1">
                 ₹{totalMrr.toLocaleString("en-IN")}
@@ -550,7 +550,7 @@ export function SuperAdminDashboard({
       {activeTab === "billing" && (
         <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-sm">
           <h3 className="text-xs font-extrabold text-slate-900">
-            ShunyOS SaaS Subscription Tiers
+            Shuny Stays SaaS Subscription Tiers
           </h3>
 
           <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
@@ -583,7 +583,7 @@ export function SuperAdminDashboard({
       <footer className="pt-3 pb-1 text-center space-y-1">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-slate-500 text-[11px] font-semibold border border-slate-200 shadow-2xs">
           <Crown className="w-3 h-3 text-purple-600" />
-          <span>ShunyOS SaaS Engine</span>
+          <span>Shuny Stays SaaS Engine</span>
           <span className="text-slate-400">• v2.4 Production</span>
         </div>
       </footer>

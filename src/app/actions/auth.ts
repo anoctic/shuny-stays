@@ -9,7 +9,7 @@ import { UserRole } from "@/types/schema.types";
 
 /**
  * Unified Direct Credential Sign-In (Phone Number or Email + Password)
- * Normalizes 10-digit phone to ${cleanPhone}@login.shunyos.app when email is omitted.
+ * Normalizes 10-digit phone to ${cleanPhone}@login.shunystays.app when email is omitted.
  * Auto-redirects by profiles.role:
  * - super_admin -> /super-admin
  * - owner / admin -> /dashboard
@@ -25,14 +25,14 @@ export async function signInAction(formData: FormData) {
 
   // Normalize phone or email:
   // If input contains '@', treat as email
-  // Otherwise, extract 10 digits and use ${cleanPhone}@login.shunyos.app
+  // Otherwise, extract 10 digits and use ${cleanPhone}@login.shunystays.app
   let emailToUse = loginIdentifier.trim().toLowerCase();
   if (!emailToUse.includes("@")) {
     const cleanPhone = emailToUse.replace(/\D/g, "").slice(-10);
     if (cleanPhone.length < 10) {
       return { error: "Please enter a valid 10-digit mobile number or email address." };
     }
-    emailToUse = `${cleanPhone}@login.shunyos.app`;
+    emailToUse = `${cleanPhone}@login.shunystays.app`;
   }
 
   const supabase = await createClient();

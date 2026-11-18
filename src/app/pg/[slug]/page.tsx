@@ -34,7 +34,7 @@ export default async function WhiteLabelPgPage({
 
   // Dynamic WhatsApp enquiry message template
   const waMessage = encodeURIComponent(
-    `Hello ${pg.name}, I am interested in checking bed availability at your property via ${pg.name} Resident App (Powered by ShunyOS).`
+    `Hello ${pg.name}, I am interested in checking bed availability at your property via ${pg.name} Resident App (Powered by Shuny Stays Software).`
   );
   const waLink = `https://wa.me/${pg.contact_phone.replace(/[^0-9]/g, "")}?text=${waMessage}`;
 
@@ -215,18 +215,12 @@ export default async function WhiteLabelPgPage({
         </div>
       </div>
 
-      {/* SUBTLE BRAND FOOTER: Powered by ShunyOS */}
-      <footer className="pt-6 pb-2 text-center space-y-1 border-t border-slate-200/60 dark:border-slate-800/60 mt-auto">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[11px] font-semibold">
-          <Sparkles className="w-3 h-3 text-purple-500" />
-          <span>Powered by</span>
-          <span className="font-extrabold text-slate-900 dark:text-white tracking-tight">
-            ShunyOS
-          </span>
+      {/* SUBTLE BRAND FOOTER: Powered by Shuny Stays Software */}
+      <footer className="pt-6 pb-2 text-center space-y-1 border-t border-slate-200/60 mt-auto">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200/80 text-slate-500 text-[11px] font-semibold shadow-2xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#4F46E5]" />
+          <span>Powered by <strong className="text-slate-900 font-extrabold">Shuny Stays Software</strong></span>
         </div>
-        <p className="text-[10px] text-slate-400">
-          Cloud-Native Multi-Tenant PG & Hostel Operating System
-        </p>
       </footer>
     </div>
   );

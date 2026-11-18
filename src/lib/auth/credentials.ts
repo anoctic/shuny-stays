@@ -56,16 +56,16 @@ export async function createOrUpdateCredentials(
   const cleanPhone = normalizePhone(phone);
   const password = generateReadablePassword();
 
-  // Normalize login email: if email is omitted or empty, use ${cleanPhone}@login.shunyos.app
+  // Normalize login email: if email is omitted or empty, use ${cleanPhone}@login.shunystays.app
   let loginEmail: string;
   if (email && email.trim().length > 0 && email.includes("@")) {
     loginEmail = email.trim().toLowerCase();
   } else if (cleanPhone.length >= 10) {
-    loginEmail = `${cleanPhone}@login.shunyos.app`;
+    loginEmail = `${cleanPhone}@login.shunystays.app`;
   } else {
     // Fallback if neither phone nor email provided
     const randomCode = Math.random().toString(36).substring(2, 8);
-    loginEmail = `user.${randomCode}@login.shunyos.app`;
+    loginEmail = `user.${randomCode}@login.shunystays.app`;
   }
 
   const loginId = cleanPhone || email || loginEmail;

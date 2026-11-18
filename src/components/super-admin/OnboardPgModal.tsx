@@ -93,7 +93,7 @@ export function OnboardPgModal({ triggerButton }: { triggerButton?: React.ReactN
       if (res?.error) {
         setError(res.error);
       } else if (res?.success) {
-        setSuccess(`Successfully onboarded "${res.pg.name}" on ShunyOS!`);
+        setSuccess(`Successfully onboarded "${res.pg.name}" on Shuny Stays!`);
         if (res.credentials) {
           setCreatedCreds(res.credentials);
         } else {
@@ -244,7 +244,7 @@ export function OnboardPgModal({ triggerButton }: { triggerButton?: React.ReactN
                   <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md">
                     {subscriptionTier}
                   </span>
-                  <p className="text-[9px] text-white/70 mt-1">Powered by ShunyOS</p>
+                  <p className="text-[9px] text-white/70 mt-1">Powered by Shuny Stays Software</p>
                 </div>
               </div>
             </div>
@@ -274,7 +274,7 @@ export function OnboardPgModal({ triggerButton }: { triggerButton?: React.ReactN
                 </label>
                 <div className="flex items-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs">
                   <span className="text-slate-400 font-mono select-none mr-1">
-                    https://shunyos.app/pg/
+                    https://shunystays.app/pg/
                   </span>
                   <input
                     type="text"

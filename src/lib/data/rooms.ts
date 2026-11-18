@@ -1,6 +1,6 @@
 // ==============================================================================
-// ShunyOS Rooms, Buildings, Floors, Beds & Ledger Data Store
-// Connects to Supabase tables with live in-memory store matching shunyos-ui.html
+// Shuny Stays Rooms, Buildings, Floors, Beds & Ledger Data Store
+// Connects to Supabase tables with live in-memory store matching UI design blueprint
 // ==============================================================================
 
 import { createClient } from "@/lib/supabase/server";
@@ -174,7 +174,7 @@ export interface MessMenu {
   baseYes: number;
 }
 
-// In-Memory Global State for ShunyOS Prototype Data
+// In-Memory Global State for Shuny Stays Prototype Data
 let memoryBuildings: BuildingItem[] = [
   {
     id: "b-a",

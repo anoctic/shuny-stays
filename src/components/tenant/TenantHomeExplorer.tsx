@@ -662,18 +662,12 @@ export function TenantHomeExplorer({
         </div>
       )}
 
-      {/* 7. Subtle White-Label Footer: "Powered by ShunyOS" */}
+      {/* 7. Subtle White-Label Footer: "Powered by Shuny Stays Software" */}
       <footer className="pt-3 pb-1 text-center space-y-1">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-slate-500 text-[11px] font-semibold border border-slate-200 shadow-2xs">
-          <Sparkles className="w-3 h-3 text-indigo-500" />
-          <span>Powered by</span>
-          <span className="font-extrabold text-slate-900 tracking-tight">
-            ShunyOS
-          </span>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#4F46E5]" />
+          <span>Powered by <strong className="text-slate-900 font-extrabold">Shuny Stays Software</strong></span>
         </div>
-        <p className="text-[10px] text-slate-400">
-          Cloud-Native Multi-Tenant PG & Hostel Operating System
-        </p>
       </footer>
     </div>
   );

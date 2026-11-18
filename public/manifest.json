@@ -1,11 +1,11 @@
 {
-  "name": "ShunyOS — Multi-Tenant PG & Hostel Operating System",
-  "short_name": "ShunyOS",
+  "name": "Shuny Stays — Multi-Tenant PG & Hostel Operating System",
+  "short_name": "Shuny Stays",
   "description": "Mobile-first cloud operating system for Paying Guest, Hostel & Student Living Accommodation",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#090d16",
-  "theme_color": "#2563eb",
+  "background_color": "#F8FAFC",
+  "theme_color": "#4F46E5",
   "orientation": "portrait",
   "icons": [
     {

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { LogOut, Sparkles, Building2, Ticket, PhoneCall, ChevronDown } from "lucide-react";
+import { RoofAndZeroIcon } from "@/components/common/ShunyStaysLogo";
 import { UserRole, Building } from "@/types/schema.types";
 import { BuildingSwitcher } from "./BuildingSwitcher";
 import { signOutAction, switchDemoPersonaAction } from "@/app/actions/auth";
@@ -80,28 +81,32 @@ export function MobileTopHeader({
             </div>
           )}
           {role === "super_admin" && (
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
-              S
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200/80 text-[#4F46E5] flex items-center justify-center shrink-0 shadow-xs">
+              <RoofAndZeroIcon className="w-4.5 h-4.5" color="#4F46E5" />
             </div>
           )}
 
           <div className="min-w-0">
             <div className="text-xs font-extrabold text-[#0F172A] truncate">
-              {role === "super_admin"
-                ? "ShunyOS Super Admin"
-                : role === "tenant"
-                ? pgName || "Royal Stay PG"
-                : role === "admin"
-                ? `Warden ${fullName}`
-                : pgName || "ShunyOS Properties"}
+              {role === "super_admin" ? (
+                <span>
+                  Shuny<span className="text-[#4F46E5]">Stays</span> Super Admin
+                </span>
+              ) : role === "tenant" ? (
+                pgName || "Royal Stay PG"
+              ) : role === "admin" ? (
+                `Warden ${fullName}`
+              ) : (
+                pgName || "Shuny Stays Properties"
+              )}
             </div>
             <div className="text-[10px] font-semibold text-[#64748B] truncate">
               {role === "super_admin"
                 ? "SaaS Platform Control"
                 : role === "owner"
-                ? "Owner • ShunyOS"
+                ? "Owner • Shuny Stays"
                 : role === "admin"
-                ? "Scoped Admin • ShunyOS"
+                ? "Scoped Admin • Shuny Stays"
                 : `${fullName} • Tenant`}
             </div>
           </div>

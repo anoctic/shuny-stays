@@ -18,13 +18,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ShunyOS — Multi-Tenant PG & Hostel Operating System",
+  title: "Shuny Stays — Multi-Tenant PG & Hostel Operating System",
   description: "Cloud-native PG, hostel & co-living property management operating system with 5-level hierarchy, white-label branding, and role-based access.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "ShunyOS",
+    title: "Shuny Stays",
   },
   icons: {
     icon: "/icons/icon-192.svg",

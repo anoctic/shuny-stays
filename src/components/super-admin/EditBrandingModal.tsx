@@ -161,7 +161,7 @@ export function EditBrandingModal({ pg }: EditBrandingModalProps) {
                 <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md">
                   {subscriptionTier}
                 </span>
-                <p className="text-[9px] text-white/70 mt-1">Powered by ShunyOS</p>
+                <p className="text-[9px] text-white/70 mt-1">Powered by Shuny Stays Software</p>
               </div>
             </div>
 

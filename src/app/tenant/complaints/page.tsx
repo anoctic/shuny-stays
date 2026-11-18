@@ -218,12 +218,9 @@ export default function TenantComplaintsPage() {
 
       {/* Subtle Brand Footer */}
       <footer className="pt-3 pb-1 text-center space-y-1">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[11px] font-semibold border border-slate-200/50 dark:border-slate-700/50">
-          <Sparkles className="w-3 h-3 text-indigo-500" />
-          <span>Powered by</span>
-          <span className="font-extrabold text-slate-900 dark:text-white tracking-tight">
-            ShunyOS
-          </span>
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-slate-500 text-[11px] font-semibold border border-slate-200 shadow-2xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#4F46E5]" />
+          <span>Powered by <strong className="text-slate-900 font-extrabold">Shuny Stays Software</strong></span>
         </div>
       </footer>
     </div>

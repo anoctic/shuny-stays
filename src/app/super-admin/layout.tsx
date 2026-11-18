@@ -25,7 +25,7 @@ export default async function SuperAdminLayout({
       <MobileTopHeader
         fullName={session.full_name}
         role="super_admin"
-        pgName="ShunyOS Governance (All Hosted PGs)"
+        pgName="Shuny Stays Governance (All Hosted PGs)"
       />
       <main className="flex-1 p-4 pb-24 overflow-y-auto">{children}</main>
       <MobileBottomNav role="super_admin" />

@@ -35,7 +35,7 @@ export function CredentialsGeneratedCard({
   password,
   phone,
   email,
-  pgName = "ShunyOS Property",
+  pgName = "Shuny Stays Property",
   roomInfo,
   onClose,
   className = "",
@@ -55,9 +55,9 @@ export function CredentialsGeneratedCard({
 
   // Generate WhatsApp message
   const waText = encodeURIComponent(
-    `*ShunyOS Access Credentials*\n` +
+    `*Shuny Stays Access Credentials*\n` +
       `Hello ${name},\n` +
-      `Your ${roleLabel} account on ShunyOS for *${pgName}* has been generated:\n\n` +
+      `Your ${roleLabel} account on Shuny Stays for *${pgName}* has been generated:\n\n` +
       `🔑 *Login ID / Phone:* ${loginId}\n` +
       `🔒 *Password:* ${password}\n` +
       (roomInfo ? `🛏 *Bed / Room:* ${roomInfo}\n` : "") +
@@ -71,7 +71,7 @@ export function CredentialsGeneratedCard({
 
   const copyText = () => {
     const textToCopy =
-      `ShunyOS Access Credentials\n` +
+      `Shuny Stays Access Credentials\n` +
       `Name: ${name}\n` +
       `Role: ${roleLabel}\n` +
       `Login ID: ${loginId}\n` +

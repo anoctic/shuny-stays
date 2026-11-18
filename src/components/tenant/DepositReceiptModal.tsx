@@ -231,13 +231,12 @@ export function DepositReceiptModal({
 
               {/* Subtle White-Label Footer */}
               <div className="text-center pt-2 border-t border-slate-100 space-y-1">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-semibold">
-                  <Sparkles className="w-3 h-3 text-indigo-600" />
-                  <span>Powered by</span>
-                  <span className="font-black text-slate-900 tracking-tight">ShunyOS</span>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-slate-500 text-[10px] font-semibold shadow-2xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#4F46E5]" />
+                  <span>Powered by <strong className="text-slate-900 font-extrabold">Shuny Stays Software</strong></span>
                 </div>
                 <p className="text-[9px] text-slate-400">
-                  Official computer-generated deposit receipt issued via ShunyOS Cloud PG Engine.
+                  Official computer-generated deposit receipt issued via Shuny Stays Cloud PG Engine.
                 </p>
               </div>
             </div>

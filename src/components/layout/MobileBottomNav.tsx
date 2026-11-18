@@ -54,7 +54,7 @@ function MobileBottomNavInner({
     return null;
   }
 
-  // Exact 4-tab configurations per role from ShunyOS Blueprint
+  // Exact 4-tab configurations per role from Shuny Stays Blueprint
   const ownerTabs: NavTab[] = [
     {
       id: "rooms",

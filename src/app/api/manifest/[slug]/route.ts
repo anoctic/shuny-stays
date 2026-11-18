@@ -16,7 +16,7 @@ export async function GET(
   const manifest = {
     name: `${brandName} — Resident App`,
     short_name: brandName.length > 12 ? brandName.slice(0, 12) : brandName,
-    description: `Official resident mobile PWA for ${brandName}. Powered by ShunyOS.`,
+    description: `Official resident mobile PWA for ${brandName}. Powered by Shuny Stays.`,
     start_url: `/pg/${slug}`,
     scope: `/pg/${slug}`,
     display: "standalone",
