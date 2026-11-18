@@ -13,6 +13,8 @@ import { getPassesForTenant } from "@/lib/data/gate-passes";
 import { getPgById } from "@/lib/data/pgs";
 import { GatePassCard } from "@/components/passes/GatePassCard";
 import { RequestPassModal } from "@/components/passes/RequestPassModal";
+
+export const runtime = "edge";
 import { TenantIdNoticeView } from "@/components/tenant/TenantIdNoticeView";
 
 export default async function TenantPassesPage() {

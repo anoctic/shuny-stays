@@ -2,6 +2,8 @@ import { getAllBroadcasts } from "@/lib/data/broadcasts";
 import { getAllPgs } from "@/lib/data/pgs";
 import { SuperAdminDashboard } from "@/components/super-admin/SuperAdminDashboard";
 
+export const runtime = "edge";
+
 export default async function SuperAdminPage({
   searchParams,
 }: {

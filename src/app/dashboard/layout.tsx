@@ -6,6 +6,8 @@ import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { Building } from "@/types/schema.types";
 
+export const runtime = "edge";
+
 export default async function DashboardLayout({
   children,
 }: {

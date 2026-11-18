@@ -2,6 +2,8 @@ import { SqlConsole } from "@/components/postgres/SqlConsole";
 import { Database, ShieldCheck, Layers, Terminal } from "lucide-react";
 import { MOCK_PG_TABLES } from "@/lib/mock-data";
 
+export const runtime = "edge";
+
 export default function SuperAdminDatabasePage() {
   return (
     <div className="space-y-8">

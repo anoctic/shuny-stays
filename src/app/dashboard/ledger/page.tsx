@@ -8,6 +8,8 @@ import {
 } from "@/lib/data/rooms";
 import { LedgerExplorer } from "@/components/ledger/LedgerExplorer";
 
+export const runtime = "edge";
+
 export default async function LedgerPage() {
   const session = await getCurrentUserSession();
   const buildings = await getAllBuildings();

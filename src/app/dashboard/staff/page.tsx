@@ -8,6 +8,8 @@ import {
 import { getPassesForManagement } from "@/lib/data/gate-passes";
 import { OpsAndStaffExplorer } from "@/components/ops/OpsAndStaffExplorer";
 
+export const runtime = "edge";
+
 export default async function StaffPage() {
   const session = await getCurrentUserSession();
   const staffList = await getStaffList();

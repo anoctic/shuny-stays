@@ -1,5 +1,7 @@
 import { Utensils, Clock } from "lucide-react";
 
+export const runtime = "edge";
+
 export default function TenantMessPage() {
   const menu = [
     { meal: "Breakfast", time: "7:30 AM - 9:30 AM", items: "Aloo Paratha, Curd, Pickle, Tea / Coffee" },

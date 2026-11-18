@@ -4,6 +4,8 @@ import "./globals.css";
 import { IOSSmartBanner } from "@/components/pwa/IOSSmartBanner";
 import { StartupSplashScreen } from "@/components/common/StartupSplashScreen";
 
+export const runtime = "edge";
+
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
   subsets: ["latin"],

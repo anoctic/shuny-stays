@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentUserSession } from "@/lib/auth/session";
 
+export const runtime = "edge";
+
 export default async function RootPage() {
   const session = await getCurrentUserSession();
 

@@ -3,6 +3,8 @@ import { getCurrentUserSession } from "@/lib/auth/session";
 import { getTodayAttendanceSheet } from "@/lib/data/attendance";
 import { AttendanceSheet } from "@/components/attendance/AttendanceSheet";
 
+export const runtime = "edge";
+
 export default async function AttendancePage() {
   const session = await getCurrentUserSession();
   const cookieStore = await cookies();

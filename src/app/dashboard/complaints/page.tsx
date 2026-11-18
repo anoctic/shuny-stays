@@ -1,5 +1,7 @@
 import { AlertCircle, Clock, CheckCircle2 } from "lucide-react";
 
+export const runtime = "edge";
+
 export default function ComplaintsPage() {
   const complaints = [
     { title: "WiFi High Ping in Room 101", category: "WiFi", room: "Room 101", status: "in_progress", priority: "medium" },

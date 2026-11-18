@@ -4,6 +4,8 @@ import { getCurrentUserSession } from "@/lib/auth/session";
 import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 
+export const runtime = "edge";
+
 export default async function SuperAdminLayout({
   children,
 }: {

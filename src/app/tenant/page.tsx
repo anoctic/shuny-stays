@@ -11,6 +11,8 @@ import {
 } from "@/lib/data/rooms";
 import { TenantHomeExplorer } from "@/components/tenant/TenantHomeExplorer";
 
+export const runtime = "edge";
+
 export default async function TenantDashboardPage() {
   const session = await getCurrentUserSession();
   const broadcasts = await getActiveBroadcastsForRole("tenant");

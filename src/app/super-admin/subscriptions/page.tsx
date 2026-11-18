@@ -1,6 +1,8 @@
 import { CreditCard, CheckCircle2, AlertCircle, ArrowUpRight } from "lucide-react";
 import { DEMO_TENANTS } from "@/lib/tenant/constants";
 
+export const runtime = "edge";
+
 export default function SuperAdminSubscriptionsPage() {
   const tiers = [
     {

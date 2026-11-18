@@ -13,6 +13,8 @@ import {
 import { getAllPgs } from "@/lib/data/pgs";
 import { OnboardPgModal } from "@/components/super-admin/OnboardPgModal";
 import { EditBrandingModal } from "@/components/super-admin/EditBrandingModal";
+
+export const runtime = "edge";
 import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
 import { enterViewAsOrgAction, exitViewAsOrgAction } from "@/app/actions/auth";
 

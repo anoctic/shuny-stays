@@ -5,6 +5,8 @@ import { getPassesForManagement } from "@/lib/data/gate-passes";
 import { GatePassCard } from "@/components/passes/GatePassCard";
 import { RequestPassModal } from "@/components/passes/RequestPassModal";
 
+export const runtime = "edge";
+
 export default async function DashboardPassesPage() {
   const session = await getCurrentUserSession();
   const passes = await getPassesForManagement();

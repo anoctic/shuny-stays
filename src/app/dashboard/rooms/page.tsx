@@ -5,6 +5,8 @@ import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 import { ActiveBroadcastBanner } from "@/components/broadcasts/ActiveBroadcastBanner";
 import { RoomsExplorer } from "@/components/pg/RoomsExplorer";
 
+export const runtime = "edge";
+
 export default async function RoomsPage() {
   const session = await getCurrentUserSession();
   const buildings = await getAllBuildings();

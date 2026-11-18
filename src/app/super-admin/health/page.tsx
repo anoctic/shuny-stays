@@ -1,6 +1,8 @@
 import { Activity, ShieldCheck, Database, CheckCircle2, Server, Cpu } from "lucide-react";
 import { MOCK_CLUSTER_STATS, MOCK_PG_TABLES } from "@/lib/mock-data";
 
+export const runtime = "edge";
+
 export default function SuperAdminHealthPage() {
   return (
     <div className="space-y-8">
