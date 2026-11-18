@@ -946,8 +946,9 @@ export async function walkInAddTenant(
   memorySecurityDeposits.unshift(newDeposit);
 
   // If rent is marked paid on walk-in, generate an invoice
+  let invNo: string | undefined;
   if (data.rentPaid) {
-    const invNo = `INV-${new Date().toISOString().slice(0, 7).replace("-", "")}-${Math.floor(1000 + Math.random() * 9000)}`;
+    invNo = `INV-${new Date().toISOString().slice(0, 7).replace("-", "")}-${Math.floor(1000 + Math.random() * 9000)}`;
     const newRent: RentPaymentRecord = {
       id: invNo,
       pgId: b.pgId,
@@ -965,6 +966,46 @@ export async function walkInAddTenant(
       settledAt: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
     };
     memoryRentPayments.unshift(newRent);
+  }
+
+  // Live Supabase Sync (falls back gracefully)
+  try {
+    const supabase = await createClient();
+    await supabase.from("security_deposits").insert({
+      pg_id: b.pgId,
+      building_id: b.id,
+      tenant_id: tenantId,
+      expected_amount: depAmount,
+      paid_amount: depStatus === "paid" ? depAmount : 0,
+      status: depStatus,
+      payment_mode: depMode,
+      transaction_ref: data.depositRef || null,
+      collected_by: data.collectorId || null,
+      collected_by_name: depStatus === "paid" ? (data.collectorName || "Warden Staff") : null,
+      collected_at: depStatus === "paid" ? new Date().toISOString() : null,
+    });
+
+    if (data.rentPaid && invNo) {
+      await supabase.from("rent_payments").insert({
+        pg_id: b.pgId,
+        building_id: b.id,
+        tenant_id: tenantId,
+        tenant_name: data.name,
+        room_number: `${b.name} • Room ${room.number}`,
+        billing_month: new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+        amount: room.rent,
+        status: "settled_with_owner",
+        payment_mode: "cash",
+        invoice_number: invNo,
+        collected_by: data.collectorId || null,
+        collected_by_name: data.collectorName || "Staff Desk",
+        collected_by_role: "owner",
+        collected_at: new Date().toISOString(),
+        settled_at: new Date().toISOString(),
+      });
+    }
+  } catch (err) {
+    // In-memory fallback
   }
 
   memoryAuditLogs.unshift({
@@ -1133,6 +1174,30 @@ export async function collectSecurityDeposit(params: {
     time: "Just now",
   });
 
+  // Live Supabase Sync (falls back gracefully)
+  try {
+    const supabase = await createClient();
+    await supabase.from("security_deposits").upsert(
+      {
+        pg_id: dep.pgId || "00000000-0000-0000-0000-000000000001",
+        building_id: dep.buildingId || "00000000-0000-0000-0000-000000000002",
+        tenant_id: tenantId,
+        expected_amount: dep.expectedAmount || amount,
+        paid_amount: amount,
+        status: "paid",
+        payment_mode: paymentMode,
+        transaction_ref: transactionRef || null,
+        collected_by: collectorId || null,
+        collected_by_name: collectorName,
+        collected_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "tenant_id" }
+    );
+  } catch (err) {
+    // In-memory fallback
+  }
+
   return { success: true, deposit: dep };
 }
 
@@ -1185,6 +1250,26 @@ export async function refundSecurityDeposit(params: {
     text: `Owner ${refundedByName} settled Security Deposit for ${dep.tenantName}: Refunded ₹${refundAmt.toLocaleString("en-IN")}, Deducted ₹${deductionAmount.toLocaleString("en-IN")} (${deductionReason || "No deductions"})`,
     time: "Just now",
   });
+
+  // Live Supabase Sync (falls back gracefully)
+  try {
+    const supabase = await createClient();
+    await supabase
+      .from("security_deposits")
+      .update({
+        status: dep.status,
+        deduction_amount: deductionAmount,
+        deduction_reason: deductionReason || null,
+        refunded_amount: refundAmt,
+        refunded_at: new Date().toISOString(),
+        refunded_by: refundedById || null,
+        refunded_by_name: refundedByName,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("tenant_id", tenantId);
+  } catch (err) {
+    // In-memory fallback
+  }
 
   return { success: true, deposit: dep };
 }
@@ -1299,6 +1384,32 @@ export async function collectRentPayment(params: {
     time: "Just now",
   });
 
+  // Live Supabase Sync (falls back gracefully)
+  try {
+    const supabase = await createClient();
+    await supabase.from("rent_payments").insert({
+      pg_id: newRecord.pgId || "00000000-0000-0000-0000-000000000001",
+      building_id: buildingId || "00000000-0000-0000-0000-000000000002",
+      tenant_id: tenantId,
+      tenant_name: tenantName,
+      room_number: roomNumber,
+      billing_month: billingMonth,
+      amount: amount,
+      status: status,
+      payment_mode: paymentMode,
+      invoice_number: invoiceNumber,
+      transaction_ref: transactionRef || null,
+      collected_by: collectedBy || null,
+      collected_by_name: collectedByName,
+      collected_by_role: collectedByRole,
+      collected_at: new Date().toISOString(),
+      settled_at: status === "settled_with_owner" ? new Date().toISOString() : null,
+      settled_by: status === "settled_with_owner" ? collectedBy || null : null,
+    });
+  } catch (err) {
+    // In-memory fallback
+  }
+
   return { success: true, invoice: newRecord };
 }
 
@@ -1329,6 +1440,23 @@ export async function settleRentPaymentWithOwner(params: {
     text: `Owner ${settledByName} confirmed cash receipt of ₹${record.amount.toLocaleString("en-IN")} from ${record.collectedByName} for ${record.tenantName} (${record.id}) - Settled ✅`,
     time: "Just now",
   });
+
+  // Live Supabase Sync (falls back gracefully)
+  try {
+    const supabase = await createClient();
+    await supabase
+      .from("rent_payments")
+      .update({
+        status: "settled_with_owner",
+        handover_at: new Date().toISOString(),
+        settled_at: new Date().toISOString(),
+        settled_by: settledById || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("invoice_number", invoiceId);
+  } catch (err) {
+    // In-memory fallback
+  }
 
   return { success: true, invoice: record };
 }

@@ -236,12 +236,20 @@ export function LedgerExplorer({
                             ₹{item.amount.toLocaleString("en-IN")}
                           </span>
                           <span className="text-[10px] text-amber-600 font-bold block">
-                            Collected by {item.collectedByName}
+                            Pending Handover
                           </span>
                         </div>
                       </div>
 
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                      {/* Alert banner matching exact spec: Collected by [Admin] • Collect ₹X from Admin */}
+                      <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200/90 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-950">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span>Collected by {item.collectedByName} • Collect ₹{item.amount.toLocaleString("en-IN")} from {item.collectedByName}</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-1.5 flex items-center justify-between gap-2">
                         <span className="text-[10px] text-slate-400 flex items-center gap-1">
                           <Clock className="w-3 h-3 text-slate-400" />
                           {item.collectedAt}
@@ -251,7 +259,7 @@ export function LedgerExplorer({
                           type="button"
                           disabled={isProcessingId === item.id}
                           onClick={() => handleConfirmHandover(item)}
-                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 shadow-xs active:scale-95 transition"
+                          className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 shadow-xs active:scale-95 transition"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>{isProcessingId === item.id ? "Settling..." : "Confirm Cash Received"}</span>

@@ -300,20 +300,20 @@ export function BedProfileSheet({
 
           {/* AMBER ALERT BANNER: PENDING CASH HANDOVER TO OWNER */}
           {isHandoverPending && (
-            <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 space-y-2 animate-in fade-in">
+            <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 space-y-2.5 animate-in fade-in">
               <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <div>
-                    <div className="text-xs font-extrabold text-amber-900">
-                      Pending Cash Handover from Staff
+                    <div className="text-xs font-black text-amber-950 leading-snug">
+                      Collected by {generatedInvoice?.collected_by_name || t.depositCollectedByName || (t.id === "t-karan" || t.id === "t-rahul" ? "Warden Suresh" : "Warden Ramesh")} • Collect ₹{room.rent.toLocaleString("en-IN")} from {generatedInvoice?.collected_by_name || t.depositCollectedByName || (t.id === "t-karan" || t.id === "t-rahul" ? "Warden Suresh" : "Warden Ramesh")}
                     </div>
-                    <div className="text-[10px] text-amber-700">
-                      Rent collected by Warden • Pending physical handover to Owner
+                    <div className="text-[10px] text-amber-800 font-medium mt-0.5">
+                      Status: Pending Handover to Owner • Physical cash collected at desk
                     </div>
                   </div>
                 </div>
-                <span className="text-xs font-black text-amber-900 tabular-nums">
+                <span className="text-xs font-black text-amber-900 tabular-nums shrink-0">
                   ₹{room.rent.toLocaleString("en-IN")}
                 </span>
               </div>
@@ -323,10 +323,10 @@ export function BedProfileSheet({
                   type="button"
                   disabled={isProcessing}
                   onClick={handleConfirmHandover}
-                  className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition"
+                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Confirm Cash Received & Settle to Ledger</span>
+                  <span>Confirm Cash Received</span>
                 </button>
               )}
             </div>

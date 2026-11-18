@@ -61,15 +61,83 @@ CREATE INDEX IF NOT EXISTS idx_security_deposits_pg_id ON public.security_deposi
 CREATE INDEX IF NOT EXISTS idx_security_deposits_tenant_id ON public.security_deposits(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_security_deposits_status ON public.security_deposits(status);
 
--- 3. Enhance rent_payments table with 2-step collection & handover metadata
+-- 3. Rent Payments Table (Create if not exists & enhance with 2-step collection & handover metadata)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_status') THEN
+    CREATE TYPE public.payment_status AS ENUM ('pending', 'paid', 'verified', 'collected_by_admin', 'settled_with_owner', 'overdue', 'cancelled');
+  ELSE
+    ALTER TYPE public.payment_status ADD VALUE IF NOT EXISTS 'collected_by_admin';
+    ALTER TYPE public.payment_status ADD VALUE IF NOT EXISTS 'settled_with_owner';
+  END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS public.rent_payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pg_id UUID NOT NULL REFERENCES public.pgs(id) ON DELETE CASCADE,
+  building_id UUID REFERENCES public.buildings(id) ON DELETE SET NULL,
+  tenant_id UUID NOT NULL,
+  tenant_name TEXT,
+  room_number TEXT,
+  billing_month TEXT NOT NULL,
+  amount NUMERIC(10, 2) NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  payment_mode TEXT NOT NULL DEFAULT 'cash',
+  invoice_number TEXT UNIQUE,
+  transaction_ref TEXT,
+  collected_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  collected_by_name TEXT,
+  collected_by_role TEXT,
+  collected_at TIMESTAMPTZ,
+  handover_at TIMESTAMPTZ,
+  settled_at TIMESTAMPTZ,
+  settled_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- In case rent_payments already existed without these columns:
 ALTER TABLE public.rent_payments
+  ADD COLUMN IF NOT EXISTS invoice_number TEXT UNIQUE,
   ADD COLUMN IF NOT EXISTS collected_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS collected_by_name TEXT,
   ADD COLUMN IF NOT EXISTS collected_by_role TEXT,
   ADD COLUMN IF NOT EXISTS collected_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS handover_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS settled_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS settled_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS transaction_ref TEXT;
+
+-- Enable RLS on rent_payments
+ALTER TABLE public.rent_payments ENABLE ROW LEVEL SECURITY;
+
+-- Rent Payments Policies
+DROP POLICY IF EXISTS "rent_payments_super_admin_all" ON public.rent_payments;
+CREATE POLICY "rent_payments_super_admin_all" ON public.rent_payments
+  FOR ALL TO authenticated
+  USING (public.is_super_admin())
+  WITH CHECK (public.is_super_admin());
+
+DROP POLICY IF EXISTS "rent_payments_owner_all" ON public.rent_payments;
+CREATE POLICY "rent_payments_owner_all" ON public.rent_payments
+  FOR ALL TO authenticated
+  USING (pg_id IN (SELECT public.get_owner_pg_ids()))
+  WITH CHECK (pg_id IN (SELECT public.get_owner_pg_ids()));
+
+DROP POLICY IF EXISTS "rent_payments_staff_all" ON public.rent_payments;
+CREATE POLICY "rent_payments_staff_all" ON public.rent_payments
+  FOR ALL TO authenticated
+  USING (building_id = ANY(public.get_staff_building_ids()))
+  WITH CHECK (building_id = ANY(public.get_staff_building_ids()));
+
+DROP POLICY IF EXISTS "rent_payments_tenant_select" ON public.rent_payments;
+CREATE POLICY "rent_payments_tenant_select" ON public.rent_payments
+  FOR SELECT TO authenticated
+  USING (tenant_id IN (SELECT t_id FROM public.get_tenant_record()));
+
+CREATE INDEX IF NOT EXISTS idx_rent_payments_pg_id ON public.rent_payments(pg_id);
+CREATE INDEX IF NOT EXISTS idx_rent_payments_tenant_id ON public.rent_payments(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_rent_payments_status ON public.rent_payments(status);
 
 -- 4. Audit Log Helper Function
 CREATE OR REPLACE FUNCTION public.log_financial_audit(
