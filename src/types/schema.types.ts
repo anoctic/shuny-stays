@@ -269,3 +269,51 @@ export interface GatePass {
   updated_at: string;
 }
 
+export type AttendanceStatus = 'present' | 'absent' | 'day_pass' | 'night_pass';
+
+export interface AttendanceLog {
+  id: string;
+  pg_id: string;
+  building_id: string;
+  floor_id?: string | null;
+  room_id?: string | null;
+  bed_id: string;
+  tenant_id: string;
+  tenant_name?: string;
+  room_number?: string;
+  bed_name?: string;
+  floor_name?: string;
+  building_name?: string;
+  attendance_date: string;
+  status: AttendanceStatus;
+  marked_by?: string | null;
+  marked_by_role?: UserRole;
+  pass_id?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BedAttendanceItem {
+  bed_id: string;
+  bed_name: string;
+  room_id: string;
+  room_number: string;
+  sharing_type: number;
+  floor_id: string;
+  floor_name: string;
+  floor_number: number;
+  building_id: string;
+  building_name: string;
+  tenant_id: string;
+  tenant_name: string;
+  tenant_phone?: string;
+  status: AttendanceStatus;
+  has_active_pass?: boolean;
+  pass_type?: GatePassType | null;
+  pass_number?: string | null;
+  pass_status?: GatePassApprovalStatus | null;
+  updated_at?: string;
+}
+
+

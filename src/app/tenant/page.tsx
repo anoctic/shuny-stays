@@ -17,14 +17,17 @@ import {
 import { getCurrentUserSession } from "@/lib/auth/session";
 import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 import { getPassesForTenant } from "@/lib/data/gate-passes";
+import { getTenantAttendanceStatus } from "@/lib/data/attendance";
 import { ActiveBroadcastBanner } from "@/components/broadcasts/ActiveBroadcastBanner";
 import { GatePassCard } from "@/components/passes/GatePassCard";
 import { RequestPassModal } from "@/components/passes/RequestPassModal";
+import { TenantAttendanceCard } from "@/components/attendance/TenantAttendanceCard";
 
 export default async function TenantDashboardPage() {
   const session = await getCurrentUserSession();
   const broadcasts = await getActiveBroadcastsForRole("tenant");
   const passes = await getPassesForTenant(session.id);
+  const attendance = await getTenantAttendanceStatus(session.id);
 
   return (
     <div className="space-y-4">
@@ -46,6 +49,14 @@ export default async function TenantDashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* TODAY'S LIVE ATTENDANCE CARD */}
+      <TenantAttendanceCard
+        todayStatus={attendance.todayStatus}
+        markedAt={attendance.markedAt}
+        markedBy={attendance.markedBy}
+        history={attendance.history}
+      />
 
       {/* DUAL DAY PASS & NIGHT PASS SYSTEM SECTION */}
       <div className="space-y-3">

@@ -14,6 +14,7 @@ import {
   CreditCard,
   MessageSquareWarning,
   QrCode,
+  UserCheck,
 } from "lucide-react";
 import { UserRole } from "@/types/schema.types";
 import { cn } from "@/lib/utils";
@@ -36,13 +37,19 @@ export function MobileBottomNav({
     return null;
   }
 
-  // 1. Owner Nav Tabs (4 Max)
+  // 1. Owner Nav Tabs (5 Tabs)
   const ownerTabs = [
     {
       label: "Overview",
       href: "/dashboard",
       icon: LayoutDashboard,
       active: pathname === "/dashboard",
+    },
+    {
+      label: "Attendance",
+      href: "/dashboard/attendance",
+      icon: UserCheck,
+      active: pathname.startsWith("/dashboard/attendance"),
     },
     {
       label: "Passes",
@@ -65,13 +72,19 @@ export function MobileBottomNav({
     },
   ];
 
-  // 2. Admin / Warden Nav Tabs (4 Max)
+  // 2. Admin / Warden Nav Tabs (5 Tabs)
   const adminTabs = [
     {
       label: "Duty Desk",
       href: "/dashboard",
       icon: ClipboardCheck,
       active: pathname === "/dashboard",
+    },
+    {
+      label: "Attendance",
+      href: "/dashboard/attendance",
+      icon: UserCheck,
+      active: pathname.startsWith("/dashboard/attendance"),
     },
     {
       label: "Passes",
@@ -131,7 +144,12 @@ export function MobileBottomNav({
       className="fixed bottom-0 left-0 right-0 z-40 max-w-[480px] mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200/80 dark:bg-slate-900/95 dark:border-slate-800 transition-all shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
       aria-label="Mobile Navigation"
     >
-      <div className="grid grid-cols-4 h-16 items-center px-1">
+      <div
+        className={cn(
+          "grid h-16 items-center px-1",
+          activeTabs.length === 5 ? "grid-cols-5" : "grid-cols-4"
+        )}
+      >
         {activeTabs.map((tab) => {
           const Icon = tab.icon;
           return (
