@@ -209,7 +209,7 @@ function MobileBottomNavInner({
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 max-w-[480px] mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200/90 py-1 px-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] transition-all"
+      className="fixed bottom-0 left-0 right-0 z-40 max-w-[480px] mx-auto bg-white/90 backdrop-blur-md border-t border-slate-200/80 py-1 px-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] transition-all"
       aria-label="Mobile Bottom Navigation"
     >
       <div className="grid grid-cols-4 items-center">

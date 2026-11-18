@@ -53,7 +53,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full bg-[#060913] flex justify-center text-[#0F172A] selection:bg-indigo-600 selection:text-white">
         {/* Mobile-first PWA Container: max-w-[480px] on desktop, full width on mobile */}
-        <div className="w-full max-w-[480px] mx-auto min-h-screen bg-[#F8FAFC] shadow-2xl relative pb-20 flex flex-col overflow-x-hidden border-x border-[#E2E8F0]">
+        <div className="w-full max-w-[480px] mx-auto min-h-screen bg-[#F8FAFC] shadow-2xl relative pb-24 flex flex-col overflow-x-hidden border-x border-slate-200/80">
           <IOSSmartBanner />
           <main className="flex-1 flex flex-col">{children}</main>
         </div>

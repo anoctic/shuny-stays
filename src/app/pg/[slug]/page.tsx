@@ -39,7 +39,10 @@ export default async function WhiteLabelPgPage({
   const waLink = `https://wa.me/${pg.contact_phone.replace(/[^0-9]/g, "")}?text=${waMessage}`;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-between pb-16">
+    <div
+      className="min-h-screen bg-[#F8FAFC] flex flex-col justify-between pb-24 text-[#0F172A]"
+      style={{ "--brand-primary": primaryColor } as React.CSSProperties}
+    >
       {/* Dynamic PWA Manifest Link */}
       <link rel="manifest" href={`/api/manifest/${pg.slug}`} />
 

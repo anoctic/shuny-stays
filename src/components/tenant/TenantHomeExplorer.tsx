@@ -164,7 +164,10 @@ export function TenantHomeExplorer({
   }[attendance.todayStatus] || { label: "Present ✅", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" };
 
   return (
-    <div className="space-y-3.5 pb-6">
+    <div
+      className="space-y-3.5 pb-6"
+      style={{ "--brand-primary": brandColor } as React.CSSProperties}
+    >
       {/* Toast popup */}
       {toastMessage && (
         <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg border border-slate-700 backdrop-blur-md animate-in fade-in duration-200">
