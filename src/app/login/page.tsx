@@ -3,22 +3,14 @@
 export const runtime = "edge";
 
 import { useState } from "react";
-import {
-  Building2,
-  Lock,
-  User,
-  ArrowRight,
-  Shield,
-  Sparkles,
-  Home,
-  Crown,
-} from "lucide-react";
+import { User, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
-import { signInAction, switchDemoPersonaAction } from "@/app/actions/auth";
+import { signInAction } from "@/app/actions/auth";
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -35,31 +27,26 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-between min-h-screen bg-[#F8FAFC] pb-24 text-[#0F172A]">
-      {/* Sticky Translucent Header matching Blueprint */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 flex items-center justify-between shadow-xs">
-        <div className="flex items-center gap-2.5">
-          <ShunyStaysEmblem className="w-8 h-8 shadow-xs" />
-          <div>
-            <div className="text-xs font-black tracking-tight">
-              <span className="text-[#0F172A]">Shuny</span>
-              <span className="text-[#4F46E5] ml-0.5">Stays</span>
-            </div>
-            <div className="text-[10px] font-semibold text-[#64748B]">
-              Direct Sign-In Portal
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 px-4 py-8 text-[#0F172A]">
+      <div className="w-full max-w-md mx-auto space-y-5">
+        {/* Top Header matching Brand */}
+        <div className="flex flex-col items-center text-center space-y-2">
+          <div className="flex items-center gap-2.5">
+            <ShunyStaysEmblem className="w-9 h-9 shadow-xs" />
+            <div className="text-left">
+              <div className="text-sm font-black tracking-tight">
+                <span className="text-[#0F172A]">Shuny</span>
+                <span className="text-[#4F46E5] ml-0.5">Stays</span>
+              </div>
+              <div className="text-[11px] font-semibold text-[#64748B]">
+                Direct Sign-In Portal
+              </div>
             </div>
           </div>
         </div>
 
-        <span className="px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/80 text-[#4F46E5] text-[10px] font-extrabold uppercase tracking-wider">
-          Secure Auth
-        </span>
-      </header>
-
-      {/* Main Content Body */}
-      <div className="p-4 space-y-4 my-auto">
-        {/* Welcome Card */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-3.5">
+        {/* Clean Sign In Card */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
           <div>
             <h2 className="text-sm font-extrabold text-[#0F172A]">Sign In</h2>
             <p className="text-[11px] text-[#64748B] mt-0.5">
@@ -73,8 +60,8 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Clean Direct Credential Form */}
-          <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+          {/* Clean Credential Form */}
+          <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
                 Phone Number or Email
@@ -95,23 +82,30 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                  Password
-                </label>
-                <span className="text-[10px] text-slate-400">
-                  Default format: Shuny@XXXX
-                </span>
-              </div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                Password
+              </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   required
                   placeholder="••••••••"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#F1F5F9] border border-slate-200 font-bold text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition font-mono"
+                  className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-[#F1F5F9] border border-slate-200 font-bold text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition font-mono"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label="Toggle password visibility"
+                  className="absolute right-3 top-2.5 p-0.5 text-slate-400 hover:text-slate-600 focus:outline-none transition"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
               </div>
             </div>
 
@@ -126,103 +120,16 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* 1-Click Demo Personas for Quick Preview */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              1-Click Demo Personas
+        {/* Subtle Brand Footer */}
+        <div className="text-center pt-1">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200/80 text-slate-500 text-[10.5px] font-semibold shadow-2xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#4F46E5]" />
+            <span>
+              Powered by <strong className="text-slate-900 font-extrabold">Shuny Stays Software</strong>
             </span>
-            <span className="text-[10px] text-slate-400">Instant Preview</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            {/* Owner */}
-            <button
-              type="button"
-              onClick={() => switchDemoPersonaAction("owner")}
-              className="p-3 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/90 text-left shadow-xs transition group"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200/80 flex items-center justify-center shrink-0">
-                  <Building2 className="w-4 h-4" />
-                </div>
-                <div className="truncate">
-                  <p className="text-xs font-extrabold text-[#0F172A] group-hover:text-emerald-600 transition-colors">
-                    PG Owner
-                  </p>
-                  <p className="text-[10px] text-slate-400 tabular-nums">98765 43210</p>
-                </div>
-              </div>
-            </button>
-
-            {/* Admin / Warden */}
-            <button
-              type="button"
-              onClick={() => switchDemoPersonaAction("admin")}
-              className="p-3 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/90 text-left shadow-xs transition group"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-700 border border-amber-200/80 flex items-center justify-center shrink-0">
-                  <Shield className="w-4 h-4" />
-                </div>
-                <div className="truncate">
-                  <p className="text-xs font-extrabold text-[#0F172A] group-hover:text-amber-700 transition-colors">
-                    Warden Desk
-                  </p>
-                  <p className="text-[10px] text-slate-400 tabular-nums">98765 12345</p>
-                </div>
-              </div>
-            </button>
-
-            {/* Tenant */}
-            <button
-              type="button"
-              onClick={() => switchDemoPersonaAction("tenant")}
-              className="p-3 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/90 text-left shadow-xs transition group"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-indigo-50 text-[#4F46E5] border border-indigo-200/80 flex items-center justify-center shrink-0">
-                  <Home className="w-4 h-4" />
-                </div>
-                <div className="truncate">
-                  <p className="text-xs font-extrabold text-[#0F172A] group-hover:text-[#4F46E5] transition-colors">
-                    Tenant App
-                  </p>
-                  <p className="text-[10px] text-slate-400 tabular-nums">91234 56789</p>
-                </div>
-              </div>
-            </button>
-
-            {/* Super Admin */}
-            <button
-              type="button"
-              onClick={() => switchDemoPersonaAction("super_admin")}
-              className="p-3 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/90 text-left shadow-xs transition group"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-purple-50 text-purple-600 border border-purple-200/80 flex items-center justify-center shrink-0">
-                  <Crown className="w-4 h-4" />
-                </div>
-                <div className="truncate">
-                  <p className="text-xs font-extrabold text-[#0F172A] group-hover:text-purple-600 transition-colors">
-                    Super Admin
-                  </p>
-                  <p className="text-[10px] text-slate-400 tabular-nums">99999 00001</p>
-                </div>
-              </div>
-            </button>
           </div>
         </div>
       </div>
-
-      {/* Subtle Brand Footer */}
-      <footer className="text-center pt-2 pb-3 border-t border-slate-200/80">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200/80 text-slate-500 text-[10.5px] font-semibold shadow-2xs">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#4F46E5]" />
-          <span>Powered by <strong className="text-slate-900 font-extrabold">Shuny Stays Software</strong></span>
-        </div>
-      </footer>
     </div>
   );
 }
