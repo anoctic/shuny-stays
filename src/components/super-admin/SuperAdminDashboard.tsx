@@ -27,6 +27,7 @@ import { PlatformBroadcast, UserRole } from "@/types/schema.types";
 import { OnboardPgModal } from "@/components/super-admin/OnboardPgModal";
 import { EditBrandingModal } from "@/components/super-admin/EditBrandingModal";
 import { CredentialsGeneratedCard } from "@/components/auth/CredentialsGeneratedCard";
+import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
 import { togglePgStatusAction } from "@/app/actions/branding";
 import {
   createBroadcastAction,
@@ -582,7 +583,7 @@ export function SuperAdminDashboard({
       {/* Platform Governance Footer */}
       <footer className="pt-3 pb-1 text-center space-y-1">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-slate-500 text-[11px] font-semibold border border-slate-200 shadow-2xs">
-          <Crown className="w-3 h-3 text-purple-600" />
+          <ShunyStaysEmblem className="w-3.5 h-3.5" rounded={true} />
           <span>Shuny Stays SaaS Engine</span>
           <span className="text-slate-400">• v2.4 Production</span>
         </div>

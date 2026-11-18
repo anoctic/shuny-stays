@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import "./globals.css";
 import { IOSSmartBanner } from "@/components/pwa/IOSSmartBanner";
+import { StartupSplashScreen } from "@/components/common/StartupSplashScreen";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
@@ -27,8 +28,8 @@ export const metadata: Metadata = {
     title: "Shuny Stays",
   },
   icons: {
-    icon: "/icons/icon-192.svg",
-    apple: "/icons/icon-192.svg",
+    icon: "/icon.svg",
+    apple: "/icon.svg",
   },
 };
 
@@ -54,6 +55,7 @@ export default function RootLayout({
       <body className="min-h-full bg-[#060913] flex justify-center text-[#0F172A] selection:bg-indigo-600 selection:text-white">
         {/* Mobile-first PWA Container: max-w-[480px] on desktop, full width on mobile */}
         <div className="w-full max-w-[480px] mx-auto min-h-screen bg-[#F8FAFC] shadow-2xl relative pb-24 flex flex-col overflow-x-hidden border-x border-slate-200/80">
+          <StartupSplashScreen />
           <IOSSmartBanner />
           <main className="flex-1 flex flex-col">{children}</main>
         </div>

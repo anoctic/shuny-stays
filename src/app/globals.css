@@ -126,3 +126,12 @@ body {
   animation: fadeIn 0.16s ease-out forwards;
 }
 
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(30%); }
+  100% { transform: translateX(200%); }
+}
+.animate-indeterminate {
+  animation: indeterminate 1.4s cubic-bezier(0.65, 0.815, 0.735, 0.395) infinite;
+}
+

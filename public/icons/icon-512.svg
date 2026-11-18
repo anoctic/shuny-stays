@@ -1,17 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <linearGradient id="indigoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#4F46E5" />
-      <stop offset="100%" stop-color="#3730A3" />
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" rx="128" fill="url(#indigoGrad)" />
-  <!-- Geometric Roof -->
-  <path d="M100 230L256 100L412 230" stroke="#FFFFFF" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-  <!-- Chimney accent -->
-  <path d="M340 170V120H376V200" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-  <!-- Geometric Zero Loop (Shunya) -->
-  <rect x="176" y="210" width="160" height="200" rx="80" stroke="#FFFFFF" stroke-width="36" fill="none" />
-  <!-- Core Zero Center -->
-  <circle cx="256" cy="310" r="24" fill="#A5B4FC" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="512" height="512" fill="none">
+  <rect width="64" height="64" rx="15" fill="#4338CA"/>
+  <path d="M13 27.5L32 12L51 27.5H44.5L32 17.2L19.5 27.5H13Z" fill="#FFFFFF"/>
+  <rect x="40.5" y="14.5" width="4.5" height="8" fill="#FFFFFF"/>
+  <circle cx="32" cy="34.5" r="10.2" stroke="#FFFFFF" stroke-width="4.4"/>
+  <path d="M20.5 41.5C22.2 44.3 25 46.3 28.5 47.1V52H25.5V49.8H23.2V52H20.5V41.5Z" fill="#FFFFFF"/>
+  <path d="M43.5 41.5C41.8 44.3 39 46.3 35.5 47.1V52H38.5V49.8H40.8V52H43.5V41.5Z" fill="#FFFFFF"/>
 </svg>

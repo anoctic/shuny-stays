@@ -11,7 +11,7 @@ import {
   Home,
   Crown,
 } from "lucide-react";
-import { RoofAndZeroIcon } from "@/components/common/ShunyStaysLogo";
+import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
 import { signInAction, switchDemoPersonaAction } from "@/app/actions/auth";
 
 export default function LoginPage() {
@@ -37,9 +37,7 @@ export default function LoginPage() {
       {/* Sticky Translucent Header matching Blueprint */}
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200/80 text-[#4F46E5] flex items-center justify-center font-black text-xs shadow-xs">
-            <RoofAndZeroIcon className="w-4.5 h-4.5" color="#4F46E5" />
-          </div>
+          <ShunyStaysEmblem className="w-8 h-8 shadow-xs" />
           <div>
             <div className="text-xs font-black tracking-tight">
               <span className="text-[#0F172A]">Shuny</span>

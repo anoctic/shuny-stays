@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { LogOut, Sparkles, Building2, Ticket, PhoneCall, ChevronDown } from "lucide-react";
-import { RoofAndZeroIcon } from "@/components/common/ShunyStaysLogo";
+import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
 import { UserRole, Building } from "@/types/schema.types";
 import { BuildingSwitcher } from "./BuildingSwitcher";
 import { signOutAction, switchDemoPersonaAction } from "@/app/actions/auth";
@@ -66,9 +66,13 @@ export function MobileTopHeader({
         {/* Left: Role-Specific Monogram & Brand / Identity */}
         <div className="flex items-center gap-2 min-w-0">
           {role === "owner" && (
-            <div className="w-8 h-8 rounded-xl bg-[#4F46E5] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
-              {pgName ? pgName.slice(0, 2).toUpperCase() : "PG"}
-            </div>
+            pgName && pgName !== "Shuny Stays Properties" ? (
+              <div className="w-8 h-8 rounded-xl bg-[#4F46E5] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
+                {pgName.slice(0, 2).toUpperCase()}
+              </div>
+            ) : (
+              <ShunyStaysEmblem className="w-8 h-8 shadow-xs" />
+            )
           )}
           {role === "admin" && (
             <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
@@ -81,9 +85,7 @@ export function MobileTopHeader({
             </div>
           )}
           {role === "super_admin" && (
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200/80 text-[#4F46E5] flex items-center justify-center shrink-0 shadow-xs">
-              <RoofAndZeroIcon className="w-4.5 h-4.5" color="#4F46E5" />
-            </div>
+            <ShunyStaysEmblem className="w-8 h-8 shadow-xs" />
           )}
 
           <div className="min-w-0">

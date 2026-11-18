@@ -13,6 +13,7 @@ import {
 import { getAllPgs } from "@/lib/data/pgs";
 import { OnboardPgModal } from "@/components/super-admin/OnboardPgModal";
 import { EditBrandingModal } from "@/components/super-admin/EditBrandingModal";
+import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
 import { enterViewAsOrgAction, exitViewAsOrgAction } from "@/app/actions/auth";
 
 export default async function SuperAdminOrganizationsPage() {
@@ -24,8 +25,8 @@ export default async function SuperAdminOrganizationsPage() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 text-[10px] font-bold mb-1">
-            <Sparkles className="w-3 h-3" /> Shuny Stays Multi-Tenancy
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200/60 text-[10px] font-bold mb-1">
+            <ShunyStaysEmblem className="w-3 h-3" rounded={true} /> Shuny Stays Multi-Tenancy
           </div>
           <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             PG Brands & Tenant Scopes
