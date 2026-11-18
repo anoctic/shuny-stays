@@ -2,11 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
+  try {
+    let response = NextResponse.next({
+      request: {
+        headers: new Headers(request.headers),
+      },
+    });
 
   const { pathname } = request.nextUrl;
 
@@ -133,6 +134,10 @@ export async function middleware(request: NextRequest) {
   }
 
   return response;
+  } catch (err) {
+    console.error("Middleware caught runtime exception:", err);
+    return NextResponse.next();
+  }
 }
 
 export const config = {
