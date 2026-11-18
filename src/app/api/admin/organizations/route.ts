@@ -3,6 +3,8 @@ import { getCurrentUserSession } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DEMO_TENANTS } from "@/lib/tenant/constants";
 
+export const runtime = "edge";
+
 export async function GET() {
   const session = await getCurrentUserSession();
 

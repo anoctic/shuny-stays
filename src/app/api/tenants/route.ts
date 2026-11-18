@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { getCurrentUserSession } from "@/lib/auth/session";
 import { DEMO_TENANTS } from "@/lib/tenant/constants";
 
+export const runtime = "edge";
+
 export async function GET() {
   const session = await getCurrentUserSession();
 

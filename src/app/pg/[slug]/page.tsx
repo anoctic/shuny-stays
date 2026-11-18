@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { getPgBySlug } from "@/lib/data/pgs";
 
+export const runtime = "edge";
+
 export default async function WhiteLabelPgPage({
   params,
 }: {

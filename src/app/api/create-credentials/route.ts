@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createOrUpdateCredentials } from "@/lib/auth/credentials";
 import { UserRole } from "@/types/schema.types";
 
+export const runtime = "edge";
+
 /**
  * POST /api/create-credentials
  *

@@ -3,6 +3,8 @@ import { getCurrentUserSession } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MOCK_PG_TABLES } from "@/lib/mock-data";
 
+export const runtime = "edge";
+
 export async function GET() {
   try {
     // Verify super_admin privilege

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getCurrentUserSession } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const runtime = "edge";
+
 export async function POST(request: Request) {
   try {
     // 1. Verify super_admin privileges
