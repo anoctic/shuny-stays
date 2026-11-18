@@ -11,6 +11,10 @@ import {
   vacateBed,
   verifyTenantKyc,
   markBedRentPaid,
+  collectRentPayment,
+  settleRentPaymentWithOwner,
+  collectSecurityDeposit,
+  refundSecurityDeposit,
   logExpense,
   approveUpiPayment,
   rejectUpiPayment,
@@ -84,11 +88,121 @@ export async function walkInAddTenantAction(
   const phone = formData.get("phone") as string;
   const joinDate = (formData.get("joinDate") as string) || "18 Nov 2026";
   const rentPaid = formData.get("rentPaid") === "on" || formData.get("rentPaid") === "true";
+  const depositAmount = parseInt(formData.get("depositAmount") as string) || 8500;
+  const depositStatus = (formData.get("depositStatus") as "paid" | "pending") || "paid";
+  const depositPaymentMode = (formData.get("depositPaymentMode") as "cash" | "upi" | "bank_transfer") || "cash";
+  const depositRef = (formData.get("depositRef") as string) || undefined;
 
-  const res = await walkInAddTenant(buildingId, floorIdx, roomId, bedIdx, { name, phone, joinDate, rentPaid });
+  const res = await walkInAddTenant(buildingId, floorIdx, roomId, bedIdx, {
+    name,
+    phone,
+    joinDate,
+    rentPaid,
+    depositAmount,
+    depositStatus,
+    depositPaymentMode,
+    depositRef,
+    collectorName: session.full_name,
+    collectorId: session.id,
+  });
   revalidatePath("/dashboard/rooms");
   revalidatePath("/dashboard/attendance");
   revalidatePath("/dashboard/ledger");
+  revalidatePath("/dashboard");
+  revalidatePath("/tenant");
+  return res;
+}
+
+export async function collectRentPaymentAction(params: {
+  tenantId: string;
+  tenantName: string;
+  roomNumber: string;
+  buildingId: string;
+  amount: number;
+  paymentMode: "cash" | "admin_upi" | "pg_bank_upi";
+  billingMonth?: string;
+  transactionRef?: string;
+}) {
+  const session = await getCurrentUserSession();
+  if (session.role !== "owner" && session.role !== "admin") {
+    return { error: "Unauthorized. Staff or Owner access required." };
+  }
+
+  const res = await collectRentPayment({
+    ...params,
+    collectedBy: session.id,
+    collectedByName: session.full_name,
+    collectedByRole: session.role as "owner" | "admin",
+  });
+
+  revalidatePath("/dashboard/rooms");
+  revalidatePath("/dashboard/ledger");
+  revalidatePath("/dashboard");
+  revalidatePath("/tenant");
+  revalidatePath("/tenant/dues");
+  return res;
+}
+
+export async function settleRentPaymentAction(invoiceId: string) {
+  const session = await getCurrentUserSession();
+  if (session.role !== "owner" && session.role !== "super_admin") {
+    return { error: "Unauthorized. Only PG Owner can confirm cash receipt and settle." };
+  }
+
+  const res = await settleRentPaymentWithOwner({
+    invoiceId,
+    settledByName: session.full_name,
+    settledById: session.id,
+  });
+
+  revalidatePath("/dashboard/ledger");
+  revalidatePath("/dashboard/rooms");
+  revalidatePath("/dashboard");
+  return res;
+}
+
+export async function collectSecurityDepositAction(params: {
+  tenantId: string;
+  amount: number;
+  paymentMode: "cash" | "upi" | "bank_transfer";
+  transactionRef?: string;
+}) {
+  const session = await getCurrentUserSession();
+  if (session.role !== "owner" && session.role !== "admin") {
+    return { error: "Unauthorized." };
+  }
+
+  const res = await collectSecurityDeposit({
+    ...params,
+    collectorName: session.full_name,
+    collectorId: session.id,
+  });
+
+  revalidatePath("/dashboard/rooms");
+  revalidatePath("/dashboard/ledger");
+  revalidatePath("/tenant");
+  return res;
+}
+
+export async function refundSecurityDepositAction(params: {
+  tenantId: string;
+  deductionAmount: number;
+  deductionReason: string;
+}) {
+  const session = await getCurrentUserSession();
+  if (session.role !== "owner" && session.role !== "super_admin") {
+    return { error: "Unauthorized. Only PG Owner can settle or refund security deposits." };
+  }
+
+  const res = await refundSecurityDeposit({
+    ...params,
+    refundedByName: session.full_name,
+    refundedById: session.id,
+  });
+
+  revalidatePath("/dashboard/rooms");
+  revalidatePath("/dashboard/ledger");
+  revalidatePath("/tenant");
   return res;
 }
 

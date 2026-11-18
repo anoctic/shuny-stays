@@ -24,6 +24,8 @@ import {
 import { GatePassItem, PlatformBroadcast } from "@/types/schema.types";
 import { RequestPassModal } from "@/components/passes/RequestPassModal";
 import { RentReceiptModal } from "@/components/tenant/RentReceiptModal";
+import { DepositReceiptModal } from "@/components/tenant/DepositReceiptModal";
+import { SecurityDepositItem, RentPaymentRecord } from "@/lib/data/rooms";
 import {
   submitTenantUpiScreenshotAction,
   verifySelfKycAction,
@@ -66,6 +68,8 @@ interface TenantHomeExplorerProps {
   rentAmount?: number;
   rentPaid?: boolean;
   depositAmount?: number;
+  depositDetails?: SecurityDepositItem | null;
+  invoices?: RentPaymentRecord[];
   upiId?: string;
   wifiName?: string;
   wifiPass?: string;
@@ -84,6 +88,8 @@ export function TenantHomeExplorer({
   rentAmount = 8500,
   rentPaid = false,
   depositAmount = 8500,
+  depositDetails,
+  invoices = [],
   upiId = "royalstay@okicici",
   wifiName = "ROYAL_5G_RESIDENT",
   wifiPass = "StayRoyal@2026",
@@ -323,31 +329,63 @@ export function TenantHomeExplorer({
       </div>
 
       {/* 4. Security Deposit Held Card */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-5 h-5" />
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-extrabold text-slate-900">Security Deposit</div>
+              <div className="text-[10px] text-slate-400">100% Refundable at Checkout</div>
+            </div>
           </div>
-          <div>
-            <div className="text-xs font-extrabold text-slate-900">Security Deposit Held</div>
-            <div className="text-[10px] text-slate-400">100% Refundable at Checkout</div>
+          <div className="text-right">
+            <div className="text-sm font-black text-slate-900 tabular-nums">
+              ₹{(depositDetails?.paidAmount || depositAmount).toLocaleString("en-IN")}
+            </div>
+            <span
+              className={`px-2 py-0.5 rounded text-[9px] font-extrabold border ${
+                depositDetails?.status === "paid" || !depositDetails
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-amber-50 text-amber-700 border-amber-200"
+              }`}
+            >
+              {depositDetails?.status === "paid" || !depositDetails ? "Paid & Held Safely" : "Deposit Pending"}
+            </span>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-sm font-black text-emerald-600 tabular-nums">
-            ₹{depositAmount.toLocaleString("en-IN")}
-          </div>
-          <span className="px-2 py-0.5 rounded text-[9px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            Held in Trust
+
+        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
+          <span>
+            Received by: <strong className="text-slate-800">{depositDetails?.collectedByName || "Warden Ramesh Verma"}</strong>
           </span>
+          <span>Date: {depositDetails?.collectedAt || "Nov 01, 2026"}</span>
         </div>
+
+        <DepositReceiptModal
+          pgName={pg.name}
+          pgLogo={pg.logo_url}
+          primaryColor={brandColor}
+          tenantName={session.full_name}
+          roomNumber={roomNumber}
+          receiptNumber={depositDetails?.id || "DEP-202611-001"}
+          amount={depositDetails?.paidAmount || depositAmount}
+          paymentMode={depositDetails?.paymentMode || "UPI Transfer"}
+          paymentDate={depositDetails?.collectedAt || "Nov 01, 2026"}
+          collectedByName={depositDetails?.collectedByName || "Warden Ramesh Verma"}
+          status={depositDetails?.status === "paid" || !depositDetails ? "Paid • Held Safely" : "Deposit Pending"}
+          deductionAmount={depositDetails?.deductionAmount}
+          deductionReason={depositDetails?.deductionReason}
+          refundedAmount={depositDetails?.refundedAmount}
+        />
       </div>
 
       {/* 5. Rent & Auto-Invoices History Card with PDF Download */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-3 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-xs font-extrabold text-slate-900">Monthly Rent & Invoices</h3>
+            <h3 className="text-xs font-extrabold text-slate-900">Monthly Rent & Auto-Invoices</h3>
             <p className="text-[10px] text-slate-400">Due on 5th of every month</p>
           </div>
           <span
@@ -357,7 +395,7 @@ export function TenantHomeExplorer({
                 : "bg-rose-50 text-rose-700 border-rose-200"
             }`}
           >
-            ₹{rentAmount.toLocaleString("en-IN")}
+            {rentPaid ? "Paid ✅" : `₹${rentAmount.toLocaleString("en-IN")} Due`}
           </span>
         </div>
 
@@ -413,17 +451,71 @@ export function TenantHomeExplorer({
           </form>
         )}
 
-        {/* PDF Receipt Trigger */}
-        <div className="pt-1">
-          <RentReceiptModal
-            pgName={pg.name}
-            pgLogo={pg.logo_url}
-            primaryColor={brandColor}
-            tenantName={session.full_name}
-            roomNumber={roomNumber}
-            amount={`₹${rentAmount.toLocaleString("en-IN")}`}
-            dueDate="Nov 05, 2026"
-          />
+        {/* Invoices History List */}
+        <div className="space-y-2 pt-2 border-t border-slate-100">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+            Payment & Invoice History
+          </span>
+
+          {invoices.length > 0 ? (
+            invoices.map((inv) => (
+              <div
+                key={inv.id}
+                className="p-3 bg-slate-50 border border-slate-200/90 rounded-xl flex items-center justify-between gap-2"
+              >
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-extrabold text-slate-900">
+                      {inv.billingMonth}
+                    </span>
+                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Paid
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">
+                    {inv.paymentMode.toUpperCase()} • {inv.collectedAt} • By {inv.collectedByName || "Staff"}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs font-black text-slate-900 tabular-nums">
+                    ₹{inv.amount.toLocaleString("en-IN")}
+                  </span>
+
+                  <RentReceiptModal
+                    pgName={pg.name}
+                    pgLogo={pg.logo_url}
+                    primaryColor={brandColor}
+                    tenantName={session.full_name}
+                    roomNumber={roomNumber}
+                    invoiceNumber={inv.id}
+                    amount={`₹${inv.amount.toLocaleString("en-IN")}`}
+                    dueDate={inv.collectedAt}
+                    triggerButton={
+                      <button
+                        type="button"
+                        className="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-extrabold border border-indigo-200 transition"
+                      >
+                        PDF
+                      </button>
+                    }
+                  />
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="pt-1">
+              <RentReceiptModal
+                pgName={pg.name}
+                pgLogo={pg.logo_url}
+                primaryColor={brandColor}
+                tenantName={session.full_name}
+                roomNumber={roomNumber}
+                amount={`₹${rentAmount.toLocaleString("en-IN")}`}
+                dueDate="Nov 05, 2026"
+              />
+            </div>
+          )}
         </div>
       </div>
 

@@ -8,8 +8,9 @@ export type UserRole = 'super_admin' | 'owner' | 'admin' | 'tenant';
 export type PgStatus = 'pending' | 'active' | 'suspended';
 export type GenderType = 'boys' | 'girls' | 'coliving';
 export type BedStatus = 'vacant' | 'occupied' | 'maintenance' | 'notice';
-export type PaymentStatus = 'pending' | 'paid' | 'verified' | 'rejected';
-export type PaymentMode = 'upi' | 'cash' | 'bank_transfer';
+export type PaymentStatus = 'pending' | 'paid' | 'verified' | 'rejected' | 'collected_by_admin' | 'settled_with_owner';
+export type PaymentMode = 'upi' | 'cash' | 'bank_transfer' | 'admin_upi' | 'pg_bank_upi';
+export type SecurityDepositStatus = 'pending' | 'paid' | 'refunded' | 'partially_refunded';
 export type ComplaintStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 export type ComplaintPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type MealType = 'breakfast' | 'lunch' | 'snacks' | 'dinner';
@@ -157,7 +158,39 @@ export interface RentPayment {
   screenshot_url: string | null;
   payment_date: string | null;
   verified_by: string | null;
+  collected_by?: string | null;
+  collected_by_name?: string | null;
+  collected_by_role?: string | null;
+  collected_at?: string | null;
+  settled_at?: string | null;
+  settled_by?: string | null;
+  transaction_ref?: string | null;
   notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SecurityDeposit {
+  id: string;
+  pg_id: string;
+  building_id: string;
+  tenant_id: string;
+  bed_id?: string | null;
+  expected_amount: number;
+  paid_amount: number;
+  status: SecurityDepositStatus;
+  payment_mode?: 'cash' | 'upi' | 'bank_transfer' | null;
+  transaction_ref?: string | null;
+  collected_by?: string | null;
+  collected_by_name?: string | null;
+  collected_at?: string | null;
+  deduction_amount: number;
+  deduction_reason?: string | null;
+  refunded_amount: number;
+  refunded_at?: string | null;
+  refunded_by?: string | null;
+  refunded_by_name?: string | null;
+  notes?: string | null;
   created_at: string;
   updated_at: string;
 }

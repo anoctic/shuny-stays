@@ -3,7 +3,12 @@ import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 import { getPassesForTenant } from "@/lib/data/gate-passes";
 import { getTenantAttendanceStatus } from "@/lib/data/attendance";
 import { getPgById } from "@/lib/data/pgs";
-import { getMessMenu, getTenantDinnerPoll } from "@/lib/data/rooms";
+import {
+  getMessMenu,
+  getTenantDinnerPoll,
+  getSecurityDepositForTenant,
+  getRentPaymentsForTenant,
+} from "@/lib/data/rooms";
 import { TenantHomeExplorer } from "@/components/tenant/TenantHomeExplorer";
 
 export default async function TenantDashboardPage() {
@@ -23,6 +28,72 @@ export default async function TenantDashboardPage() {
 
   const messMenu = await getMessMenu();
   const dinnerPoll = await getTenantDinnerPoll(session.id);
+
+  // Security Deposit for this tenant
+  const dbDeposit = await getSecurityDepositForTenant(session.id);
+  const depositDetails = dbDeposit || {
+    id: "DEP-202611-001",
+    pgId: pg.id,
+    buildingId: "b-a",
+    buildingName: "Block A - Krishna Bhawan",
+    tenantId: session.id,
+    tenantName: session.full_name,
+    roomNumber: "101",
+    bedLabel: "Bed A",
+    expectedAmount: 8500,
+    paidAmount: 8500,
+    status: "paid" as const,
+    paymentMode: "upi" as const,
+    collectedByName: "Warden Ramesh Verma",
+    collectedAt: "01 Nov 2026, 10:00 AM",
+    deductionAmount: 0,
+    refundedAmount: 0,
+    createdAt: new Date().toISOString(),
+  };
+
+  // Rent Payments & Invoices for this tenant
+  const dbInvoices = await getRentPaymentsForTenant(session.id);
+  const invoices = dbInvoices.length > 0 ? dbInvoices : [
+    {
+      id: "INV-202611-01",
+      pgId: pg.id,
+      buildingId: "b-a",
+      tenantId: session.id,
+      tenantName: session.full_name,
+      room: "Block A • Room 101",
+      billingMonth: "November 2026",
+      amount: 8500,
+      status: "settled_with_owner" as const,
+      paymentMode: "cash" as const,
+      collectedByName: "Warden Suresh",
+      collectedByRole: "admin" as const,
+      collectedAt: "15 Nov 2026, 11:00 AM",
+      settledAt: "15 Nov 2026, 06:00 PM",
+    },
+    {
+      id: "INV-202610-09",
+      pgId: pg.id,
+      buildingId: "b-a",
+      tenantId: session.id,
+      tenantName: session.full_name,
+      room: "Block A • Room 101",
+      billingMonth: "October 2026",
+      amount: 8500,
+      status: "settled_with_owner" as const,
+      paymentMode: "pg_bank_upi" as const,
+      collectedByName: "Owner Manoj Kumar",
+      collectedByRole: "owner" as const,
+      collectedAt: "05 Oct 2026, 09:15 AM",
+      settledAt: "05 Oct 2026, 09:15 AM",
+    },
+  ];
+
+  const rentPaid = invoices.some(
+    (inv) =>
+      inv.billingMonth.includes("November 2026") ||
+      inv.status === "collected_by_admin" ||
+      inv.status === "settled_with_owner"
+  );
 
   return (
     <TenantHomeExplorer
@@ -60,7 +131,9 @@ export default async function TenantDashboardPage() {
       roomNumber="Room 101 • Bed A"
       buildingName="Block A - Krishna Bhawan"
       rentAmount={8500}
-      rentPaid={false}
+      rentPaid={rentPaid}
+      depositDetails={depositDetails}
+      invoices={invoices}
       upiId="royalstay@okicici"
       wifiName="ROYAL_5G_RESIDENT"
       wifiPass="StayRoyal@2026"

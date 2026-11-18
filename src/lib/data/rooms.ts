@@ -14,8 +14,64 @@ export interface TenantProfileItem {
   college: string;
   joinDate: string;
   deposit: number;
+  depositStatus: "paid" | "pending" | "refunded" | "partially_refunded";
+  depositPaymentMode?: "cash" | "upi" | "bank_transfer";
+  depositCollectedBy?: string;
+  depositCollectedByName?: string;
+  depositCollectedAt?: string;
+  depositDeduction?: number;
+  depositDeductionReason?: string;
+  depositRefundedAmount?: number;
+  depositRefundedAt?: string;
+  depositReceiptNo?: string;
   rentPaid: boolean;
   kycStatus: "Verified" | "Pending";
+}
+
+export interface SecurityDepositItem {
+  id: string; // e.g. "DEP-202611-001"
+  pgId: string;
+  buildingId: string;
+  buildingName: string;
+  tenantId: string;
+  tenantName: string;
+  roomNumber: string;
+  bedLabel: string;
+  expectedAmount: number;
+  paidAmount: number;
+  status: "pending" | "paid" | "refunded" | "partially_refunded";
+  paymentMode: "cash" | "upi" | "bank_transfer";
+  transactionRef?: string;
+  collectedBy?: string;
+  collectedByName?: string;
+  collectedAt?: string;
+  deductionAmount: number;
+  deductionReason?: string;
+  refundedAmount: number;
+  refundedAt?: string;
+  refundedByName?: string;
+  createdAt: string;
+}
+
+export interface RentPaymentRecord {
+  id: string; // e.g. "INV-202611-01"
+  pgId: string;
+  buildingId: string;
+  tenantId: string;
+  tenantName: string;
+  room: string;
+  billingMonth: string;
+  amount: number;
+  status: "collected_by_admin" | "settled_with_owner" | "pending" | "paid" | "verified";
+  paymentMode: "cash" | "admin_upi" | "pg_bank_upi" | "upi" | "bank_transfer";
+  transactionRef?: string;
+  collectedBy?: string;
+  collectedByName?: string;
+  collectedByRole?: "owner" | "admin";
+  collectedAt: string;
+  settledAt?: string;
+  settledBy?: string;
+  settledByName?: string;
 }
 
 export interface BedItem {
@@ -149,6 +205,11 @@ let memoryBuildings: BuildingItem[] = [
                   college: "Amity University",
                   joinDate: "01 Aug 2026",
                   deposit: 8500,
+                  depositStatus: "paid",
+                  depositPaymentMode: "upi",
+                  depositCollectedByName: "Warden Ramesh Verma",
+                  depositCollectedAt: "01 Nov 2026, 10:00 AM",
+                  depositReceiptNo: "DEP-202611-001",
                   rentPaid: false,
                   kycStatus: "Pending",
                 },
@@ -175,6 +236,11 @@ let memoryBuildings: BuildingItem[] = [
                   college: "TCS Sector 62",
                   joinDate: "15 Jul 2026",
                   deposit: 8500,
+                  depositStatus: "paid",
+                  depositPaymentMode: "cash",
+                  depositCollectedByName: "Owner Manoj Kumar",
+                  depositCollectedAt: "01 Nov 2026, 12:30 PM",
+                  depositReceiptNo: "DEP-202611-002",
                   rentPaid: true,
                   kycStatus: "Verified",
                 },
@@ -192,6 +258,9 @@ let memoryBuildings: BuildingItem[] = [
                   college: "JIIT Noida",
                   joinDate: "10 Sep 2026",
                   deposit: 8500,
+                  depositStatus: "pending",
+                  depositPaymentMode: "cash",
+                  depositReceiptNo: "DEP-202611-003",
                   rentPaid: false,
                   kycStatus: "Pending",
                 },
@@ -223,6 +292,11 @@ let memoryBuildings: BuildingItem[] = [
                   college: "Galgotias Univ",
                   joinDate: "05 Aug 2026",
                   deposit: 7500,
+                  depositStatus: "paid",
+                  depositPaymentMode: "bank_transfer",
+                  depositCollectedByName: "Owner Manoj Kumar",
+                  depositCollectedAt: "05 Aug 2026",
+                  depositReceiptNo: "DEP-202608-001",
                   rentPaid: true,
                   kycStatus: "Verified",
                 },
@@ -264,6 +338,11 @@ let memoryBuildings: BuildingItem[] = [
                   college: "Infosys Gurugram",
                   joinDate: "12 Aug 2026",
                   deposit: 9500,
+                  depositStatus: "paid",
+                  depositPaymentMode: "upi",
+                  depositCollectedByName: "Warden Sunita Devi",
+                  depositCollectedAt: "12 Aug 2026",
+                  depositReceiptNo: "DEP-202608-002",
                   rentPaid: true,
                   kycStatus: "Verified",
                 },
@@ -350,6 +429,187 @@ let memoryMessMenu: MessMenu = {
   dinner: "Paneer Butter Masala, Dal Tadka & Roti (8:00 - 10:00 PM)",
   baseYes: 34,
 };
+
+let memorySecurityDeposits: SecurityDepositItem[] = [
+  {
+    id: "DEP-202611-001",
+    pgId: "pg-royal",
+    buildingId: "b-a",
+    buildingName: "Block A",
+    tenantId: "t-rahul",
+    tenantName: "Rahul Sharma",
+    roomNumber: "G-01",
+    bedLabel: "Bed A",
+    expectedAmount: 8500,
+    paidAmount: 8500,
+    status: "paid",
+    paymentMode: "upi",
+    transactionRef: "UPI-DEP-99410",
+    collectedByName: "Warden Ramesh Verma",
+    collectedAt: "01 Nov 2026, 10:00 AM",
+    deductionAmount: 0,
+    refundedAmount: 0,
+    createdAt: "2026-11-01T10:00:00Z",
+  },
+  {
+    id: "DEP-202611-002",
+    pgId: "pg-royal",
+    buildingId: "b-a",
+    buildingName: "Block A",
+    tenantId: "t-aman",
+    tenantName: "Aman Verma",
+    roomNumber: "G-02",
+    bedLabel: "Bed A",
+    expectedAmount: 8500,
+    paidAmount: 8500,
+    status: "paid",
+    paymentMode: "cash",
+    collectedByName: "Owner Manoj Kumar",
+    collectedAt: "01 Nov 2026, 12:30 PM",
+    deductionAmount: 0,
+    refundedAmount: 0,
+    createdAt: "2026-11-01T12:30:00Z",
+  },
+  {
+    id: "DEP-202611-003",
+    pgId: "pg-royal",
+    buildingId: "b-a",
+    buildingName: "Block A",
+    tenantId: "t-karan",
+    tenantName: "Karan Mehta",
+    roomNumber: "G-02",
+    bedLabel: "Bed B",
+    expectedAmount: 8500,
+    paidAmount: 0,
+    status: "pending",
+    paymentMode: "cash",
+    deductionAmount: 0,
+    refundedAmount: 0,
+    createdAt: "2026-11-01T12:35:00Z",
+  },
+  {
+    id: "DEP-202608-001",
+    pgId: "pg-royal",
+    buildingId: "b-a",
+    buildingName: "Block A",
+    tenantId: "t-devansh",
+    tenantName: "Devansh Singh",
+    roomNumber: "101",
+    bedLabel: "Bed A",
+    expectedAmount: 7500,
+    paidAmount: 7500,
+    status: "paid",
+    paymentMode: "bank_transfer",
+    collectedByName: "Owner Manoj Kumar",
+    collectedAt: "05 Aug 2026, 02:00 PM",
+    deductionAmount: 0,
+    refundedAmount: 0,
+    createdAt: "2026-08-05T14:00:00Z",
+  },
+  {
+    id: "DEP-202608-002",
+    pgId: "pg-krishna",
+    buildingId: "b-k",
+    buildingName: "Krishna Bhawan",
+    tenantId: "t-priya",
+    tenantName: "Priya Nair",
+    roomNumber: "G-01",
+    bedLabel: "Bed A",
+    expectedAmount: 9500,
+    paidAmount: 9500,
+    status: "paid",
+    paymentMode: "upi",
+    collectedByName: "Warden Sunita Devi",
+    collectedAt: "12 Aug 2026, 11:15 AM",
+    deductionAmount: 0,
+    refundedAmount: 0,
+    createdAt: "2026-08-12T11:15:00Z",
+  },
+];
+
+let memoryRentPayments: RentPaymentRecord[] = [
+  {
+    id: "INV-202611-01",
+    pgId: "pg-royal",
+    buildingId: "b-a",
+    tenantId: "t-aman",
+    tenantName: "Aman Verma",
+    room: "Block A • Room G-02",
+    billingMonth: "November 2026",
+    amount: 8500,
+    status: "settled_with_owner",
+    paymentMode: "cash",
+    collectedByName: "Warden Suresh",
+    collectedByRole: "admin",
+    collectedAt: "15 Nov 2026, 11:00 AM",
+    settledAt: "15 Nov 2026, 06:00 PM",
+    settledByName: "Owner Manoj Kumar",
+  },
+  {
+    id: "INV-202611-02",
+    pgId: "pg-royal",
+    buildingId: "b-a",
+    tenantId: "t-devansh",
+    tenantName: "Devansh Singh",
+    room: "Block A • Room 101",
+    billingMonth: "November 2026",
+    amount: 7500,
+    status: "settled_with_owner",
+    paymentMode: "pg_bank_upi",
+    collectedByName: "Owner Manoj Kumar",
+    collectedByRole: "owner",
+    collectedAt: "12 Nov 2026, 09:30 AM",
+    settledAt: "12 Nov 2026, 09:30 AM",
+    settledByName: "Owner Manoj Kumar",
+  },
+  {
+    id: "INV-202611-03",
+    pgId: "pg-krishna",
+    buildingId: "b-k",
+    tenantId: "t-priya",
+    tenantName: "Priya Nair",
+    room: "Krishna Bhawan • Room G-01",
+    billingMonth: "November 2026",
+    amount: 9500,
+    status: "settled_with_owner",
+    paymentMode: "admin_upi",
+    collectedByName: "Warden Sunita Devi",
+    collectedByRole: "admin",
+    collectedAt: "10 Nov 2026, 04:15 PM",
+    settledAt: "10 Nov 2026, 08:00 PM",
+    settledByName: "Owner Manoj Kumar",
+  },
+  {
+    id: "INV-202611-04",
+    pgId: "pg-royal",
+    buildingId: "b-a",
+    tenantId: "t-rahul",
+    tenantName: "Rahul Sharma",
+    room: "Block A • Room G-01",
+    billingMonth: "November 2026",
+    amount: 8500,
+    status: "collected_by_admin",
+    paymentMode: "cash",
+    collectedByName: "Warden Suresh",
+    collectedByRole: "admin",
+    collectedAt: "Today, 11:30 AM",
+  },
+  {
+    id: "INV-202611-05",
+    pgId: "pg-royal",
+    buildingId: "b-a",
+    tenantId: "t-karan",
+    tenantName: "Karan Mehta",
+    room: "Block A • Room G-02",
+    billingMonth: "November 2026",
+    amount: 8500,
+    status: "collected_by_admin",
+    paymentMode: "cash",
+    collectedByName: "Warden Suresh",
+    collectedByRole: "admin",
+    collectedAt: "Yesterday, 06:15 PM",
+  },
+];
 
 // --- DATA ACCESS FUNCTIONS ---
 
@@ -615,7 +875,18 @@ export async function walkInAddTenant(
   floorIdx: number,
   roomId: string,
   bedIdx: number,
-  data: { name: string; phone: string; joinDate: string; rentPaid: boolean }
+  data: {
+    name: string;
+    phone: string;
+    joinDate: string;
+    rentPaid: boolean;
+    depositAmount?: number;
+    depositStatus?: "paid" | "pending";
+    depositPaymentMode?: "cash" | "upi" | "bank_transfer";
+    depositRef?: string;
+    collectorName?: string;
+    collectorId?: string;
+  }
 ) {
   const b = memoryBuildings.find((x) => x.id === buildingId);
   if (!b) return { error: "Building not found" };
@@ -624,15 +895,26 @@ export async function walkInAddTenant(
   const bed = room.beds[bedIdx];
   if (!bed) return { error: "Bed not found" };
 
+  const tenantId = `t-${Date.now()}`;
+  const depAmount = data.depositAmount ?? room.rent ?? 8500;
+  const depStatus = data.depositStatus ?? "paid";
+  const depMode = data.depositPaymentMode ?? "cash";
+  const depReceiptNo = `DEP-${new Date().toISOString().slice(0, 7).replace("-", "")}-${Math.floor(100 + Math.random() * 900)}`;
+
   const newTenant: TenantProfileItem = {
-    id: `t-${Date.now()}`,
+    id: tenantId,
     pgId: b.pgId,
     name: data.name,
     phone: data.phone,
     parentPhone: "9811002233",
     college: "Walk-In Resident",
     joinDate: data.joinDate,
-    deposit: room.rent,
+    deposit: depAmount,
+    depositStatus: depStatus,
+    depositPaymentMode: depMode,
+    depositCollectedByName: depStatus === "paid" ? (data.collectorName || "Warden Staff") : undefined,
+    depositCollectedAt: depStatus === "paid" ? new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : undefined,
+    depositReceiptNo: depReceiptNo,
     rentPaid: data.rentPaid,
     kycStatus: "Pending",
   };
@@ -640,9 +922,54 @@ export async function walkInAddTenant(
   bed.occupied = true;
   bed.tenant = newTenant;
 
+  // Insert into security deposits list
+  const newDeposit: SecurityDepositItem = {
+    id: depReceiptNo,
+    pgId: b.pgId,
+    buildingId: b.id,
+    buildingName: b.name,
+    tenantId,
+    tenantName: data.name,
+    roomNumber: room.number,
+    bedLabel: bed.label,
+    expectedAmount: depAmount,
+    paidAmount: depStatus === "paid" ? depAmount : 0,
+    status: depStatus,
+    paymentMode: depMode,
+    transactionRef: data.depositRef,
+    collectedByName: depStatus === "paid" ? (data.collectorName || "Warden Staff") : undefined,
+    collectedAt: depStatus === "paid" ? new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : undefined,
+    deductionAmount: 0,
+    refundedAmount: 0,
+    createdAt: new Date().toISOString(),
+  };
+  memorySecurityDeposits.unshift(newDeposit);
+
+  // If rent is marked paid on walk-in, generate an invoice
+  if (data.rentPaid) {
+    const invNo = `INV-${new Date().toISOString().slice(0, 7).replace("-", "")}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newRent: RentPaymentRecord = {
+      id: invNo,
+      pgId: b.pgId,
+      buildingId: b.id,
+      tenantId,
+      tenantName: data.name,
+      room: `${b.name} • Room ${room.number}`,
+      billingMonth: new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+      amount: room.rent,
+      status: "settled_with_owner",
+      paymentMode: "cash",
+      collectedByName: data.collectorName || "Staff Desk",
+      collectedByRole: "owner",
+      collectedAt: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
+      settledAt: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
+    };
+    memoryRentPayments.unshift(newRent);
+  }
+
   memoryAuditLogs.unshift({
     id: `a-${Date.now()}`,
-    text: `Walk-in tenant ${data.name} assigned to ${b.name} Room ${room.number} (${bed.label})`,
+    text: `Walk-in tenant ${data.name} assigned to ${b.name} Room ${room.number} (${bed.label}). Security Deposit: ₹${depAmount} (${depStatus}).`,
     time: "Just now",
   });
 
@@ -702,6 +1029,308 @@ export async function markBedRentPaid(tenantId: string) {
   });
 
   return { success: true };
+}
+
+// --- SECURITY DEPOSIT FUNCTIONS ---
+
+export async function getAllSecurityDeposits(pgId?: string, buildingId?: string): Promise<SecurityDepositItem[]> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.from("security_deposits").select("*").order("created_at", { ascending: false });
+    if (data && data.length > 0) {
+      // Return Supabase data if available
+    }
+  } catch {}
+
+  let list = [...memorySecurityDeposits];
+  if (buildingId && buildingId !== "all") {
+    list = list.filter((d) => d.buildingId === buildingId);
+  }
+  return list;
+}
+
+export async function getSecurityDepositForTenant(tenantId: string): Promise<SecurityDepositItem | null> {
+  const dep = memorySecurityDeposits.find((d) => d.tenantId === tenantId);
+  return dep || null;
+}
+
+export async function collectSecurityDeposit(params: {
+  tenantId: string;
+  amount: number;
+  paymentMode: "cash" | "upi" | "bank_transfer";
+  transactionRef?: string;
+  collectorName: string;
+  collectorId?: string;
+}) {
+  const { tenantId, amount, paymentMode, transactionRef, collectorName, collectorId } = params;
+  const nowStr = new Date().toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  let dep = memorySecurityDeposits.find((d) => d.tenantId === tenantId);
+  if (dep) {
+    dep.paidAmount = amount;
+    dep.status = "paid";
+    dep.paymentMode = paymentMode;
+    dep.transactionRef = transactionRef;
+    dep.collectedByName = collectorName;
+    dep.collectedBy = collectorId;
+    dep.collectedAt = nowStr;
+  } else {
+    dep = {
+      id: `DEP-${Date.now()}`,
+      pgId: "pg-royal",
+      buildingId: "b-a",
+      buildingName: "Block A",
+      tenantId,
+      tenantName: "Resident",
+      roomNumber: "101",
+      bedLabel: "Bed A",
+      expectedAmount: amount,
+      paidAmount: amount,
+      status: "paid",
+      paymentMode,
+      transactionRef,
+      collectedByName: collectorName,
+      collectedBy: collectorId,
+      collectedAt: nowStr,
+      deductionAmount: 0,
+      refundedAmount: 0,
+      createdAt: new Date().toISOString(),
+    };
+    memorySecurityDeposits.unshift(dep);
+  }
+
+  // Update in bed tenant
+  memoryBuildings.forEach((b) => {
+    b.floors.forEach((f) => {
+      f.rooms.forEach((r) => {
+        r.beds.forEach((bed) => {
+          if (bed.tenant && bed.tenant.id === tenantId) {
+            bed.tenant.deposit = amount;
+            bed.tenant.depositStatus = "paid";
+            bed.tenant.depositPaymentMode = paymentMode;
+            bed.tenant.depositCollectedByName = collectorName;
+            bed.tenant.depositCollectedAt = nowStr;
+            dep!.tenantName = bed.tenant.name;
+            dep!.roomNumber = r.number;
+            dep!.bedLabel = bed.label;
+            dep!.buildingName = b.name;
+            dep!.buildingId = b.id;
+          }
+        });
+      });
+    });
+  });
+
+  memoryAuditLogs.unshift({
+    id: `a-${Date.now()}`,
+    text: `${collectorName} collected ₹${amount.toLocaleString("en-IN")} Security Deposit for ${dep.tenantName} (${paymentMode})`,
+    time: "Just now",
+  });
+
+  return { success: true, deposit: dep };
+}
+
+export async function refundSecurityDeposit(params: {
+  tenantId: string;
+  deductionAmount: number;
+  deductionReason: string;
+  refundedByName: string;
+  refundedById?: string;
+}) {
+  const { tenantId, deductionAmount, deductionReason, refundedByName, refundedById } = params;
+  const nowStr = new Date().toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const dep = memorySecurityDeposits.find((d) => d.tenantId === tenantId);
+  if (!dep) return { error: "Deposit record not found" };
+
+  const refundAmt = Math.max(0, dep.paidAmount - deductionAmount);
+  dep.deductionAmount = deductionAmount;
+  dep.deductionReason = deductionReason;
+  dep.refundedAmount = refundAmt;
+  dep.refundedAt = nowStr;
+  dep.refundedByName = refundedByName;
+  dep.status = deductionAmount > 0 ? "partially_refunded" : "refunded";
+
+  // Update in bed tenant
+  memoryBuildings.forEach((b) => {
+    b.floors.forEach((f) => {
+      f.rooms.forEach((r) => {
+        r.beds.forEach((bed) => {
+          if (bed.tenant && bed.tenant.id === tenantId) {
+            bed.tenant.depositStatus = dep.status;
+            bed.tenant.depositDeduction = deductionAmount;
+            bed.tenant.depositDeductionReason = deductionReason;
+            bed.tenant.depositRefundedAmount = refundAmt;
+            bed.tenant.depositRefundedAt = nowStr;
+          }
+        });
+      });
+    });
+  });
+
+  memoryAuditLogs.unshift({
+    id: `a-${Date.now()}`,
+    text: `Owner ${refundedByName} settled Security Deposit for ${dep.tenantName}: Refunded ₹${refundAmt.toLocaleString("en-IN")}, Deducted ₹${deductionAmount.toLocaleString("en-IN")} (${deductionReason || "No deductions"})`,
+    time: "Just now",
+  });
+
+  return { success: true, deposit: dep };
+}
+
+// --- RENT PAYMENTS & 2-STEP HANDOVER FUNCTIONS ---
+
+export async function getAllRentPayments(pgId?: string, buildingId?: string): Promise<RentPaymentRecord[]> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.from("rent_payments").select("*").order("created_at", { ascending: false });
+    if (data && data.length > 0) {
+      // return Supabase data
+    }
+  } catch {}
+
+  let list = [...memoryRentPayments];
+  if (buildingId && buildingId !== "all") {
+    list = list.filter((r) => r.buildingId === buildingId);
+  }
+  return list;
+}
+
+export async function getRentPaymentsForTenant(tenantId: string): Promise<RentPaymentRecord[]> {
+  return memoryRentPayments.filter((r) => r.tenantId === tenantId);
+}
+
+export async function getAdminCollections(adminName?: string): Promise<RentPaymentRecord[]> {
+  if (!adminName) return memoryRentPayments.filter((r) => r.collectedByRole === "admin");
+  return memoryRentPayments.filter(
+    (r) => r.collectedByName?.toLowerCase().includes(adminName.toLowerCase()) || r.collectedByRole === "admin"
+  );
+}
+
+export async function collectRentPayment(params: {
+  tenantId: string;
+  tenantName: string;
+  roomNumber: string;
+  buildingId: string;
+  amount: number;
+  paymentMode: "cash" | "admin_upi" | "pg_bank_upi";
+  billingMonth?: string;
+  transactionRef?: string;
+  collectedBy?: string;
+  collectedByName: string;
+  collectedByRole: "owner" | "admin";
+}) {
+  const {
+    tenantId,
+    tenantName,
+    roomNumber,
+    buildingId,
+    amount,
+    paymentMode,
+    billingMonth = new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+    transactionRef,
+    collectedBy,
+    collectedByName,
+    collectedByRole,
+  } = params;
+
+  let status: "collected_by_admin" | "settled_with_owner";
+  if (collectedByRole === "admin") {
+    if (paymentMode === "pg_bank_upi") {
+      status = "settled_with_owner";
+    } else {
+      status = "collected_by_admin";
+    }
+  } else {
+    status = "settled_with_owner";
+  }
+
+  const invoiceNumber = `INV-${new Date().toISOString().slice(0, 7).replace("-", "")}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const nowStr = new Date().toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const newRecord: RentPaymentRecord = {
+    id: invoiceNumber,
+    pgId: "pg-royal",
+    buildingId,
+    tenantId,
+    tenantName,
+    room: roomNumber,
+    billingMonth,
+    amount,
+    status,
+    paymentMode,
+    transactionRef,
+    collectedBy,
+    collectedByName,
+    collectedByRole,
+    collectedAt: nowStr,
+    settledAt: status === "settled_with_owner" ? nowStr : undefined,
+    settledByName: status === "settled_with_owner" ? collectedByName : undefined,
+  };
+
+  memoryRentPayments.unshift(newRecord);
+
+  // Mark tenant's bed rent as paid
+  await markBedRentPaid(tenantId);
+
+  // Log in Audit Logs
+  memoryAuditLogs.unshift({
+    id: `a-${Date.now()}`,
+    text: `${collectedByName} collected ₹${amount.toLocaleString("en-IN")} via ${paymentMode.toUpperCase()} for ${tenantName} (${invoiceNumber}) - ${
+      status === "collected_by_admin" ? "⚠️ Pending Handover to Owner" : "✅ Settled with Owner"
+    }`,
+    time: "Just now",
+  });
+
+  return { success: true, invoice: newRecord };
+}
+
+export async function settleRentPaymentWithOwner(params: {
+  invoiceId: string;
+  settledByName: string;
+  settledById?: string;
+}) {
+  const { invoiceId, settledByName, settledById } = params;
+  const record = memoryRentPayments.find((r) => r.id === invoiceId);
+  if (!record) return { error: "Invoice payment record not found" };
+
+  const nowStr = new Date().toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  record.status = "settled_with_owner";
+  record.settledAt = nowStr;
+  record.settledBy = settledById;
+  record.settledByName = settledByName;
+
+  memoryAuditLogs.unshift({
+    id: `a-${Date.now()}`,
+    text: `Owner ${settledByName} confirmed cash receipt of ₹${record.amount.toLocaleString("en-IN")} from ${record.collectedByName} for ${record.tenantName} (${record.id}) - Settled ✅`,
+    time: "Just now",
+  });
+
+  return { success: true, invoice: record };
 }
 
 // --- LEDGER & EXPENSES ---

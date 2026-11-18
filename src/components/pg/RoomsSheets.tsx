@@ -102,8 +102,77 @@ export function WalkInSheet({
                 className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A] focus:outline-none"
               />
             </div>
+
+            {/* Security Deposit Section */}
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-[11px] text-slate-800">
+                  4. Security Deposit Setup
+                </span>
+                <span className="text-[10px] text-indigo-600 font-bold">100% Refundable</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                    Deposit Amount (₹)
+                  </label>
+                  <input
+                    name="depositAmount"
+                    type="number"
+                    required
+                    defaultValue={room.rent || 8500}
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-slate-900 focus:outline-none text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                    Deposit Status
+                  </label>
+                  <select
+                    name="depositStatus"
+                    defaultValue="paid"
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-slate-900 focus:outline-none text-xs"
+                  >
+                    <option value="paid">Paid • Collected Now</option>
+                    <option value="pending">Pending • To be collected</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                    Payment Mode
+                  </label>
+                  <select
+                    name="depositPaymentMode"
+                    defaultValue="cash"
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-slate-900 focus:outline-none text-xs"
+                  >
+                    <option value="cash">💵 Cash to Warden/Owner</option>
+                    <option value="upi">📱 UPI Transfer</option>
+                    <option value="bank_transfer">🏦 Bank NEFT/IMPS</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                    UTR / Receipt Ref (Opt.)
+                  </label>
+                  <input
+                    name="depositRef"
+                    type="text"
+                    placeholder="e.g. UTR-998811"
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-slate-900 focus:outline-none text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
             <label className="flex items-center justify-between p-2.5 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] cursor-pointer">
-              <span className="font-bold text-[#0F172A]">4. Current Month Rent Paid?</span>
+              <span className="font-bold text-[#0F172A]">5. Current Month Rent Paid?</span>
               <input
                 name="rentPaid"
                 type="checkbox"
@@ -121,7 +190,7 @@ export function WalkInSheet({
               disabled={isSubmitting}
               className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold shadow-sm transition active:scale-95"
             >
-              {isSubmitting ? "Assigning..." : "Assign Bed & Send Welcome"}
+              {isSubmitting ? "Assigning..." : "Assign Bed & Generate Receipts"}
             </button>
           </form>
         </div>
@@ -614,8 +683,8 @@ export function CsvImportModal({
           </p>
 
           <div className="p-3 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] text-[10px] font-mono text-[#64748B] overflow-x-auto leading-relaxed">
-            building, floor, room, sharing, rent, tenant_name, phone, paid<br />
-            Block A, Ground, G-01, 2, 8500, Harsh Vardhan, 9811776655, true
+            building, floor, room, sharing, rent, tenant_name, phone, rent_paid, deposit_amt, deposit_status, deposit_mode<br />
+            Block A, Ground, G-01, 2, 8500, Harsh Vardhan, 9811776655, true, 8500, paid, cash
           </div>
 
           {imported ? (
