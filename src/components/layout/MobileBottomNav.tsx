@@ -70,16 +70,18 @@ export function MobileBottomNav({
     {
       id: "ledger",
       label: "Ledger",
-      href: "/dashboard/finance",
+      href: "/dashboard/ledger",
       icon: IndianRupee,
-      isActive: pathname.startsWith("/dashboard/finance"),
+      isActive: pathname.startsWith("/dashboard/ledger") || pathname.startsWith("/dashboard/finance"),
     },
     {
       id: "ops_staff",
       label: "Ops & Staff",
-      href: "/dashboard/tenants",
+      href: "/dashboard/ops",
       icon: ShieldCheck,
       isActive:
+        pathname.startsWith("/dashboard/ops") ||
+        pathname.startsWith("/dashboard/staff") ||
         pathname.startsWith("/dashboard/tenants") ||
         pathname.startsWith("/dashboard/complaints") ||
         pathname.startsWith("/dashboard/passes"),
@@ -91,7 +93,7 @@ export function MobileBottomNav({
     {
       id: "rooms",
       label: "Rooms",
-      href: "/dashboard",
+      href: "/dashboard/rooms",
       icon: BedDouble,
       isActive: pathname === "/dashboard" || pathname.startsWith("/dashboard/rooms"),
     },
@@ -105,17 +107,21 @@ export function MobileBottomNav({
     {
       id: "passes_help",
       label: "Passes & Help",
-      href: "/dashboard/passes",
+      href: "/dashboard/ops",
       icon: Ticket,
-      isActive: pathname.startsWith("/dashboard/passes") || pathname.startsWith("/dashboard/complaints"),
+      isActive:
+        pathname.startsWith("/dashboard/ops") ||
+        pathname.startsWith("/dashboard/staff") ||
+        pathname.startsWith("/dashboard/passes") ||
+        pathname.startsWith("/dashboard/complaints"),
       badge: pendingPassesCount > 0 ? pendingPassesCount : null,
     },
     {
       id: "cash_rent",
       label: "Cash Rent",
-      href: "/dashboard/finance",
+      href: "/dashboard/ledger",
       icon: Banknote,
-      isActive: pathname.startsWith("/dashboard/finance"),
+      isActive: pathname.startsWith("/dashboard/ledger") || pathname.startsWith("/dashboard/finance"),
     },
   ];
 

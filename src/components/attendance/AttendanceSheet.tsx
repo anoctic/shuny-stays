@@ -3,18 +3,8 @@
 import { useState, useTransition } from "react";
 import {
   CheckCircle2,
-  XCircle,
-  Clock,
-  Moon,
   Building2,
-  Layers,
-  Save,
-  CheckCheck,
-  UserCheck,
-  AlertCircle,
-  Phone,
-  QrCode,
-  Sparkles,
+  Lock,
 } from "lucide-react";
 import {
   AttendanceStatus,
@@ -22,7 +12,6 @@ import {
   UserRole,
 } from "@/types/schema.types";
 import { saveAttendanceAction } from "@/app/actions/attendance";
-import { cn } from "@/lib/utils";
 
 interface FloorData {
   floor_id: string;
@@ -63,6 +52,7 @@ export function AttendanceSheet({
   userName,
   assignedBuildingIds = [],
 }: AttendanceSheetProps) {
+  const isAdminScoped = userRole === "admin";
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
   const [isPending, startTransition] = useTransition();
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
@@ -87,403 +77,290 @@ export function AttendanceSheet({
 
   // Filter buildings according to selection & admin permissions
   const filteredBuildings = initialBuildings.filter((b) => {
-    if (userRole === "admin" && assignedBuildingIds.length > 0) {
+    if (isAdminScoped && assignedBuildingIds.length > 0) {
       if (!assignedBuildingIds.includes(b.building_id)) return false;
     }
     if (selectedBuildingId === "all") return true;
     return b.building_id === selectedBuildingId;
   });
 
-  // Handle single bed status toggle
-  const handleStatusChange = (
-    bedId: string,
-    tenantId: string,
-    status: AttendanceStatus
-  ) => {
-    setBedStatuses((prev) => ({
-      ...prev,
-      [bedId]: { status, tenant_id: tenantId },
-    }));
-    setSaveSuccessMsg(null);
-  };
-
-  // Mark all unmarked or absent beds on a floor as "present" in 1 tap
-  const handleMarkFloorRemainingPresent = (beds: BedAttendanceItem[]) => {
-    setBedStatuses((prev) => {
-      const updated = { ...prev };
-      beds.forEach((bed) => {
-        const current = updated[bed.bed_id]?.status || bed.status;
-        // If absent or unconfirmed, change to present (keep active passes intact)
-        if (current === "absent" || !updated[bed.bed_id]) {
-          updated[bed.bed_id] = {
-            status: "present",
-            tenant_id: bed.tenant_id,
-          };
-        }
-      });
-      return updated;
-    });
-    setSaveSuccessMsg(null);
-  };
-
-  // Save all changed attendance logs via Server Action
-  const handleSaveAttendance = () => {
-    startTransition(async () => {
-      const itemsToSave = Object.entries(bedStatuses).map(([bed_id, data]) => ({
-        bed_id,
-        tenant_id: data.tenant_id,
-        status: data.status,
-      }));
-
-      const res = await saveAttendanceAction(itemsToSave);
-      if (res?.success) {
-        setSaveSuccessMsg(`Attendance saved for ${itemsToSave.length} residents!`);
-        setTimeout(() => setSaveSuccessMsg(null), 4000);
-      }
-    });
-  };
-
-  // Calculate live dynamic metrics across current view
-  let viewTotal = 0;
-  let viewPresent = 0;
-  let viewPass = 0;
-  let viewAbsent = 0;
+  // Compute live summary counts
+  let presentCnt = 0;
+  let absentCnt = 0;
+  let passCnt = 0;
 
   filteredBuildings.forEach((b) => {
     b.floors.forEach((f) => {
       f.beds.forEach((bed) => {
-        viewTotal++;
-        const currentStatus = bedStatuses[bed.bed_id]?.status || bed.status;
-        if (currentStatus === "present") viewPresent++;
-        else if (currentStatus === "day_pass" || currentStatus === "night_pass")
-          viewPass++;
-        else viewAbsent++;
+        const st = bedStatuses[bed.bed_id]?.status || bed.status;
+        if (st === "present") presentCnt++;
+        else if (st === "absent") absentCnt++;
+        else passCnt++;
       });
     });
   });
 
-  const todayFormatted = new Date().toLocaleDateString("en-IN", {
-    weekday: "long",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  // Handle single bed status change
+  const handleStatusChange = (bedId: string, tenantId: string, status: AttendanceStatus) => {
+    setBedStatuses((prev) => ({
+      ...prev,
+      [bedId]: { status, tenant_id: tenantId },
+    }));
+  };
+
+  // Mark all remaining beds on a floor as Present
+  const handleMarkFloorRemainingPresent = (beds: BedAttendanceItem[]) => {
+    setBedStatuses((prev) => {
+      const next = { ...prev };
+      beds.forEach((b) => {
+        const current = next[b.bed_id]?.status || b.status;
+        if (current !== "day_pass" && current !== "night_pass") {
+          next[b.bed_id] = {
+            status: "present",
+            tenant_id: b.tenant_id,
+          };
+        }
+      });
+      return next;
+    });
+  };
+
+  // Save & Sync all attendance to tenant apps
+  const handleSaveAndSync = () => {
+    const payload = Object.entries(bedStatuses).map(([bedId, val]) => ({
+      bed_id: bedId,
+      tenant_id: val.tenant_id,
+      status: val.status,
+    }));
+
+    startTransition(async () => {
+      const res = await saveAttendanceAction(payload);
+      if (res?.success) {
+        setSaveSuccessMsg(`Attendance saved & synced for ${res.count} residents!`);
+        setTimeout(() => setSaveSuccessMsg(null), 3500);
+      }
+    });
+  };
 
   return (
-    <div className="space-y-4 pb-24">
-      {/* Top Header Card */}
-      <div className="rounded-3xl bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-900 text-white p-5 shadow-lg shadow-indigo-500/15">
-        <div className="flex items-center justify-between">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-[11px] font-semibold mb-2">
-            <UserCheck className="w-3.5 h-3.5 text-emerald-300" />
-            Night Attendance & Roll Call
-          </div>
-          <span className="text-[11px] text-indigo-200 font-medium">
-            {todayFormatted}
-          </span>
+    <div className="space-y-3.5">
+      {/* 1. Top Attendance Summary Bar */}
+      <div className="p-3 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs flex items-center justify-between gap-2">
+        <div>
+          <div className="text-xs font-extrabold text-[#0F172A]">Daily Bed Roll Call</div>
+          <div className="text-[10px] text-[#64748B]">Auto-detects active Day & Night passes</div>
         </div>
-        <h1 className="text-xl font-black tracking-tight">
-          Beds & Attendance Sheet
-        </h1>
-        <p className="text-xs text-indigo-100/90 mt-1">
-          {userRole === "owner"
-            ? "Full oversight across all PG blocks. Passes automatically sync with gate requests."
-            : "Assigned block duty desk. Tap status pills or mark entire floor present in 1 tap."}
-        </p>
-
-        {/* Global Attendance Quick Stats */}
-        <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-white/10">
-          <div className="text-center">
-            <span className="text-[10px] uppercase font-bold text-indigo-200">Total</span>
-            <p className="text-base font-black">{viewTotal}</p>
-          </div>
-          <div className="text-center">
-            <span className="text-[10px] uppercase font-bold text-emerald-300">Present</span>
-            <p className="text-base font-black text-emerald-300">{viewPresent}</p>
-          </div>
-          <div className="text-center">
-            <span className="text-[10px] uppercase font-bold text-amber-300">On Pass</span>
-            <p className="text-base font-black text-amber-300">{viewPass}</p>
-          </div>
-          <div className="text-center">
-            <span className="text-[10px] uppercase font-bold text-rose-300">Absent</span>
-            <p className="text-base font-black text-rose-300">{viewAbsent}</p>
-          </div>
+        <div className="flex items-center gap-1.5 text-[10px] font-extrabold tabular-nums">
+          <span className="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">
+            {presentCnt} P
+          </span>
+          <span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-600 border border-amber-500/30">
+            {passCnt} Pass
+          </span>
+          <span className="px-2 py-1 rounded-lg bg-rose-500/15 text-rose-500 border border-rose-500/30">
+            {absentCnt} A
+          </span>
         </div>
       </div>
 
-      {/* Level 1: Building Selector Tabs */}
-      {userRole === "owner" && initialBuildings.length > 1 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      {/* Building Filter Pills */}
+      <div className="flex items-center gap-1.5 overflow-x-auto phone-scroll pb-0.5">
+        {!isAdminScoped && (
           <button
-            type="button"
             onClick={() => setSelectedBuildingId("all")}
-            className={cn(
-              "px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all",
+            className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold shrink-0 border transition ${
               selectedBuildingId === "all"
-                ? "bg-indigo-600 text-white shadow-sm"
-                : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800"
-            )}
+                ? "bg-[#4F46E5] text-white border-transparent shadow-xs"
+                : "bg-white text-[#0F172A] border-[#E2E8F0]"
+            }`}
           >
             All Buildings ({initialBuildings.length})
           </button>
-          {initialBuildings.map((b) => (
+        )}
+
+        {initialBuildings.map((b) => {
+          const locked = isAdminScoped && assignedBuildingIds.length > 0 && !assignedBuildingIds.includes(b.building_id);
+          const selected = selectedBuildingId === b.building_id;
+
+          return (
             <button
               key={b.building_id}
-              type="button"
-              onClick={() => setSelectedBuildingId(b.building_id)}
-              className={cn(
-                "px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all",
-                selectedBuildingId === b.building_id
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800"
-              )}
+              onClick={() => {
+                if (!locked) setSelectedBuildingId(b.building_id);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold shrink-0 flex items-center gap-1 border transition ${
+                selected
+                  ? "bg-[#4F46E5] text-white border-transparent shadow-xs"
+                  : locked
+                  ? "opacity-50 bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0]"
+                  : "bg-white text-[#0F172A] border-[#E2E8F0]"
+              }`}
             >
-              {b.building_name.split("-")[0].trim()}
+              <span>{b.building_name.split(" - ")[0]}</span>
+              {locked && <Lock className="w-3 h-3 text-[#64748B]" />}
             </button>
-          ))}
+          );
+        })}
+      </div>
+
+      {saveSuccessMsg && (
+        <div className="p-3 rounded-2xl bg-slate-900 text-white text-xs font-semibold flex items-center gap-2 animate-fade-in shadow-md">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{saveSuccessMsg}</span>
         </div>
       )}
 
-      {/* Level 2 & 3: Buildings -> Floors -> Beds List */}
-      <div className="space-y-6">
+      {/* 2. Building Sections -> Floor Sections -> All Occupied Beds */}
+      <div className="space-y-3.5">
         {filteredBuildings.map((building) => (
-          <div key={building.building_id} className="space-y-4">
-            {/* Building Header Banner */}
-            <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center">
-                  <Building2 className="w-4 h-4" />
-                </div>
-                <div>
-                  <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
-                    {building.building_name}
-                  </h2>
-                  <p className="text-[10px] text-slate-400">
-                    {building.floors.length} Floors • {building.stats.total} Beds Total
-                  </p>
-                </div>
-              </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase">
-                {building.gender_type}
+          <div
+            key={building.building_id}
+            className="rounded-2xl border border-[#E2E8F0] bg-white shadow-xs overflow-hidden"
+          >
+            {/* Building Header */}
+            <div className="px-3.5 py-2.5 bg-slate-900 text-white flex items-center justify-between">
+              <span className="text-xs font-extrabold">
+                {building.building_name} ({building.gender_type})
+              </span>
+              <span className="text-[10px] text-slate-300">
+                {building.floors.length} Floors
               </span>
             </div>
 
-            {/* Floor Sections */}
-            {building.floors.map((floor) => {
-              // Calculate live counts for this floor from bedStatuses
-              const floorTotal = floor.beds.length;
-              const floorPresent = floor.beds.filter(
-                (b) => (bedStatuses[b.bed_id]?.status || b.status) === "present"
-              ).length;
-              const floorPass = floor.beds.filter((b) => {
-                const s = bedStatuses[b.bed_id]?.status || b.status;
-                return s === "day_pass" || s === "night_pass";
-              }).length;
+            {/* Floors List */}
+            <div className="p-3 space-y-3">
+              {building.floors.map((floor) => {
+                const flPresent = floor.beds.filter(
+                  (bed) => (bedStatuses[bed.bed_id]?.status || bed.status) === "present"
+                ).length;
 
-              return (
-                <div
-                  key={floor.floor_id}
-                  className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 shadow-xs space-y-3.5"
-                >
-                  {/* Floor Header Bar with 'Mark Remaining Present' 1-Tap Button */}
-                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs">
-                        F{floor.floor_number}
-                      </div>
-                      <div>
-                        <h3 className="text-xs font-black text-slate-900 dark:text-white">
-                          {floor.floor_name}
-                        </h3>
-                        <p className="text-[10px] text-slate-400">
-                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                            {floorPresent}/{floorTotal} Present
-                          </span>
-                          {floorPass > 0 && ` • ${floorPass} on Pass`}
-                        </p>
-                      </div>
+                return (
+                  <div key={floor.floor_id} className="space-y-2">
+                    {/* Floor Sub-header */}
+                    <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0]">
+                      <span className="text-[11px] font-extrabold text-[#0F172A]">
+                        {floor.floor_name}{" "}
+                        <span className="text-emerald-600">
+                          ({flPresent}/{floor.beds.length} Present)
+                        </span>
+                      </span>
+                      <button
+                        onClick={() => handleMarkFloorRemainingPresent(floor.beds)}
+                        className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 text-[9.5px] font-extrabold border border-emerald-500/30 active:scale-95 transition"
+                      >
+                        Mark Remaining Present
+                      </button>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleMarkFloorRemainingPresent(floor.beds)}
-                      className="px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold inline-flex items-center gap-1 transition-all active:scale-95 border border-emerald-200/60 dark:border-emerald-800/40"
-                    >
-                      <CheckCheck className="w-3.5 h-3.5" />
-                      Mark Remaining Present
-                    </button>
-                  </div>
+                    {/* Beds on Floor */}
+                    {floor.beds.length === 0 ? (
+                      <p className="text-[10.5px] text-[#64748B] px-2">
+                        No occupied beds on this floor.
+                      </p>
+                    ) : (
+                      floor.beds.map((bed) => {
+                        const st = bedStatuses[bed.bed_id]?.status || bed.status;
+                        const hasPass = bed.active_pass_type != null;
 
-                  {/* Level 3: Beds Cards on this floor */}
-                  <div className="space-y-2.5">
-                    {floor.beds.map((bed) => {
-                      const currentStatus =
-                        bedStatuses[bed.bed_id]?.status || bed.status;
-
-                      return (
-                        <div
-                          key={bed.bed_id}
-                          className={cn(
-                            "p-3 rounded-2xl border transition-all space-y-2",
-                            currentStatus === "present"
-                              ? "bg-slate-50/60 dark:bg-slate-800/30 border-slate-200/70 dark:border-slate-800"
-                              : currentStatus === "absent"
-                              ? "bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/50"
-                              : currentStatus === "day_pass"
-                              ? "bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/50"
-                              : "bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-900/50"
-                          )}
-                        >
-                          {/* Bed Top Row: Room, Bed, Tenant Name & Pass Pill */}
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-black text-slate-900 dark:text-white">
+                        return (
+                          <div
+                            key={bed.bed_id}
+                            className="p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-xs font-extrabold text-[#0F172A]">
+                                  {bed.tenant_name}
+                                </div>
+                                <div className="text-[10px] text-[#64748B]">
                                   Room {bed.room_number} • {bed.bed_name}
-                                </span>
-                                {bed.sharing_type && (
-                                  <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-slate-200/70 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                                    {bed.sharing_type}S
-                                  </span>
-                                )}
+                                </div>
                               </div>
-                              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-0.5">
-                                {bed.tenant_name}
-                              </p>
+                              {hasPass && (
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
+                                    bed.active_pass_type === "day_pass"
+                                      ? "bg-amber-500/20 text-amber-700 border border-amber-500/30"
+                                      : "bg-indigo-500/20 text-indigo-600 border border-indigo-500/30"
+                                  }`}
+                                >
+                                  Active {bed.active_pass_type === "day_pass" ? "Day Pass" : "Night Pass"}
+                                </span>
+                              )}
                             </div>
 
-                            {/* Auto-detected Gate Pass Pill */}
-                            {bed.has_active_pass && bed.pass_number && (
-                              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 text-[10px] font-bold border border-amber-300/60 dark:border-amber-700/60">
-                                <QrCode className="w-3 h-3 text-amber-600" />
-                                {bed.pass_number}
-                              </div>
-                            )}
+                            {/* 4 Quick-Tap Attendance Status Pills */}
+                            <div className="grid grid-cols-4 gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(bed.bed_id, bed.tenant_id, "present")}
+                                className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition ${
+                                  st === "present"
+                                    ? "bg-emerald-500 text-white border-emerald-500 shadow-xs"
+                                    : "bg-white text-[#64748B] border-[#E2E8F0] hover:text-[#0F172A]"
+                                }`}
+                              >
+                                Present
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(bed.bed_id, bed.tenant_id, "absent")}
+                                className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition ${
+                                  st === "absent"
+                                    ? "bg-rose-500 text-white border-rose-500 shadow-xs"
+                                    : "bg-white text-[#64748B] border-[#E2E8F0] hover:text-[#0F172A]"
+                                }`}
+                              >
+                                Absent
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(bed.bed_id, bed.tenant_id, "day_pass")}
+                                className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition ${
+                                  st === "day_pass"
+                                    ? "bg-amber-500 text-slate-950 border-amber-500 shadow-xs"
+                                    : "bg-white text-[#64748B] border-[#E2E8F0] hover:text-[#0F172A]"
+                                }`}
+                              >
+                                Day Pass
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(bed.bed_id, bed.tenant_id, "night_pass")}
+                                className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition ${
+                                  st === "night_pass"
+                                    ? "bg-[#4F46E5] text-white border-[#4F46E5] shadow-xs"
+                                    : "bg-white text-[#64748B] border-[#E2E8F0] hover:text-[#0F172A]"
+                                }`}
+                              >
+                                Night Pass
+                              </button>
+                            </div>
                           </div>
-
-                          {/* 4 Smart Quick-Tap Status Pills */}
-                          <div className="grid grid-cols-4 gap-1.5 pt-1">
-                            {/* 1. Present */}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleStatusChange(bed.bed_id, bed.tenant_id, "present")
-                              }
-                              className={cn(
-                                "py-1.5 px-1 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95",
-                                currentStatus === "present"
-                                  ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/30 font-black"
-                                  : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                              )}
-                            >
-                              <CheckCircle2 className="w-3 h-3" />
-                              Present
-                            </button>
-
-                            {/* 2. Absent */}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleStatusChange(bed.bed_id, bed.tenant_id, "absent")
-                              }
-                              className={cn(
-                                "py-1.5 px-1 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95",
-                                currentStatus === "absent"
-                                  ? "bg-rose-600 text-white shadow-sm shadow-rose-600/30 font-black"
-                                  : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
-                              )}
-                            >
-                              <XCircle className="w-3 h-3" />
-                              Absent
-                            </button>
-
-                            {/* 3. Day Pass */}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleStatusChange(bed.bed_id, bed.tenant_id, "day_pass")
-                              }
-                              className={cn(
-                                "py-1.5 px-1 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95",
-                                currentStatus === "day_pass"
-                                  ? "bg-amber-500 text-white shadow-sm shadow-amber-500/30 font-black"
-                                  : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700 hover:bg-amber-50 dark:hover:bg-amber-950/40"
-                              )}
-                            >
-                              <Clock className="w-3 h-3" />
-                              Day Pass
-                            </button>
-
-                            {/* 4. Night Pass */}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleStatusChange(bed.bed_id, bed.tenant_id, "night_pass")
-                              }
-                              className={cn(
-                                "py-1.5 px-1 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95",
-                                currentStatus === "night_pass"
-                                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 font-black"
-                                  : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
-                              )}
-                            >
-                              <Moon className="w-3 h-3" />
-                              Night Pass
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Floating Bottom Sticky Action Bar: Save Attendance */}
-      <div className="fixed bottom-16 inset-x-0 max-w-[480px] mx-auto px-4 z-40 pointer-events-none">
-        <div className="pointer-events-auto bg-slate-950/90 text-white backdrop-blur-md border border-slate-800 rounded-2xl p-3 shadow-xl flex items-center justify-between gap-3">
-          <div className="text-xs">
-            <span className="font-bold text-slate-200 block">
-              {viewPresent}/{viewTotal} Marked Present
-            </span>
-            <span className="text-[10px] text-slate-400">
-              {viewPass} on pass • {viewAbsent} absent
-            </span>
-          </div>
-
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={handleSaveAttendance}
-            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition-all disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            {isPending ? "Saving..." : "Save Attendance"}
-          </button>
-        </div>
-      </div>
-
-      {/* Save Success Banner Notification */}
-      {saveSuccessMsg && (
-        <div className="fixed top-20 inset-x-0 max-w-[440px] mx-auto px-4 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="p-3 rounded-2xl bg-emerald-600 text-white shadow-xl flex items-center justify-between text-xs font-bold">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>{saveSuccessMsg}</span>
-            </div>
-            <button
-              onClick={() => setSaveSuccessMsg(null)}
-              className="text-white/80 hover:text-white"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
+      {/* 3. Sticky Save & Sync Attendance Button */}
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={handleSaveAndSync}
+        className="w-full py-3 rounded-2xl bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs font-extrabold shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-1.5 active:scale-98 transition disabled:opacity-50"
+      >
+        <CheckCircle2 className="w-4 h-4" />
+        <span>{isPending ? "Syncing to Tenant Apps..." : "Save & Sync Attendance to Tenant Apps"}</span>
+      </button>
     </div>
   );
 }
