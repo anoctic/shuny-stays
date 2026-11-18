@@ -7,7 +7,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "pages:build": "npx @cloudflare/next-on-pages && node -e \"require('fs').mkdirSync('.vercel/output/static', {recursive: true}); require('fs').writeFileSync('.vercel/output/static/.assetsignore', '_worker.js\\n_routes.json\\n')\""
+    "pages:build": "npx @cloudflare/next-on-pages && node scripts/create-assetsignore.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
