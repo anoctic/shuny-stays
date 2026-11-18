@@ -185,3 +185,78 @@ export async function updateMessMenuAction(formData: FormData) {
   revalidatePath("/dashboard/ops");
   return res;
 }
+
+// --- TENANT PORTAL ACTIONS ---
+
+export async function submitTenantComplaintAction(formData: FormData) {
+  const session = await getCurrentUserSession();
+  const cat = (formData.get("cat") as string) || "Wi-Fi";
+  const desc = (formData.get("desc") as string) || "Issue with PG facility";
+
+  const { submitTenantComplaint } = await import("@/lib/data/rooms");
+  const res = await submitTenantComplaint({
+    tenantId: session.id,
+    tenantName: session.full_name,
+    buildingId: session.building_id || "b-a",
+    room: session.room_id ? "Room 101 • Bed A" : "Room 101",
+    cat,
+    desc,
+  });
+
+  revalidatePath("/tenant/complaints");
+  revalidatePath("/tenant");
+  revalidatePath("/dashboard/ops");
+  return { success: true, complaint: res };
+}
+
+export async function submitDinnerPollAction(choice: "Yes" | "No") {
+  const session = await getCurrentUserSession();
+  const { setTenantDinnerPoll } = await import("@/lib/data/rooms");
+  const res = await setTenantDinnerPoll(session.id, choice);
+  revalidatePath("/tenant");
+  revalidatePath("/dashboard/ops");
+  return res;
+}
+
+export async function submitTenantUpiScreenshotAction(formData: FormData) {
+  const session = await getCurrentUserSession();
+  const utr = (formData.get("utr") as string) || `UTR${Math.floor(10000000 + Math.random() * 90000000)}`;
+  const amount = parseInt(formData.get("amount") as string) || 8500;
+
+  const { submitTenantUpiScreenshot } = await import("@/lib/data/rooms");
+  const res = await submitTenantUpiScreenshot({
+    tenantId: session.id,
+    tenantName: session.full_name,
+    room: "Block A • Room 101",
+    amount,
+    utr,
+  });
+
+  revalidatePath("/tenant/dues");
+  revalidatePath("/tenant");
+  revalidatePath("/dashboard/ledger");
+  return { success: true, upi: res };
+}
+
+export async function verifySelfKycAction() {
+  const session = await getCurrentUserSession();
+  const { verifyTenantKyc } = await import("@/lib/data/rooms");
+  await verifyTenantKyc(session.id);
+  revalidatePath("/tenant");
+  revalidatePath("/tenant/passes");
+  revalidatePath("/dashboard/rooms");
+  return { success: true };
+}
+
+export async function submitVacateNoticeAction(formData: FormData) {
+  const session = await getCurrentUserSession();
+  const date = (formData.get("date") as string) || "25 Dec 2026";
+  const reason = (formData.get("reason") as string) || "Relocating / Semester completed";
+
+  const { submitVacateNotice } = await import("@/lib/data/rooms");
+  const res = await submitVacateNotice(session.id, session.full_name, date, reason);
+  revalidatePath("/tenant");
+  revalidatePath("/tenant/passes");
+  revalidatePath("/dashboard/ops");
+  return res;
+}

@@ -1,44 +1,51 @@
-import { QrCode, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import {
+  QrCode,
+  ArrowLeft,
+  IdCard,
+  ShieldCheck,
+  Calendar,
+  Phone,
+  Sparkles,
+} from "lucide-react";
 import { getCurrentUserSession } from "@/lib/auth/session";
 import { getPassesForTenant } from "@/lib/data/gate-passes";
+import { getPgById } from "@/lib/data/pgs";
 import { GatePassCard } from "@/components/passes/GatePassCard";
 import { RequestPassModal } from "@/components/passes/RequestPassModal";
+import { TenantIdNoticeView } from "@/components/tenant/TenantIdNoticeView";
 
 export default async function TenantPassesPage() {
   const session = await getCurrentUserSession();
   const passes = await getPassesForTenant(session.id);
+  const pg = (await getPgById(session.pg_id || "00000000-0000-0000-0000-000000000001")) || {
+    id: "00000000-0000-0000-0000-000000000001",
+    name: "Royal Stay PG",
+    slug: "royal-stay",
+    primary_color: "#4F46E5",
+    city: "Bengaluru",
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link
-            href="/tenant"
-            className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-          <div>
-            <h1 className="text-base font-black text-slate-900 dark:text-white">
-              My Outing & Gate Passes
-            </h1>
-            <p className="text-[11px] text-slate-400">Day Passes & Night Passes</p>
-          </div>
-        </div>
-
-        <RequestPassModal
-          userRole="tenant"
-          defaultTenantName={session.full_name}
-          defaultRoomNumber="Room 101 • Bed A"
-        />
-      </div>
-
-      <div className="space-y-3">
-        {passes.map((pass) => (
-          <GatePassCard key={pass.id} pass={pass} viewerRole="tenant" />
-        ))}
-      </div>
-    </div>
+    <TenantIdNoticeView
+      session={{
+        id: session.id,
+        full_name: session.full_name,
+        phone: session.phone || "+91 98765 43210",
+        room_id: session.room_id,
+        building_id: session.building_id,
+      }}
+      pg={{
+        name: pg.name,
+        primaryColor: pg.primary_color || "#4F46E5",
+      }}
+      buildingName="Block A - Krishna Bhawan"
+      roomNumber="Room 101 (Bed A)"
+      kycStatus="Verified"
+      joinDate="01 Aug 2026"
+      depositAmount={8500}
+      emergencyPhone="+91 98111 22233"
+      passes={passes}
+    />
   );
 }

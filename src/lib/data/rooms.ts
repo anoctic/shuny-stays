@@ -99,6 +99,18 @@ export interface AuditLogItem {
   time: string;
 }
 
+export interface ReceiptItem {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  pgId: string;
+  room: string;
+  month: string;
+  amount: number;
+  utr: string;
+  date: string;
+}
+
 export interface MessMenu {
   breakfast: string;
   lunch: string;
@@ -770,4 +782,130 @@ export async function updateMessMenu(data: Partial<MessMenu>) {
 
 export async function getAuditLogs() {
   return memoryAuditLogs;
+}
+
+// --- RECEIPTS & DINNER POLLS ---
+
+let memoryReceipts: ReceiptItem[] = [
+  {
+    id: "REC-202611-01",
+    tenantId: "t-rahul",
+    tenantName: "Rahul Sharma",
+    pgId: "pg-royal",
+    room: "Block A • G-01",
+    month: "October 2026",
+    amount: 8500,
+    utr: "UTR33091811",
+    date: "04 Oct 2026",
+  },
+  {
+    id: "REC-202611-02",
+    tenantId: "t-rahul",
+    tenantName: "Rahul Sharma",
+    pgId: "pg-royal",
+    room: "Block A • G-01",
+    month: "September 2026",
+    amount: 8500,
+    utr: "UTR22987102",
+    date: "05 Sep 2026",
+  },
+  {
+    id: "REC-202611-03",
+    tenantId: "90000000-0000-0000-0000-000000000004",
+    tenantName: "Aarav Patel",
+    pgId: "00000000-0000-0000-0000-000000000001",
+    room: "Block A • Room 101",
+    month: "October 2026",
+    amount: 10650,
+    utr: "UTR89123401",
+    date: "05 Oct 2026",
+  },
+];
+
+let memoryDinnerPolls: Record<string, "Yes" | "No"> = {
+  "t-rahul": "Yes",
+  "90000000-0000-0000-0000-000000000004": "Yes",
+};
+
+export async function getTenantReceipts(tenantId?: string): Promise<ReceiptItem[]> {
+  if (!tenantId) return memoryReceipts;
+  const filtered = memoryReceipts.filter((r) => r.tenantId === tenantId);
+  return filtered.length > 0 ? filtered : memoryReceipts.slice(0, 2);
+}
+
+export async function addReceipt(data: Omit<ReceiptItem, "id">): Promise<ReceiptItem> {
+  const newReceipt: ReceiptItem = {
+    id: `REC-${Date.now().toString().slice(-6)}`,
+    ...data,
+  };
+  memoryReceipts.unshift(newReceipt);
+  return newReceipt;
+}
+
+export async function getTenantDinnerPoll(tenantId: string): Promise<"Yes" | "No"> {
+  return memoryDinnerPolls[tenantId] || "Yes";
+}
+
+export async function setTenantDinnerPoll(tenantId: string, choice: "Yes" | "No") {
+  memoryDinnerPolls[tenantId] = choice;
+  return { success: true, choice };
+}
+
+export async function submitTenantComplaint(data: {
+  tenantId: string;
+  tenantName: string;
+  buildingId?: string;
+  room?: string;
+  cat: string;
+  desc: string;
+}): Promise<ComplaintItem> {
+  const newComplaint: ComplaintItem = {
+    id: `T-${Math.floor(220 + Math.random() * 700)}`,
+    tenantId: data.tenantId,
+    tenantName: data.tenantName,
+    buildingId: data.buildingId || "b-a",
+    room: data.room || "Room 101",
+    cat: data.cat,
+    desc: data.desc,
+    status: "Open",
+    note: "",
+    time: "Just now",
+  };
+  memoryComplaints.unshift(newComplaint);
+  return newComplaint;
+}
+
+export async function submitTenantUpiScreenshot(data: {
+  tenantId: string;
+  tenantName: string;
+  room: string;
+  amount: number;
+  utr: string;
+}): Promise<UpiApprovalItem> {
+  const newUpi: UpiApprovalItem = {
+    id: `u-${Date.now()}`,
+    tenantId: data.tenantId,
+    tenantName: data.tenantName,
+    room: data.room,
+    amount: data.amount,
+    utr: data.utr,
+    status: "Pending",
+    time: "Just now",
+  };
+  memoryUpiApprovals.unshift(newUpi);
+  return newUpi;
+}
+
+export async function submitVacateNotice(
+  tenantId: string,
+  tenantName: string,
+  date: string,
+  reason: string
+) {
+  memoryAuditLogs.unshift({
+    id: `a-${Date.now()}`,
+    text: `Resident ${tenantName} submitted Vacate Notice for ${date} (Reason: ${reason})`,
+    time: "Just now",
+  });
+  return { success: true };
 }

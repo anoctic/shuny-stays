@@ -148,3 +148,28 @@ export async function updatePgBrandingAction(formData: FormData) {
 
   return { success: true, pg: updated };
 }
+
+/**
+ * Super Admin Server Action: Toggle PG Status (Approve / Kill-Switch Suspend / Re-activate)
+ */
+export async function togglePgStatusAction(
+  pgId: string,
+  targetStatus?: "active" | "pending" | "suspended"
+) {
+  const session = await getCurrentUserSession();
+
+  if (session.role !== "super_admin") {
+    return { error: "Unauthorized: Super Admin access required." };
+  }
+
+  const { togglePgStatus } = await import("@/lib/data/pgs");
+  const updated = await togglePgStatus(pgId, targetStatus);
+
+  revalidatePath("/super-admin");
+  revalidatePath("/super-admin/organizations");
+  if (updated?.slug) {
+    revalidatePath(`/pg/${updated.slug}`);
+  }
+
+  return { success: true, pg: updated };
+}

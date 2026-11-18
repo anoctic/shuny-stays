@@ -328,3 +328,44 @@ export async function updatePgBranding(
 
   return updated;
 }
+
+/**
+ * Super Admin: Toggle PG Status (Active / Suspended / Pending)
+ */
+export async function togglePgStatus(
+  pgId: string,
+  targetStatus?: "active" | "pending" | "suspended"
+): Promise<PgDetailItem | null> {
+  const index = memoryPgs.findIndex((p) => p.id === pgId);
+  if (index === -1) return null;
+
+  const current = memoryPgs[index];
+  let newStatus: "active" | "pending" | "suspended";
+
+  if (targetStatus) {
+    newStatus = targetStatus;
+  } else if (current.status === "active") {
+    newStatus = "suspended";
+  } else {
+    newStatus = "active";
+  }
+
+  const updated: PgDetailItem = {
+    ...current,
+    status: newStatus,
+  };
+
+  memoryPgs[index] = updated;
+
+  try {
+    const admin = createAdminClient();
+    await admin
+      .from("pgs")
+      .update({ status: newStatus } as any)
+      .eq("id", pgId);
+  } catch {
+    // Keep memory updated
+  }
+
+  return updated;
+}

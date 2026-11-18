@@ -1,7 +1,8 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   BedDouble,
   ClipboardCheck,
@@ -38,13 +39,15 @@ interface MobileBottomNavProps {
   pendingPassesCount?: number;
 }
 
-export function MobileBottomNav({
+function MobileBottomNavInner({
   role,
   openComplaintsCount = 0,
   pendingDuesCount = 0,
   pendingPassesCount = 1,
 }: MobileBottomNavProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const superAdminCurrentTab = searchParams?.get("tab") || "overview";
 
   // If on onboarding or standalone auth pages, hide bottom nav
   if (pathname === "/onboarding" || pathname === "/login" || pathname === "/signup") {
@@ -164,28 +167,34 @@ export function MobileBottomNav({
       label: "Overview",
       href: "/super-admin",
       icon: Activity,
-      isActive: pathname === "/super-admin",
+      isActive: pathname === "/super-admin" && superAdminCurrentTab === "overview",
     },
     {
       id: "pgs",
       label: "PGs",
-      href: "/super-admin/organizations",
+      href: "/super-admin?tab=pgs",
       icon: Building2,
-      isActive: pathname.startsWith("/super-admin/organizations"),
+      isActive:
+        (pathname === "/super-admin" && superAdminCurrentTab === "pgs") ||
+        pathname.startsWith("/super-admin/organizations"),
     },
     {
       id: "broadcast",
       label: "Broadcast",
-      href: "/super-admin#broadcast",
+      href: "/super-admin?tab=broadcast",
       icon: Megaphone,
-      isActive: pathname.includes("broadcast"),
+      isActive:
+        (pathname === "/super-admin" && superAdminCurrentTab === "broadcast") ||
+        pathname.includes("broadcast"),
     },
     {
       id: "billing",
       label: "Billing",
-      href: "/super-admin/subscriptions",
+      href: "/super-admin?tab=billing",
       icon: CreditCard,
-      isActive: pathname.startsWith("/super-admin/subscriptions"),
+      isActive:
+        (pathname === "/super-admin" && superAdminCurrentTab === "billing") ||
+        pathname.startsWith("/super-admin/subscriptions"),
     },
   ];
 
@@ -241,5 +250,13 @@ export function MobileBottomNav({
       {/* Subtle Mobile Home Bar Indicator */}
       <div className="w-28 h-1 mx-auto mt-1 rounded-full bg-slate-300/60 pointer-events-none" />
     </nav>
+  );
+}
+
+export function MobileBottomNav(props: MobileBottomNavProps) {
+  return (
+    <Suspense fallback={null}>
+      <MobileBottomNavInner {...props} />
+    </Suspense>
   );
 }
