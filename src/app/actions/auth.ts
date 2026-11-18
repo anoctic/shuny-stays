@@ -65,8 +65,7 @@ export async function signInAction(formData: FormData) {
   // Determine user role from profiles table and redirect
   let role: UserRole = (data.user?.user_metadata?.role as UserRole) || "tenant";
   try {
-    const { data: profile } = await supabase
-      .from("profiles")
+    const { data: profile } = await (supabase.from("profiles" as any) as any)
       .select("role")
       .eq("id", data.user.id)
       .single();
@@ -84,55 +83,6 @@ export async function signInAction(formData: FormData) {
   } else {
     redirect("/tenant");
   }
-}
-
-/**
- * PG Owner Sign Up Action
- * Automatically creates entry in auth.users, and the trigger handles profiles with role 'owner'
- */
-export async function signUpOwnerAction(formData: FormData) {
-  const fullName = formData.get("full_name") as string;
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const phone = formData.get("phone") as string;
-
-  if (!fullName || !email || !password) {
-    return { error: "Name, email, and password are required." };
-  }
-
-  if (password.length < 6) {
-    return { error: "Password must be at least 6 characters long." };
-  }
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        role: "owner",
-        full_name: fullName,
-        phone: phone || null,
-      },
-    },
-  });
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  // Check if session was automatically established (email confirmation disabled in Supabase)
-  if (data.session) {
-    const cookieStore = await cookies();
-    cookieStore.delete("pg_demo_role");
-    redirect("/onboarding");
-  }
-
-  // If email confirmation required or demo mode
-  return {
-    success: true,
-    message: "Owner account registered! Please check your email to verify or sign in.",
-  };
 }
 
 /**
@@ -157,8 +107,7 @@ export async function submitOnboardingAction(formData: FormData) {
   const slug = pgName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Math.floor(Math.random() * 1000);
 
   // 1. Insert PG Brand record
-  const { data: newPg, error: pgError } = await supabase
-    .from("pgs")
+  const { data: newPg, error: pgError } = await (supabase.from("pgs" as any) as any)
     .insert({
       owner_id: sess.id,
       name: pgName,
@@ -179,8 +128,7 @@ export async function submitOnboardingAction(formData: FormData) {
   }
 
   // 2. Insert First Building record
-  const { data: newBuilding, error: bldError } = await supabase
-    .from("buildings")
+  const { data: newBuilding, error: bldError } = await (supabase.from("buildings" as any) as any)
     .insert({
       pg_id: newPg.id,
       name: buildingName,
@@ -197,7 +145,7 @@ export async function submitOnboardingAction(formData: FormData) {
 
   if (newBuilding) {
     // 3. Insert Owner into pg_staff with ALL permissions
-    await supabase.from("pg_staff").insert({
+    await (supabase.from("pg_staff" as any) as any).insert({
       user_id: sess.id,
       pg_id: newPg.id,
       assigned_building_ids: [newBuilding.id],

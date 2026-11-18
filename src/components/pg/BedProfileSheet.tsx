@@ -140,7 +140,7 @@ export function BedProfileSheet({
       transactionRef: rentTxRef || undefined,
     });
 
-    if (res.invoice) {
+    if ("invoice" in res && res.invoice) {
       setGeneratedInvoice(res.invoice);
       t.rentPaid = true;
       if (res.invoice.status === "collected_by_admin") {
@@ -306,7 +306,7 @@ export function BedProfileSheet({
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <div>
                     <div className="text-xs font-black text-amber-950 leading-snug">
-                      Collected by {generatedInvoice?.collected_by_name || t.depositCollectedByName || (t.id === "t-karan" || t.id === "t-rahul" ? "Warden Suresh" : "Warden Ramesh")} • Collect ₹{room.rent.toLocaleString("en-IN")} from {generatedInvoice?.collected_by_name || t.depositCollectedByName || (t.id === "t-karan" || t.id === "t-rahul" ? "Warden Suresh" : "Warden Ramesh")}
+                      Collected by {generatedInvoice?.collectedByName || t.depositCollectedByName || (t.id === "t-karan" || t.id === "t-rahul" ? "Warden Suresh" : "Warden Ramesh")} • Collect ₹{room.rent.toLocaleString("en-IN")} from {generatedInvoice?.collectedByName || t.depositCollectedByName || (t.id === "t-karan" || t.id === "t-rahul" ? "Warden Suresh" : "Warden Ramesh")}
                     </div>
                     <div className="text-[10px] text-amber-800 font-medium mt-0.5">
                       Status: Pending Handover to Owner • Physical cash collected at desk

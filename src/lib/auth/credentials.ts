@@ -137,7 +137,7 @@ export async function createOrUpdateCredentials(
         { onConflict: "pg_id,user_id" }
       );
 
-      await admin.from("pgs").update({ owner_id: userId } as any).eq("id", pgId);
+      await (admin.from("pgs" as any) as any).update({ owner_id: userId } as any).eq("id", pgId);
     } else if (role === "admin" && pgId) {
       await admin.from("pg_staff").upsert(
         {

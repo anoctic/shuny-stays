@@ -217,7 +217,7 @@ export async function requestGatePass(params: {
 
   try {
     const supabase = await createClient();
-    await supabase.from("gate_passes" as any).insert({
+    await (supabase.from("gate_passes" as any) as any).insert({
       id: newPass.id,
       pg_id: newPass.pg_id,
       building_id: newPass.building_id,
@@ -233,7 +233,7 @@ export async function requestGatePass(params: {
       emergency_phone: newPass.emergency_phone,
       approval_status: newPass.approval_status,
       created_by_role: newPass.created_by_role,
-    });
+    } as any);
   } catch {
     // Fallback memory
   }
@@ -264,14 +264,14 @@ export async function approveGatePass(passId: string, approverRole: UserRole, ap
 
   try {
     const supabase = await createClient();
-    await supabase.from("gate_passes" as any).update({
+    await (supabase.from("gate_passes" as any) as any).update({
       approval_status: pass.approval_status,
       owner_approved_by: pass.owner_approved_by,
       owner_approved_at: pass.owner_approved_at,
       warden_approved_by: pass.warden_approved_by,
       warden_approved_at: pass.warden_approved_at,
       updated_at: pass.updated_at,
-    }).eq("id", passId);
+    } as any).eq("id", passId);
   } catch {
     // Fallback memory
   }
@@ -292,11 +292,11 @@ export async function rejectGatePass(passId: string, reason: string): Promise<Ga
 
   try {
     const supabase = await createClient();
-    await supabase.from("gate_passes" as any).update({
+    await (supabase.from("gate_passes" as any) as any).update({
       approval_status: "rejected",
       rejection_reason: reason,
       updated_at: pass.updated_at,
-    }).eq("id", passId);
+    } as any).eq("id", passId);
   } catch {
     // Fallback memory
   }

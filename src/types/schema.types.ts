@@ -303,6 +303,8 @@ export interface GatePass {
   updated_at: string;
 }
 
+export type GatePassItem = GatePass;
+
 export type AttendanceStatus = 'present' | 'absent' | 'day_pass' | 'night_pass';
 
 export interface AttendanceLog {
@@ -345,6 +347,7 @@ export interface BedAttendanceItem {
   status: AttendanceStatus;
   has_active_pass?: boolean;
   pass_type?: GatePassType | null;
+  active_pass_type?: GatePassType | null;
   pass_number?: string | null;
   pass_status?: GatePassApprovalStatus | null;
   updated_at?: string;

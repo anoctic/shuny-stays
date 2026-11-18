@@ -101,9 +101,9 @@ export default async function TenantDashboardPage() {
         id: session.id,
         full_name: session.full_name,
         email: session.email,
-        phone: session.phone,
-        room_id: session.room_id,
-        building_id: session.building_id,
+        phone: session.phone || undefined,
+        room_id: session.room_id || undefined,
+        building_id: session.building_id || undefined,
       }}
       pg={{
         id: pg.id,

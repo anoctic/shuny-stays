@@ -11,7 +11,7 @@ export default async function AttendancePage() {
   const buildingsData = await getTodayAttendanceSheet({
     pgId: session.pg_id || undefined,
     buildingId: activeBuildingId || undefined,
-    role: session.role,
+    userRole: session.role,
     assignedBuildingIds: session.assigned_building_ids || [],
   });
 

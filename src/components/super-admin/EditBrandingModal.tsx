@@ -26,9 +26,10 @@ const COLOR_PRESETS = [
 
 interface EditBrandingModalProps {
   pg: PgDetailItem;
+  triggerButton?: React.ReactNode;
 }
 
-export function EditBrandingModal({ pg }: EditBrandingModalProps) {
+export function EditBrandingModal({ pg, triggerButton }: EditBrandingModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -78,14 +79,20 @@ export function EditBrandingModal({ pg }: EditBrandingModalProps) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1 transition-all active:scale-95"
-      >
-        <Palette className="w-3.5 h-3.5 text-purple-600" />
-        Edit Branding
-      </button>
+      {triggerButton ? (
+        <div onClick={() => setIsOpen(true)} className="inline-block cursor-pointer">
+          {triggerButton}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1 transition-all active:scale-95"
+        >
+          <Palette className="w-3.5 h-3.5 text-purple-600" />
+          Edit Branding
+        </button>
+      )}
 
       {isOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">

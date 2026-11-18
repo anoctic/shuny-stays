@@ -59,7 +59,7 @@ export function WalkInSheet({
     const formData = new FormData(e.currentTarget);
     const res = await walkInAddTenantAction(building.id, floorIdx, room.id, bedIdx, formData);
     setIsSubmitting(false);
-    if (res?.credentials) {
+    if (res && "credentials" in res && res.credentials) {
       setCreatedCreds(res.credentials);
     } else {
       handleClose();

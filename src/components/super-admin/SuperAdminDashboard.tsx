@@ -156,6 +156,7 @@ export function SuperAdminDashboard({
         priority: "info",
         target_roles: roles as UserRole[],
         is_active: true,
+        starts_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
       };
 

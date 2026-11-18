@@ -322,7 +322,7 @@ export function RoomsExplorer({
                                 onClick={() =>
                                   setActiveProfileBed({
                                     building,
-                                    floor,
+                                    floor: activeFloor,
                                     floorIdx,
                                     room,
                                     bed,
@@ -363,7 +363,7 @@ export function RoomsExplorer({
                                 onClick={() =>
                                   setActiveWalkInBed({
                                     building,
-                                    floor,
+                                    floor: activeFloor,
                                     floorIdx,
                                     room,
                                     bedIdx: bIdx,

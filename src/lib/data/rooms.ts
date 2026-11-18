@@ -971,7 +971,7 @@ export async function walkInAddTenant(
   // Live Supabase Sync (falls back gracefully)
   try {
     const supabase = await createClient();
-    await supabase.from("security_deposits").insert({
+    await (supabase.from("security_deposits" as any) as any).insert({
       pg_id: b.pgId,
       building_id: b.id,
       tenant_id: tenantId,
@@ -983,10 +983,10 @@ export async function walkInAddTenant(
       collected_by: data.collectorId || null,
       collected_by_name: depStatus === "paid" ? (data.collectorName || "Warden Staff") : null,
       collected_at: depStatus === "paid" ? new Date().toISOString() : null,
-    });
+    } as any);
 
     if (data.rentPaid && invNo) {
-      await supabase.from("rent_payments").insert({
+      await (supabase.from("rent_payments" as any) as any).insert({
         pg_id: b.pgId,
         building_id: b.id,
         tenant_id: tenantId,
@@ -1002,7 +1002,7 @@ export async function walkInAddTenant(
         collected_by_role: "owner",
         collected_at: new Date().toISOString(),
         settled_at: new Date().toISOString(),
-      });
+      } as any);
     }
   } catch (err) {
     // In-memory fallback
@@ -1177,7 +1177,7 @@ export async function collectSecurityDeposit(params: {
   // Live Supabase Sync (falls back gracefully)
   try {
     const supabase = await createClient();
-    await supabase.from("security_deposits").upsert(
+    await (supabase.from("security_deposits" as any) as any).upsert(
       {
         pg_id: dep.pgId || "00000000-0000-0000-0000-000000000001",
         building_id: dep.buildingId || "00000000-0000-0000-0000-000000000002",
@@ -1191,7 +1191,7 @@ export async function collectSecurityDeposit(params: {
         collected_by_name: collectorName,
         collected_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      },
+      } as any,
       { onConflict: "tenant_id" }
     );
   } catch (err) {
@@ -1254,8 +1254,7 @@ export async function refundSecurityDeposit(params: {
   // Live Supabase Sync (falls back gracefully)
   try {
     const supabase = await createClient();
-    await supabase
-      .from("security_deposits")
+    await (supabase.from("security_deposits" as any) as any)
       .update({
         status: dep.status,
         deduction_amount: deductionAmount,
@@ -1265,7 +1264,7 @@ export async function refundSecurityDeposit(params: {
         refunded_by: refundedById || null,
         refunded_by_name: refundedByName,
         updated_at: new Date().toISOString(),
-      })
+      } as any)
       .eq("tenant_id", tenantId);
   } catch (err) {
     // In-memory fallback
@@ -1387,7 +1386,7 @@ export async function collectRentPayment(params: {
   // Live Supabase Sync (falls back gracefully)
   try {
     const supabase = await createClient();
-    await supabase.from("rent_payments").insert({
+    await (supabase.from("rent_payments" as any) as any).insert({
       pg_id: newRecord.pgId || "00000000-0000-0000-0000-000000000001",
       building_id: buildingId || "00000000-0000-0000-0000-000000000002",
       tenant_id: tenantId,
@@ -1405,7 +1404,7 @@ export async function collectRentPayment(params: {
       collected_at: new Date().toISOString(),
       settled_at: status === "settled_with_owner" ? new Date().toISOString() : null,
       settled_by: status === "settled_with_owner" ? collectedBy || null : null,
-    });
+    } as any);
   } catch (err) {
     // In-memory fallback
   }
@@ -1444,15 +1443,14 @@ export async function settleRentPaymentWithOwner(params: {
   // Live Supabase Sync (falls back gracefully)
   try {
     const supabase = await createClient();
-    await supabase
-      .from("rent_payments")
+    await (supabase.from("rent_payments" as any) as any)
       .update({
         status: "settled_with_owner",
         handover_at: new Date().toISOString(),
         settled_at: new Date().toISOString(),
         settled_by: settledById || null,
         updated_at: new Date().toISOString(),
-      })
+      } as any)
       .eq("invoice_number", invoiceId);
   } catch (err) {
     // In-memory fallback

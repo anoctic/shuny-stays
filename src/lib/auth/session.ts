@@ -19,6 +19,9 @@ export interface CurrentUserSession {
   building_id?: string | null;
   room_id?: string | null;
   bed_id?: string | null;
+  // Governance & Multi-tenant helpers
+  is_super_admin?: boolean;
+  organization_id?: string | null;
 }
 
 export const DEMO_USERS: Record<UserRole, CurrentUserSession> = {
@@ -29,6 +32,7 @@ export const DEMO_USERS: Record<UserRole, CurrentUserSession> = {
     role: "super_admin",
     phone: "+91 99999 00001",
     has_pg: true,
+    is_super_admin: true,
   },
   owner: {
     id: "90000000-0000-0000-0000-000000000002",
@@ -99,8 +103,7 @@ export async function getCurrentUserSession(): Promise<CurrentUserSession> {
 
       if (user) {
         // Fetch profile
-        const { data: profile } = await supabase
-          .from("profiles")
+        const { data: profile } = await (supabase.from("profiles" as any) as any)
           .select("id, role, full_name, phone")
           .eq("id", user.id)
           .single();
@@ -118,8 +121,7 @@ export async function getCurrentUserSession(): Promise<CurrentUserSession> {
         let bedId: string | null = null;
 
         if (role === "owner") {
-          const { data: pg } = await supabase
-            .from("pgs")
+          const { data: pg } = await (supabase.from("pgs" as any) as any)
             .select("id, name")
             .eq("owner_id", user.id)
             .limit(1)
@@ -131,8 +133,7 @@ export async function getCurrentUserSession(): Promise<CurrentUserSession> {
             hasPg = true;
           }
         } else if (role === "admin") {
-          const { data: staff } = await supabase
-            .from("pg_staff")
+          const { data: staff } = await (supabase.from("pg_staff" as any) as any)
             .select("pg_id, assigned_building_ids, permissions")
             .eq("user_id", user.id)
             .eq("is_active", true)
@@ -145,8 +146,7 @@ export async function getCurrentUserSession(): Promise<CurrentUserSession> {
             hasPg = true;
           }
         } else if (role === "tenant") {
-          const { data: tenant } = await supabase
-            .from("tenants")
+          const { data: tenant } = await (supabase.from("tenants" as any) as any)
             .select("pg_id, building_id, room_id, bed_id")
             .eq("user_id", user.id)
             .eq("is_active", true)
@@ -177,6 +177,8 @@ export async function getCurrentUserSession(): Promise<CurrentUserSession> {
           building_id: buildingId,
           room_id: roomId,
           bed_id: bedId,
+          is_super_admin: role === "super_admin",
+          organization_id: pgId,
         };
       }
     } catch {

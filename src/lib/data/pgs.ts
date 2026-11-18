@@ -312,8 +312,7 @@ export async function updatePgBranding(
   // Persist to Supabase if reachable
   try {
     const admin = createAdminClient();
-    await admin
-      .from("pgs")
+    await (admin.from("pgs" as any) as any)
       .update({
         name: updated.name,
         slug: updated.slug,
@@ -359,8 +358,7 @@ export async function togglePgStatus(
 
   try {
     const admin = createAdminClient();
-    await admin
-      .from("pgs")
+    await (admin.from("pgs" as any) as any)
       .update({ status: newStatus } as any)
       .eq("id", pgId);
   } catch {

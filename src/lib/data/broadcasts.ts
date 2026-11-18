@@ -105,14 +105,14 @@ export async function createBroadcast(data: {
 
   try {
     const supabase = await createClient();
-    await supabase.from("platform_broadcasts" as any).insert({
+    await (supabase.from("platform_broadcasts" as any) as any).insert({
       id: newBroadcast.id,
       title: newBroadcast.title,
       message: newBroadcast.message,
       priority: newBroadcast.priority,
       target_roles: newBroadcast.target_roles,
       is_active: true,
-    });
+    } as any);
   } catch {
     // Fallback memory insertion
   }

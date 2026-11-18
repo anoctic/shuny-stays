@@ -154,7 +154,7 @@ export function AttendanceSheet({
         });
       });
 
-      await saveAttendanceAction(itemsToSave, userRole);
+      await saveAttendanceAction(itemsToSave);
       setSaveSuccessMsg("Attendance saved & synced live to all Tenant apps!");
       setTimeout(() => setSaveSuccessMsg(null), 4000);
     });
