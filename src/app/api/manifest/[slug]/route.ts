@@ -12,8 +12,43 @@ export async function GET(
 
   const brandName = pg?.name || "Student & Executive Living";
   const primaryColor = pg?.primary_color || "#4F46E5";
-  const logoUrl =
-    pg?.logo_url || "/icons/icon-192.svg";
+  const logoUrl = pg?.logo_url;
+
+  const icons = logoUrl
+    ? [
+        {
+          src: logoUrl,
+          sizes: "192x192",
+          type: "image/png",
+          purpose: "any",
+        },
+        {
+          src: logoUrl,
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "any",
+        },
+      ]
+    : [
+        {
+          src: "/icons/icon-192.png",
+          sizes: "192x192",
+          type: "image/png",
+          purpose: "any",
+        },
+        {
+          src: "/icons/icon-512.png",
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "any",
+        },
+        {
+          src: "/icons/icon-maskable-512.png",
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "maskable",
+        },
+      ];
 
   const manifest = {
     name: `${brandName} — Resident App`,
@@ -23,22 +58,9 @@ export async function GET(
     scope: `/pg/${slug}`,
     display: "standalone",
     orientation: "portrait",
-    background_color: "#0f172a",
+    background_color: "#4F46E5",
     theme_color: primaryColor,
-    icons: [
-      {
-        src: logoUrl,
-        sizes: "192x192",
-        type: "image/png",
-        purpose: "any maskable",
-      },
-      {
-        src: logoUrl,
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "any maskable",
-      },
-    ],
+    icons,
   };
 
   return new NextResponse(JSON.stringify(manifest, null, 2), {
