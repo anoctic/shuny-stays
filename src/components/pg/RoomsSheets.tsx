@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Layers, Plus, FileSpreadsheet, UserPlus } from "lucide-react";
+import { X, Layers, Plus, FileSpreadsheet, UserPlus, CheckCircle2 } from "lucide-react";
 import { BuildingItem, FloorItem, RoomItem } from "@/lib/data/rooms";
 import {
   addAutoBuildingAction,
@@ -10,6 +10,7 @@ import {
   addBedAction,
   walkInAddTenantAction,
 } from "@/app/actions/rooms-and-ops";
+import { CredentialsGeneratedCard } from "@/components/auth/CredentialsGeneratedCard";
 
 // ==============================================================================
 // 1. WALK-IN EXPRESS ADD TENANT SHEET
@@ -34,23 +35,41 @@ export function WalkInSheet({
   bedIdx,
 }: WalkInSheetProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdCreds, setCreatedCreds] = useState<{
+    name: string;
+    role: "tenant";
+    loginId: string;
+    password: string;
+    phone: string;
+    pgName?: string;
+    roomInfo?: string;
+  } | null>(null);
 
   if (!isOpen) return null;
   const bed = room.beds[bedIdx];
+
+  const handleClose = () => {
+    setCreatedCreds(null);
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
-    await walkInAddTenantAction(building.id, floorIdx, room.id, bedIdx, formData);
+    const res = await walkInAddTenantAction(building.id, floorIdx, room.id, bedIdx, formData);
     setIsSubmitting(false);
-    onClose();
+    if (res?.credentials) {
+      setCreatedCreds(res.credentials);
+    } else {
+      handleClose();
+    }
   };
 
   return (
     <div
       className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="w-full max-w-[480px] mx-auto rounded-t-[28px] p-5 pb-8 shadow-2xl border-t border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up"
@@ -65,12 +84,40 @@ export function WalkInSheet({
               </p>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-1.5 rounded-full bg-[#F1F5F9] text-[#64748B] hover:text-[#0F172A]"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
+
+          {createdCreds ? (
+            <div className="space-y-3">
+              <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Resident added! Direct login credentials auto-generated.</span>
+              </div>
+
+              <CredentialsGeneratedCard
+                name={createdCreds.name}
+                role="tenant"
+                loginId={createdCreds.loginId}
+                password={createdCreds.password}
+                phone={createdCreds.phone}
+                pgName={createdCreds.pgName}
+                roomInfo={`${building.name} • Room ${room.number} (${bed?.label || "Bed"})`}
+                onClose={handleClose}
+              />
+
+              <button
+                type="button"
+                onClick={handleClose}
+                className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition active:scale-95"
+              >
+                Done & Return to Rooms
+              </button>
+            </div>
+          ) : (
 
           <form onSubmit={handleSubmit} className="space-y-2.5 text-xs">
             <div>
@@ -193,6 +240,7 @@ export function WalkInSheet({
               {isSubmitting ? "Assigning..." : "Assign Bed & Generate Receipts"}
             </button>
           </form>
+          )}
         </div>
       </div>
     </div>

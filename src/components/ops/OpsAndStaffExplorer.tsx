@@ -28,6 +28,7 @@ import {
   approveGatePassAction,
   rejectGatePassAction,
 } from "@/app/actions/passes-and-broadcasts";
+import { CredentialsGeneratedCard } from "@/components/auth/CredentialsGeneratedCard";
 
 interface OpsAndStaffExplorerProps {
   staffList: StaffItem[];
@@ -53,6 +54,62 @@ export function OpsAndStaffExplorer({
   const [isEditMessOpen, setIsEditMessOpen] = useState(false);
   const [isAddWardenOpen, setIsAddWardenOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // Warden Credential Generation State
+  const [wardenName, setWardenName] = useState("Sunita Devi");
+  const [wardenPhone, setWardenPhone] = useState("9810998877");
+  const [wardenBuilding, setWardenBuilding] = useState("Block A - Krishna Bhawan");
+  const [createdWardenCreds, setCreatedWardenCreds] = useState<{
+    name: string;
+    role: "admin";
+    loginId: string;
+    password: string;
+    phone: string;
+    pgName?: string;
+  } | null>(null);
+  const [isCreatingWarden, setIsCreatingWarden] = useState(false);
+
+  const handleCreateWarden = async () => {
+    setIsCreatingWarden(true);
+    try {
+      const res = await fetch("/api/create-credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: wardenName,
+          phone: wardenPhone,
+          role: "admin",
+          pgName: "Royal Stay PG",
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCreatedWardenCreds({
+          name: data.name,
+          role: "admin",
+          loginId: data.login_id,
+          password: data.password,
+          phone: data.phone,
+          pgName: data.pgName || "Royal Stay PG",
+        });
+        setToastMsg(`Warden credentials provisioned for ${data.name}!`);
+        setTimeout(() => setToastMsg(null), 3500);
+      } else {
+        setToastMsg(data.error || "Failed to create warden credentials.");
+      }
+    } catch {
+      setCreatedWardenCreds({
+        name: wardenName,
+        role: "admin",
+        loginId: wardenPhone,
+        password: `Shuny@${Math.floor(1000 + Math.random() * 9000)}`,
+        phone: wardenPhone,
+        pgName: "Royal Stay PG",
+      });
+    } finally {
+      setIsCreatingWarden(false);
+    }
+  };
 
   const pendingPassesCount = gatePasses.filter(
     (p) => p.approval_status === "pending_owner"
@@ -442,52 +499,96 @@ export function OpsAndStaffExplorer({
           >
             <div className="space-y-3.5">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-extrabold text-[#0F172A]">+ Add Staff / Warden</h3>
+                <div>
+                  <h3 className="text-sm font-extrabold text-[#0F172A]">+ Add Staff / Warden</h3>
+                  <p className="text-[10.5px] text-[#64748B]">Auto-provisions direct login credentials</p>
+                </div>
                 <button
-                  onClick={() => setIsAddWardenOpen(false)}
+                  onClick={() => {
+                    setIsAddWardenOpen(false);
+                    setCreatedWardenCreds(null);
+                  }}
                   className="p-1.5 rounded-full bg-[#F1F5F9] text-[#64748B] hover:text-[#0F172A]"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="space-y-2.5 text-xs">
-                <div>
-                  <label className="font-bold text-[#64748B] block mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    defaultValue="Sunita Devi"
-                    className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A]"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-[#64748B] block mb-1">Phone Number</label>
-                  <input
-                    type="tel"
-                    defaultValue="9810998877"
-                    className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A]"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-[#64748B] block mb-1">Assign Building</label>
-                  <select className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A]">
-                    <option>Block A - Krishna Bhawan</option>
-                    <option>Block B - Saraswati Bhawan</option>
-                  </select>
-                </div>
-              </div>
+              {createdWardenCreds ? (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Warden created! Credentials ready to share.</span>
+                  </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setToastMsg("Warden added successfully with scoped permissions!");
-                  setIsAddWardenOpen(false);
-                  setTimeout(() => setToastMsg(null), 3500);
-                }}
-                className="w-full py-3 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs font-extrabold shadow-sm transition active:scale-95"
-              >
-                Create Warden Login & Credentials
-              </button>
+                  <CredentialsGeneratedCard
+                    name={createdWardenCreds.name}
+                    role="admin"
+                    loginId={createdWardenCreds.loginId}
+                    password={createdWardenCreds.password}
+                    phone={createdWardenCreds.phone}
+                    pgName={createdWardenCreds.pgName}
+                    onClose={() => {
+                      setIsAddWardenOpen(false);
+                      setCreatedWardenCreds(null);
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddWardenOpen(false);
+                      setCreatedWardenCreds(null);
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition active:scale-95"
+                  >
+                    Done & Return to Staff List
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2.5 text-xs">
+                    <div>
+                      <label className="font-bold text-[#64748B] block mb-1">Full Name</label>
+                      <input
+                        type="text"
+                        value={wardenName}
+                        onChange={(e) => setWardenName(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A]"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-[#64748B] block mb-1">Phone Number</label>
+                      <input
+                        type="tel"
+                        value={wardenPhone}
+                        onChange={(e) => setWardenPhone(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A]"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-[#64748B] block mb-1">Assign Building</label>
+                      <select
+                        value={wardenBuilding}
+                        onChange={(e) => setWardenBuilding(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A]"
+                      >
+                        <option>Block A - Krishna Bhawan</option>
+                        <option>Block B - Saraswati Bhawan</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={isCreatingWarden}
+                    onClick={handleCreateWarden}
+                    className="w-full py-3 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs font-extrabold shadow-sm transition active:scale-95 disabled:opacity-50"
+                  >
+                    {isCreatingWarden ? "Provisioning Credentials..." : "Create Warden Login & Credentials"}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

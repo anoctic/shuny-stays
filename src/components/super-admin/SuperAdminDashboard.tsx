@@ -26,6 +26,7 @@ import { PgDetailItem } from "@/lib/data/pgs";
 import { PlatformBroadcast, UserRole } from "@/types/schema.types";
 import { OnboardPgModal } from "@/components/super-admin/OnboardPgModal";
 import { EditBrandingModal } from "@/components/super-admin/EditBrandingModal";
+import { CredentialsGeneratedCard } from "@/components/auth/CredentialsGeneratedCard";
 import { togglePgStatusAction } from "@/app/actions/branding";
 import {
   createBroadcastAction,
@@ -247,50 +248,18 @@ export function SuperAdminDashboard({
         </button>
       </div>
 
-      {/* Instant Owner Credentials Card (if available) */}
+      {/* Instant Owner Credentials Card (with Copy & Send on WhatsApp) */}
       {newOwnerCredentials && (
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-2.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                <KeyRound className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-xs font-extrabold text-slate-900">
-                  {newOwnerCredentials.pgName} Owner Credentials
-                </h3>
-                <p className="text-[10px] text-slate-400">Handover access for instant login</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => copyToClipboard(`Login: ${newOwnerCredentials.email} | Pass: ${newOwnerCredentials.tempPass}`, "Credentials")}
-              className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-extrabold flex items-center gap-1 hover:bg-indigo-100"
-            >
-              <Copy className="w-3 h-3" />
-              <span>Copy Access</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-50 rounded-xl text-[11px] font-mono">
-            <div>
-              <span className="text-[9px] font-bold text-slate-400 uppercase font-sans block">
-                Owner Email
-              </span>
-              <strong className="text-slate-900 truncate block">
-                {newOwnerCredentials.email}
-              </strong>
-            </div>
-            <div>
-              <span className="text-[9px] font-bold text-slate-400 uppercase font-sans block">
-                Temporary Password
-              </span>
-              <strong className="text-indigo-600 block">
-                {newOwnerCredentials.tempPass}
-              </strong>
-            </div>
-          </div>
-        </div>
+        <CredentialsGeneratedCard
+          name="Vikram Malhotra"
+          role="owner"
+          loginId={newOwnerCredentials.email}
+          password={newOwnerCredentials.tempPass}
+          phone="9822233441"
+          email={newOwnerCredentials.email}
+          pgName={newOwnerCredentials.pgName}
+          onClose={() => setNewOwnerCredentials(null)}
+        />
       )}
 
       {/* TAB 1: OVERVIEW */}

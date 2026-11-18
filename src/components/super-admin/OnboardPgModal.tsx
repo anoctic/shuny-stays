@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { onboardPgAction } from "@/app/actions/branding";
+import { CredentialsGeneratedCard } from "@/components/auth/CredentialsGeneratedCard";
 import { cn } from "@/lib/utils";
 
 const COLOR_PRESETS = [
@@ -30,11 +31,20 @@ const COLOR_PRESETS = [
   { name: "Dark Slate", hex: "#1E293B" },
 ];
 
-export function OnboardPgModal() {
+export function OnboardPgModal({ triggerButton }: { triggerButton?: React.ReactNode } = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [createdCreds, setCreatedCreds] = useState<{
+    name: string;
+    role: "owner";
+    loginId: string;
+    password: string;
+    phone?: string;
+    email?: string;
+    pgName?: string;
+  } | null>(null);
 
   // Form states for live preview
   const [pgName, setPgName] = useState("");
@@ -84,28 +94,49 @@ export function OnboardPgModal() {
         setError(res.error);
       } else if (res?.success) {
         setSuccess(`Successfully onboarded "${res.pg.name}" on ShunyOS!`);
-        setTimeout(() => {
-          setIsOpen(false);
-          setSuccess(null);
-          setPgName("");
-          setSlug("");
-          setLogoPreview(null);
-          setLogoFile(null);
-        }, 1800);
+        if (res.credentials) {
+          setCreatedCreds(res.credentials);
+        } else {
+          setTimeout(() => {
+            setIsOpen(false);
+            setSuccess(null);
+            setPgName("");
+            setSlug("");
+            setLogoPreview(null);
+            setLogoFile(null);
+          }, 1800);
+        }
       }
     });
   };
 
+  const handleResetAndClose = () => {
+    setIsOpen(false);
+    setCreatedCreds(null);
+    setSuccess(null);
+    setError(null);
+    setPgName("");
+    setSlug("");
+    setLogoPreview(null);
+    setLogoFile(null);
+  };
+
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold shadow-md shadow-purple-500/25 flex items-center gap-1.5 transition-all"
-      >
-        <Plus className="w-4 h-4" />
-        Onboard New PG
-      </button>
+      {triggerButton ? (
+        <div onClick={() => setIsOpen(true)} className="w-full cursor-pointer">
+          {triggerButton}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold shadow-md shadow-purple-500/25 flex items-center gap-1.5 transition-all"
+        >
+          <Plus className="w-4 h-4" />
+          Onboard New PG
+        </button>
+      )}
 
       {isOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
@@ -121,18 +152,48 @@ export function OnboardPgModal() {
                     Onboard New PG Brand
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    White-label branding & tenant URL provisioning
+                    White-label branding & instant owner credentials
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={handleResetAndClose}
                 className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center hover:text-slate-900"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Instant Credentials Card if created */}
+            {createdCreds ? (
+              <div className="space-y-4">
+                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>PG Onboarded! Credentials automatically provisioned in Supabase Auth.</span>
+                </div>
+
+                <CredentialsGeneratedCard
+                  name={createdCreds.name}
+                  role="owner"
+                  loginId={createdCreds.loginId}
+                  password={createdCreds.password}
+                  phone={createdCreds.phone}
+                  email={createdCreds.email}
+                  pgName={createdCreds.pgName}
+                  onClose={handleResetAndClose}
+                />
+
+                <button
+                  type="button"
+                  onClick={handleResetAndClose}
+                  className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black shadow-sm transition active:scale-98"
+                >
+                  Done & Return to Directory
+                </button>
+              </div>
+            ) : (
+              <>
 
             {error && (
               <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
@@ -410,6 +471,8 @@ export function OnboardPgModal() {
                 </button>
               </div>
             </form>
+            </>
+          )}
           </div>
         </div>
       )}

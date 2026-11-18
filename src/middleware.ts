@@ -66,12 +66,17 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const isAuthPage = pathname === "/login" || pathname === "/signup";
+  const isAuthPage = pathname === "/login";
   const isRootPage = pathname === "/";
   const isDashboardPage = pathname.startsWith("/dashboard");
   const isSuperAdminPage = pathname.startsWith("/super-admin");
   const isTenantPage = pathname.startsWith("/tenant");
   const isOnboardingPage = pathname.startsWith("/onboarding");
+
+  // Public sign-ups are disabled — redirect to /login
+  if (pathname === "/signup") {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
   // Helper for role destination
   const getDestinationForRole = (role: "super_admin" | "owner" | "admin" | "tenant") => {

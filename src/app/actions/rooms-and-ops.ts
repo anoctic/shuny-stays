@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUserSession } from "@/lib/auth/session";
+import { createOrUpdateCredentials } from "@/lib/auth/credentials";
 import {
   addAutoBuilding,
   addFloor,
@@ -105,12 +106,35 @@ export async function walkInAddTenantAction(
     collectorName: session.full_name,
     collectorId: session.id,
   });
+
+  // Auto-generate Tenant direct credentials using Supabase Service Role Key
+  const creds = await createOrUpdateCredentials({
+    name,
+    phone,
+    role: "tenant",
+    buildingId,
+    roomNumber: roomId,
+    pgName: session.pg_name || "Royal Stay PG",
+  });
+
   revalidatePath("/dashboard/rooms");
   revalidatePath("/dashboard/attendance");
   revalidatePath("/dashboard/ledger");
   revalidatePath("/dashboard");
   revalidatePath("/tenant");
-  return res;
+
+  return {
+    ...res,
+    credentials: {
+      name,
+      role: "tenant" as const,
+      loginId: creds.login_id,
+      password: creds.password,
+      phone: creds.phone,
+      pgName: session.pg_name || "Royal Stay PG",
+      roomInfo: `Room ${roomId}`,
+    },
+  };
 }
 
 export async function collectRentPaymentAction(params: {

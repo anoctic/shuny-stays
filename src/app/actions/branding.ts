@@ -8,6 +8,7 @@ import {
   uploadPgLogoToStorage,
   getPgById,
 } from "@/lib/data/pgs";
+import { createOrUpdateCredentials } from "@/lib/auth/credentials";
 
 /**
  * Super Admin Server Action: Onboard New PG with White-Label Branding
@@ -78,11 +79,33 @@ export async function onboardPgAction(formData: FormData) {
     city,
   });
 
+  // Auto-generate Owner credentials using Supabase Service Role Key
+  const creds = await createOrUpdateCredentials({
+    name: ownerName,
+    phone: ownerPhone,
+    email: ownerEmail,
+    role: "owner",
+    pgId: newPg.id,
+    pgName: newPg.name,
+  });
+
   revalidatePath("/super-admin");
   revalidatePath("/super-admin/organizations");
   revalidatePath(`/pg/${newPg.slug}`);
 
-  return { success: true, pg: newPg };
+  return {
+    success: true,
+    pg: newPg,
+    credentials: {
+      name: ownerName,
+      role: "owner" as const,
+      loginId: creds.login_id,
+      password: creds.password,
+      phone: creds.phone,
+      email: creds.email,
+      pgName: newPg.name,
+    },
+  };
 }
 
 /**
