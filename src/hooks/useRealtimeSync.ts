@@ -14,16 +14,23 @@ import { createClient } from "@/lib/supabase/client";
  *
  * Automatically unsubscribes and removes channels on component unmount.
  */
-export function useRealtimeSync(tables: string[], filter?: string) {
+export function useRealtimeSync(
+  tables: string[],
+  filter?: string,
+  onUpdate?: () => void
+) {
   const router = useRouter();
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tablesKey = [...tables].sort().join(",");
+  const onUpdateRef = useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
 
   useEffect(() => {
-    if (!tables || tables.length === 0) return;
+    if (!tablesKey) return;
+    const tableList = tablesKey.split(",");
 
     const supabase = createClient();
-    const sortedKey = [...tables].sort().join("-");
-    const channelName = `live-sync-${sortedKey}-${filter || "all"}-${Math.random().toString(36).substring(2, 7)}`;
+    const channelName = `live-sync-${tablesKey}-${filter || "all"}-${Math.random().toString(36).substring(2, 7)}`;
     const channel = supabase.channel(channelName);
 
     const triggerRefresh = () => {
@@ -32,10 +39,11 @@ export function useRealtimeSync(tables: string[], filter?: string) {
       }
       debounceTimerRef.current = setTimeout(() => {
         router.refresh();
+        onUpdateRef.current?.();
       }, 300);
     };
 
-    tables.forEach((table) => {
+    tableList.forEach((table) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (channel as any).on(
         "postgres_changes",
@@ -59,5 +67,5 @@ export function useRealtimeSync(tables: string[], filter?: string) {
       }
       supabase.removeChannel(channel);
     };
-  }, [tables, filter, router]);
+  }, [tablesKey, filter, router]);
 }
