@@ -1,6 +1,14 @@
 import { PlatformBroadcast, UserRole, BroadcastPriority } from "@/types/schema.types";
 import { createClient } from "@/lib/supabase/server";
 
+// Safe deep-clone helper to prevent cross-request memory mutation
+function deepClone<T>(obj: T): T {
+  if (typeof structuredClone === "function") {
+    return structuredClone(obj);
+  }
+  return JSON.parse(JSON.stringify(obj));
+}
+
 // Fallback in-memory store for broadcasts
 let memoryBroadcasts: PlatformBroadcast[] = [
   {
@@ -48,18 +56,20 @@ export async function getActiveBroadcastsForRole(role: UserRole): Promise<Platfo
       .order("created_at", { ascending: false });
 
     if (!error && data && data.length > 0) {
-      return (data as any[]).filter((b) => {
+      const filtered = (data as any[]).filter((b) => {
         const targets: string[] = b.target_roles || [];
         return targets.length === 0 || targets.includes(role);
       });
+      return deepClone(filtered);
     }
   } catch {
     // Fallback to memory store
   }
 
-  return memoryBroadcasts.filter((b) => {
+  const memoryFiltered = memoryBroadcasts.filter((b) => {
     return b.is_active && (b.target_roles.length === 0 || b.target_roles.includes(role));
   });
+  return deepClone(memoryFiltered);
 }
 
 /**
@@ -74,13 +84,13 @@ export async function getAllBroadcasts(): Promise<PlatformBroadcast[]> {
       .order("created_at", { ascending: false });
 
     if (!error && data && data.length > 0) {
-      return data as PlatformBroadcast[];
+      return deepClone(data as PlatformBroadcast[]);
     }
   } catch {
     // Fallback to memory store
   }
 
-  return memoryBroadcasts;
+  return deepClone(memoryBroadcasts);
 }
 
 /**

@@ -2,7 +2,7 @@
 
 export const runtime = "edge";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
 import { signInAction } from "@/app/actions/auth";
@@ -11,6 +11,21 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loginId, setLoginId] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+
+  // Restore saved login info from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("shunystays_saved_login");
+      if (saved) {
+        setLoginId(saved);
+        setRememberMe(true);
+      }
+    } catch {
+      // Ignore localStorage access restrictions in private browsing
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -18,6 +33,19 @@ export default function LoginPage() {
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
+    const identifier = (formData.get("username") || formData.get("login") || loginId) as string;
+
+    // Persist or clear saved login identifier
+    try {
+      if (rememberMe && identifier.trim()) {
+        localStorage.setItem("shunystays_saved_login", identifier.trim());
+      } else {
+        localStorage.removeItem("shunystays_saved_login");
+      }
+    } catch {
+      // Ignore localStorage write error
+    }
+
     const res = await signInAction(formData);
 
     if (res?.error) {
@@ -61,17 +89,24 @@ export default function LoginPage() {
           )}
 
           {/* Clean Credential Form */}
-          <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+          <form onSubmit={handleSubmit} method="post" action="#" className="space-y-3.5 text-xs">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+              <label htmlFor="username" className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
                 Phone Number or Email
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                 <input
                   type="text"
-                  name="login"
+                  id="username"
+                  name="username"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   required
+                  value={loginId}
+                  onChange={(e) => setLoginId(e.target.value)}
                   placeholder="e.g. 98765 43210 or name@domain.com"
                   className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#F1F5F9] border border-slate-200 font-bold text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition"
                 />
@@ -82,14 +117,16 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+              <label htmlFor="password" className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
                 Password
               </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                 <input
                   type={showPassword ? "text" : "password"}
+                  id="password"
                   name="password"
+                  autoComplete="current-password"
                   required
                   placeholder="••••••••"
                   className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-[#F1F5F9] border border-slate-200 font-bold text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition font-mono"
@@ -107,6 +144,20 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
+            </div>
+
+            {/* Save Login Info Checkbox (Remember Me + Native Autofill) */}
+            <div className="flex items-center justify-between pt-0.5">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  name="remember"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#4F46E5] focus:ring-[#4F46E5] border-slate-300 accent-[#4F46E5] cursor-pointer"
+                />
+                <span className="text-[11.5px] font-semibold text-slate-600">Save login info</span>
+              </label>
             </div>
 
             <button

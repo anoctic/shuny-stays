@@ -16,7 +16,7 @@ import { UserRole } from "@/types/schema.types";
  * - tenant -> /tenant
  */
 export async function signInAction(formData: FormData) {
-  const loginIdentifier = (formData.get("login") || formData.get("email") || formData.get("identifier")) as string;
+  const loginIdentifier = (formData.get("username") || formData.get("login") || formData.get("email") || formData.get("identifier")) as string;
   const password = formData.get("password") as string;
 
   if (!loginIdentifier || !password) {

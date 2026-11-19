@@ -256,7 +256,7 @@ export interface AuditLog {
   created_at: string;
 }
 
-export type BroadcastPriority = 'info' | 'warning' | 'urgent';
+export type BroadcastPriority = 'info' | 'warning' | 'urgent' | 'emergency' | 'normal';
 
 export interface PlatformBroadcast {
   id: string;

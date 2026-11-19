@@ -2,18 +2,21 @@ import { QrCode, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { getCurrentUserSession } from "@/lib/auth/session";
 import { getPassesForManagement } from "@/lib/data/gate-passes";
+import { getAllBroadcasts } from "@/lib/data/broadcasts";
 import { GatePassCard } from "@/components/passes/GatePassCard";
 import { RequestPassModal } from "@/components/passes/RequestPassModal";
+import { BroadcastCreatorModal } from "@/components/broadcasts/BroadcastCreatorModal";
 
 export const runtime = "edge";
 
 export default async function DashboardPassesPage() {
   const session = await getCurrentUserSession();
   const passes = await getPassesForManagement();
+  const broadcasts = await getAllBroadcasts();
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Link
             href="/dashboard"
@@ -23,7 +26,7 @@ export default async function DashboardPassesPage() {
           </Link>
           <div>
             <h1 className="text-base font-black text-slate-900 dark:text-white">
-              Resident Gate Passes & Approvals
+              Resident Gate Passes & Broadcasts
             </h1>
             <p className="text-[11px] text-slate-400">
               {session.role === "owner" ? "Owner 1-Tap Final Approvals" : "Warden Verification Desk"}
@@ -31,11 +34,14 @@ export default async function DashboardPassesPage() {
           </div>
         </div>
 
-        <RequestPassModal
-          userRole={session.role}
-          defaultTenantName="Aarav Patel"
-          defaultRoomNumber="Room 101 • Bed A"
-        />
+        <div className="flex items-center gap-2">
+          <BroadcastCreatorModal initialBroadcasts={broadcasts} />
+          <RequestPassModal
+            userRole={session.role}
+            defaultTenantName="Aarav Patel"
+            defaultRoomNumber="Room 101 • Bed A"
+          />
+        </div>
       </div>
 
       <div className="space-y-3">

@@ -22,6 +22,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { GatePassItem, PlatformBroadcast } from "@/types/schema.types";
+import { ActiveBroadcastBanner } from "@/components/broadcasts/ActiveBroadcastBanner";
 import { RequestPassModal } from "@/components/passes/RequestPassModal";
 import { RentReceiptModal } from "@/components/tenant/RentReceiptModal";
 import { DepositReceiptModal } from "@/components/tenant/DepositReceiptModal";
@@ -175,17 +176,8 @@ export function TenantHomeExplorer({
         </div>
       )}
 
-      {/* Broadcast Banner if any */}
-      {broadcasts.length > 0 && (
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-1">
-          <div className="flex items-center gap-1.5 font-extrabold text-[10px] uppercase tracking-wider text-indigo-600">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Platform Broadcast</span>
-          </div>
-          <div className="font-extrabold text-xs text-slate-900">{broadcasts[0].title}</div>
-          <div className="text-[11px] text-slate-500">{broadcasts[0].message}</div>
-        </div>
-      )}
+      {/* Urgent / Emergency Broadcast Banner */}
+      <ActiveBroadcastBanner broadcasts={broadcasts} userRole="tenant" />
 
       {/* 1. White-Labeled Top Bar: PG Logo + Name */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex items-center justify-between">

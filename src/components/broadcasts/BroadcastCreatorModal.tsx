@@ -29,7 +29,7 @@ export function BroadcastCreatorModal({ initialBroadcasts }: BroadcastCreatorMod
   // Form State
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
-  const [priority, setPriority] = useState<BroadcastPriority>("info");
+  const [priority, setPriority] = useState<BroadcastPriority>("normal");
   const [selectedRoles, setSelectedRoles] = useState<UserRole[]>(["owner", "admin", "tenant"]);
 
   const roleOptions: { role: UserRole; label: string; desc: string }[] = [
@@ -159,30 +159,57 @@ export function BroadcastCreatorModal({ initialBroadcasts }: BroadcastCreatorMod
                 </div>
               </div>
 
-              {/* Priority Chips */}
+              {/* Priority Selection: Urgent Banner vs Standard Notice */}
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Announcement Priority
+                  Display & Priority Level *
                 </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["info", "warning", "urgent"] as const).map((p) => {
-                    const isSelected = priority === p;
-                    const colors = {
-                      info: isSelected ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-700",
-                      warning: isSelected ? "bg-amber-600 text-white" : "bg-amber-50 text-amber-700",
-                      urgent: isSelected ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-700",
-                    };
-                    return (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => setPriority(p)}
-                        className={`py-2 text-xs font-bold rounded-xl transition-all uppercase tracking-wider ${colors[p]}`}
-                      >
-                        {p}
-                      </button>
-                    );
-                  })}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setPriority("urgent")}
+                    className={`p-3 rounded-2xl border text-left transition-all relative ${
+                      priority === "urgent"
+                        ? "bg-rose-50 dark:bg-rose-950/50 border-rose-500 shadow-sm ring-1 ring-rose-500/30"
+                        : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[9.5px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500 text-white">
+                        Urgent Banner
+                      </span>
+                      {priority === "urgent" && <Check className="w-3.5 h-3.5 text-rose-600" />}
+                    </div>
+                    <div className="font-extrabold text-xs text-slate-900 dark:text-white">
+                      Shows on Screen + Bell
+                    </div>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                      High-priority dark alert pinned to the top of screens
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPriority("normal")}
+                    className={`p-3 rounded-2xl border text-left transition-all relative ${
+                      priority === "normal" || priority === "info"
+                        ? "bg-indigo-50 dark:bg-indigo-950/50 border-indigo-500 shadow-sm ring-1 ring-indigo-500/30"
+                        : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[9.5px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-600 text-white">
+                        Standard Notice
+                      </span>
+                      {(priority === "normal" || priority === "info") && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                    </div>
+                    <div className="font-extrabold text-xs text-slate-900 dark:text-white">
+                      Notification Bell Only
+                    </div>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                      Silent notice routed exclusively to the header Bell
+                    </p>
+                  </button>
                 </div>
               </div>
 

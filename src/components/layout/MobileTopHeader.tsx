@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { LogOut, Sparkles, Building2, Ticket, PhoneCall, ChevronDown } from "lucide-react";
 import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
-import { UserRole, Building } from "@/types/schema.types";
+import { UserRole, Building, PlatformBroadcast } from "@/types/schema.types";
 import { BuildingSwitcher } from "./BuildingSwitcher";
+import { NotificationCenter } from "./NotificationCenter";
 import { signOutAction, switchDemoPersonaAction } from "@/app/actions/auth";
 
 interface MobileTopHeaderProps {
@@ -13,6 +14,7 @@ interface MobileTopHeaderProps {
   pgName?: string | null;
   buildings?: Building[];
   activeBuildingId?: string | null;
+  broadcasts?: PlatformBroadcast[];
 }
 
 export function MobileTopHeader({
@@ -21,6 +23,7 @@ export function MobileTopHeader({
   pgName,
   buildings = [],
   activeBuildingId,
+  broadcasts = [],
 }: MobileTopHeaderProps) {
   const [showPersonaMenu, setShowPersonaMenu] = useState(false);
 
@@ -114,7 +117,7 @@ export function MobileTopHeader({
           </div>
         </div>
 
-        {/* Right: Quick Building Switcher / Role Badge / Sign Out */}
+        {/* Right: Quick Building Switcher / Notification Bell / Role Badge / Sign Out */}
         <div className="flex items-center gap-1.5 shrink-0">
           {/* For Owners with buildings: Compact inline switcher if single bar */}
           {role === "owner" && buildings.length > 0 && (
@@ -122,6 +125,9 @@ export function MobileTopHeader({
               <BuildingSwitcher buildings={buildings} activeBuildingId={activeBuildingId} />
             </div>
           )}
+
+          {/* Top Navigation Notification Bell */}
+          <NotificationCenter broadcasts={broadcasts} userRole={role} />
 
           {/* Role Pill with pulsating live dot */}
           <button

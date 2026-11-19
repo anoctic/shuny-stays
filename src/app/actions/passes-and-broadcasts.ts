@@ -7,12 +7,12 @@ import { createBroadcast, toggleBroadcast, deleteBroadcast } from "@/lib/data/br
 import { requestGatePass, approveGatePass, rejectGatePass } from "@/lib/data/gate-passes";
 
 /**
- * Super Admin Action: Create Platform Broadcast with Target Audience Roles
+ * Create Platform / Property Broadcast with Target Audience Roles
  */
 export async function createBroadcastAction(formData: FormData) {
   const session = await getCurrentUserSession();
-  if (session.role !== "super_admin") {
-    return { error: "Unauthorized. Super Admin access required." };
+  if (session.role !== "super_admin" && session.role !== "owner" && session.role !== "admin") {
+    return { error: "Unauthorized. Management access required." };
   }
 
   const title = formData.get("title") as string;
@@ -49,11 +49,11 @@ export async function createBroadcastAction(formData: FormData) {
 }
 
 /**
- * Super Admin Action: Toggle Broadcast Active Status
+ * Toggle Broadcast Active Status
  */
 export async function toggleBroadcastAction(id: string) {
   const session = await getCurrentUserSession();
-  if (session.role !== "super_admin") {
+  if (session.role !== "super_admin" && session.role !== "owner" && session.role !== "admin") {
     return { error: "Unauthorized." };
   }
 

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUserSession } from "@/lib/auth/session";
+import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 
@@ -11,6 +12,7 @@ export default async function TenantLayout({
   children: React.ReactNode;
 }) {
   const session = await getCurrentUserSession();
+  const broadcasts = await getActiveBroadcastsForRole("tenant");
 
   // If super_admin or owner/admin, redirect to respective portals
   if (session.role === "super_admin") {
@@ -25,6 +27,7 @@ export default async function TenantLayout({
         fullName={session.full_name}
         role="tenant"
         pgName={session.pg_name || "Stanza Living Residency"}
+        broadcasts={broadcasts}
       />
       <main className="flex-1 p-4 pb-24 overflow-y-auto">{children}</main>
       <MobileBottomNav role="tenant" pendingDuesCount={1} />

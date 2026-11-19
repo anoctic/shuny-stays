@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { Building } from "@/types/schema.types";
+import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 
 export const runtime = "edge";
 
@@ -89,6 +90,8 @@ export default async function DashboardLayout({
     ];
   }
 
+  const broadcasts = await getActiveBroadcastsForRole(session.role);
+
   return (
     <div className="flex-1 flex flex-col min-h-screen">
       <MobileTopHeader
@@ -97,6 +100,7 @@ export default async function DashboardLayout({
         pgName={session.pg_name}
         buildings={buildings}
         activeBuildingId={activeBuildingId}
+        broadcasts={broadcasts}
       />
       <main className="flex-1 p-4 pb-24 overflow-y-auto">{children}</main>
       <MobileBottomNav role={session.role} openComplaintsCount={2} pendingDuesCount={3} />
