@@ -86,14 +86,14 @@ export function NotificationCenter({
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div ref={dropdownRef} className="flex items-center">
       {/* Bell Button */}
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         aria-label="Open notifications"
         title="Notices & Broadcasts"
-        className="relative p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95 flex items-center justify-center"
+        className="relative z-[75] p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95 flex items-center justify-center"
       >
         <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
@@ -106,13 +106,13 @@ export function NotificationCenter({
       {/* Sleek Dark-Slate Popover Drawer */}
       {isOpen && (
         <>
-          {/* Mobile Backdrop to prevent clipping and handle outside tap cleanly */}
+          {/* Full Screen Backdrop to dim background and capture outside tap */}
           <div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs sm:hidden animate-in fade-in"
+            className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-xs animate-in fade-in"
             onClick={() => setIsOpen(false)}
           />
 
-          <div className="fixed inset-x-3 top-16 mx-auto w-[calc(100vw-24px)] max-w-md sm:absolute sm:right-0 sm:inset-x-auto sm:top-full sm:mt-2 sm:w-96 bg-[#0B0F19] border border-slate-800 rounded-2xl p-4 shadow-2xl z-50 animate-in fade-in zoom-in-95 origin-top-right text-slate-100">
+          <div className="absolute right-3.5 top-full mt-2 w-[calc(100%-28px)] max-w-sm sm:max-w-md bg-[#0B0F19] border border-slate-800 rounded-2xl p-4 shadow-2xl z-[80] animate-in fade-in zoom-in-95 origin-top-right text-slate-100">
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
               <div className="flex items-center gap-2">
@@ -149,7 +149,7 @@ export function NotificationCenter({
             </div>
 
             {/* Broadcasts List */}
-            <div className="mt-3 space-y-2.5 max-h-[75vh] overflow-y-auto pr-0.5 scrollbar-thin scrollbar-thumb-slate-800">
+            <div className="mt-3 space-y-2.5 max-h-[65vh] overflow-y-auto pr-0.5 scrollbar-thin scrollbar-thumb-slate-800">
               {relevantBroadcasts.length === 0 ? (
                 <div className="text-center py-8 space-y-2">
                   <div className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 text-slate-500 flex items-center justify-center mx-auto">
