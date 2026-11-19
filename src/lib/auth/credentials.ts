@@ -56,43 +56,60 @@ export async function createOrUpdateCredentials(
   const cleanPhone = normalizePhone(phone);
   const password = generateReadablePassword();
 
-  // Normalize login email: if email is omitted or empty, use ${cleanPhone}@login.shunystays.app
+  // CRITICAL FIX: Phone-first auth identifier.
+  // When a 10-digit phone number is available, ALWAYS provision Supabase Auth using
+  // ${cleanPhone}@login.shunystays.app so phone-based sign-in matches auth.users 100%.
+  // Any real email is preserved in user_metadata.contact_email and profiles.email.
   let loginEmail: string;
-  if (email && email.trim().length > 0 && email.includes("@")) {
-    loginEmail = email.trim().toLowerCase();
-  } else if (cleanPhone.length >= 10) {
+  if (cleanPhone.length >= 10) {
     loginEmail = `${cleanPhone}@login.shunystays.app`;
+  } else if (email && email.trim().length > 0 && email.includes("@")) {
+    loginEmail = email.trim().toLowerCase();
   } else {
     // Fallback if neither phone nor email provided
     const randomCode = Math.random().toString(36).substring(2, 8);
     loginEmail = `user.${randomCode}@login.shunystays.app`;
   }
 
-  const loginId = cleanPhone || email || loginEmail;
+  const loginId = cleanPhone.length >= 10 ? cleanPhone : (email || loginEmail);
 
   let userId = crypto.randomUUID();
 
   try {
     const admin = createAdminClient();
 
-    // Check if user already exists with this email
-    const { data: usersList } = await admin.auth.admin.listUsers({ perPage: 1000 });
+    // Check if user already exists with this loginEmail or phone
+    const { data: usersList, error: listErr } = await admin.auth.admin.listUsers({ perPage: 1000 });
+    if (listErr) {
+      console.warn("admin.auth.admin.listUsers warning:", listErr.message);
+    }
+
     const existing = usersList?.users?.find(
-      (u) => u.email?.toLowerCase() === loginEmail.toLowerCase()
+      (u) =>
+        u.email?.toLowerCase() === loginEmail.toLowerCase() ||
+        (cleanPhone.length >= 10 && (u.user_metadata?.phone === cleanPhone || (u.phone && normalizePhone(u.phone) === cleanPhone)))
     );
 
     if (existing) {
       userId = existing.id;
-      // Update password so the user can immediately log in with the new credentials
-      await admin.auth.admin.updateUserById(userId, {
+      // Update password and auto-confirm so the user can immediately log in
+      const { error: updateErr } = await admin.auth.admin.updateUserById(userId, {
         password,
+        email: loginEmail,
+        email_confirm: true,
         user_metadata: {
+          ...existing.user_metadata,
           full_name: name,
           role,
           phone: cleanPhone,
-          pg_id: pgId || null,
+          contact_email: email ? email.trim().toLowerCase() : (existing.user_metadata?.contact_email || null),
+          pg_id: pgId || existing.user_metadata?.pg_id || null,
         },
       });
+
+      if (updateErr) {
+        throw new Error(`Failed to update existing user credentials: ${updateErr.message}`);
+      }
     } else {
       // Create new Supabase Auth user with confirmed email
       const { data: created, error: createErr } = await admin.auth.admin.createUser({
@@ -103,11 +120,16 @@ export async function createOrUpdateCredentials(
           full_name: name,
           role,
           phone: cleanPhone,
+          contact_email: email ? email.trim().toLowerCase() : null,
           pg_id: pgId || null,
         },
       });
 
-      if (!createErr && created?.user) {
+      if (createErr) {
+        throw new Error(`Failed to create Supabase user: ${createErr.message}`);
+      }
+
+      if (created?.user) {
         userId = created.user.id;
       }
     }
@@ -119,6 +141,7 @@ export async function createOrUpdateCredentials(
         full_name: name,
         role: role,
         phone: cleanPhone || null,
+        email: email ? email.trim().toLowerCase() : loginEmail,
         updated_at: new Date().toISOString(),
       } as any,
       { onConflict: "id" }
@@ -155,8 +178,20 @@ export async function createOrUpdateCredentials(
         { onConflict: "pg_id,user_id" }
       );
     }
-  } catch (err) {
-    console.warn("createOrUpdateCredentials fallback note:", err);
+  } catch (err: any) {
+    console.error("createOrUpdateCredentials error:", err);
+    return {
+      success: false,
+      userId,
+      login_id: loginId,
+      email: loginEmail,
+      password,
+      name,
+      phone: cleanPhone,
+      role,
+      pgName: pgName || undefined,
+      error: err?.message || String(err),
+    };
   }
 
   return {

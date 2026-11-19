@@ -96,6 +96,7 @@ export async function onboardPgAction(formData: FormData) {
   return {
     success: true,
     pg: newPg,
+    warning: creds.error ? `Auth notice: ${creds.error}` : undefined,
     credentials: {
       name: ownerName,
       role: "owner" as const,

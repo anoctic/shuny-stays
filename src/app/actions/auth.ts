@@ -24,38 +24,90 @@ export async function signInAction(formData: FormData) {
   }
 
   // Normalize phone or email:
-  // If input contains '@', treat as email
+  // If input contains '@', treat as email with phone fallback
   // Otherwise, extract 10 digits and use ${cleanPhone}@login.shunystays.app
   let emailToUse = loginIdentifier.trim().toLowerCase();
-  if (!emailToUse.includes("@")) {
-    const cleanPhone = emailToUse.replace(/\D/g, "").slice(-10);
+  let cleanPhone = "";
+
+  const supabase = await createClient();
+  let authData: any = null;
+  let authError: any = null;
+
+  if (emailToUse.includes("@")) {
+    // 1. Direct email sign-in attempt
+    const directRes = await supabase.auth.signInWithPassword({
+      email: emailToUse,
+      password,
+    });
+
+    if (!directRes.error) {
+      authData = directRes.data;
+    } else {
+      // 2. Fallback: check if an account was provisioned under phone-first format
+      // where contact email is stored in profiles table
+      try {
+        const { data: profile } = await (supabase.from("profiles" as any) as any)
+          .select("phone")
+          .eq("email", emailToUse)
+          .maybeSingle();
+
+        const profileData = profile as { phone?: string | null } | null;
+        if (profileData?.phone) {
+          const profilePhone = profileData.phone.replace(/\D/g, "").slice(-10);
+          if (profilePhone.length >= 10) {
+            const phoneEmail = `${profilePhone}@login.shunystays.app`;
+            const retryRes = await supabase.auth.signInWithPassword({
+              email: phoneEmail,
+              password,
+            });
+            if (!retryRes.error) {
+              authData = retryRes.data;
+            } else {
+              authError = directRes.error;
+            }
+          } else {
+            authError = directRes.error;
+          }
+        } else {
+          authError = directRes.error;
+        }
+      } catch {
+        authError = directRes.error;
+      }
+    }
+  } else {
+    // 10-digit phone sign-in
+    cleanPhone = emailToUse.replace(/\D/g, "").slice(-10);
     if (cleanPhone.length < 10) {
       return { error: "Please enter a valid 10-digit mobile number or email address." };
     }
     emailToUse = `${cleanPhone}@login.shunystays.app`;
+
+    const phoneRes = await supabase.auth.signInWithPassword({
+      email: emailToUse,
+      password,
+    });
+    authData = phoneRes.data;
+    authError = phoneRes.error;
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: emailToUse,
-    password,
-  });
-
-  if (error) {
+  if (authError || !authData?.user) {
     // Demo persona fallback for testing offline or without live Supabase credentials
-    const cleanPhone = loginIdentifier.replace(/\D/g, "").slice(-10);
-    if (loginIdentifier.includes("superadmin") || cleanPhone === "9999900001") {
+    const cleanPhoneDigits = loginIdentifier.replace(/\D/g, "").slice(-10);
+    if (loginIdentifier.includes("superadmin") || cleanPhoneDigits === "9999900001") {
       return await switchDemoPersonaAction("super_admin");
-    } else if (loginIdentifier.includes("owner") || cleanPhone === "9876543210") {
+    } else if (loginIdentifier.includes("owner") || cleanPhoneDigits === "9876543210") {
       return await switchDemoPersonaAction("owner");
-    } else if (loginIdentifier.includes("warden") || cleanPhone === "9876512345") {
+    } else if (loginIdentifier.includes("warden") || cleanPhoneDigits === "9876512345") {
       return await switchDemoPersonaAction("admin");
-    } else if (loginIdentifier.includes("student") || cleanPhone === "9123456789") {
+    } else if (loginIdentifier.includes("student") || cleanPhoneDigits === "9123456789") {
       return await switchDemoPersonaAction("tenant");
     }
 
-    return { error: error.message || "Invalid phone number/email or password." };
+    return { error: authError?.message || "Invalid phone number/email or password." };
   }
+
+  const data = authData;
 
   // Clear demo cookies upon real sign-in
   const cookieStore = await cookies();
