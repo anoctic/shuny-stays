@@ -77,9 +77,13 @@ export const DEMO_USERS: Record<UserRole, CurrentUserSession> = {
  */
 export async function getCurrentUserSession(): Promise<CurrentUserSession> {
   const cookieStore = await cookies();
+  const isDev = process.env.NODE_ENV === "development";
 
-  // 1. Check if demo persona override cookie is set
-  const demoRole = cookieStore.get("pg_demo_role")?.value as UserRole | undefined;
+  // 1. Check if demo persona override cookie is set (Strictly restricted to development mode)
+  const demoRole = isDev
+    ? (cookieStore.get("pg_demo_role")?.value as UserRole | undefined)
+    : undefined;
+
   if (demoRole && DEMO_USERS[demoRole]) {
     // If owner has demo no-pg cookie, simulate first-time onboarding
     const noPgCookie = cookieStore.get("pg_demo_no_pg")?.value;
@@ -182,10 +186,25 @@ export async function getCurrentUserSession(): Promise<CurrentUserSession> {
         };
       }
     } catch {
-      // Fallback to default owner demo profile if network or session check fails
+      // In development mode, fallback to demo owner profile
+      if (isDev) {
+        return DEMO_USERS.owner;
+      }
     }
   }
 
-  // Default fallback for development preview
-  return DEMO_USERS.owner;
+  // Default fallback for development preview only
+  if (isDev) {
+    return DEMO_USERS.owner;
+  }
+
+  // In production, unauthenticated guest
+  return {
+    id: "",
+    email: "",
+    full_name: "Guest",
+    role: "tenant",
+    has_pg: false,
+    is_super_admin: false,
+  };
 }

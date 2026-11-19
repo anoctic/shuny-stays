@@ -139,17 +139,19 @@ Run the SQL migration scripts in your Supabase SQL Editor in sequence:
 4. `supabase/migrations/004_auth_memberships_rls.sql` (`memberships` table, `is_super_admin()`, and membership-bound RLS)
 5. `supabase/seed.sql` (Seed organizations, rooms, beds, demo residents, and memberships)
 
-### 4. Run Development Server
+### 4. Run Development Server & Production URL
+- **Production URL (Cloudflare Pages):** **[https://shunystays.pages.dev](https://shunystays.pages.dev)**
+- **Local Dev Server:**
 ```bash
 npm run dev
 ```
-The server runs on **[http://localhost:3000](http://localhost:3000)**.
+The local server runs on **[http://localhost:3000](http://localhost:3000)**.
 
 ---
 
-## 🧪 Testing Role-Based Personas (Instant 1-Click Demo)
+## 🧪 Testing Role-Based Personas (Instant 1-Click Demo in Dev)
 
-On the **[http://localhost:3000/login](http://localhost:3000/login)** page, you can either sign in with your Supabase credentials or use the 1-click demo switcher cards:
+On the **[http://localhost:3000/login](http://localhost:3000/login)** page (in development mode), you can either sign in with your Supabase credentials or use the 1-click demo switcher cards:
 
 | Persona | Role | Capabilities |
 | :--- | :--- | :--- |

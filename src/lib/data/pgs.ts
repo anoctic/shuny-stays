@@ -22,6 +22,14 @@ export interface PgDetailItem {
   created_at: string;
 }
 
+// Safe deep-clone helper to prevent shared isolate memory mutations
+function deepClone<T>(obj: T): T {
+  if (typeof structuredClone === "function") {
+    return structuredClone(obj);
+  }
+  return JSON.parse(JSON.stringify(obj));
+}
+
 // In-memory persistent registry for PGs across sessions
 let memoryPgs: PgDetailItem[] = [
   {
@@ -134,13 +142,13 @@ export async function getAllPgs(): Promise<PgDetailItem[]> {
       // Include memory-only PGs (newly onboarded in demo)
       const existingIds = new Set(dbPgs.map((p) => p.id));
       const unmergedMemory = memoryPgs.filter((m) => !existingIds.has(m.id));
-      return [...dbPgs, ...unmergedMemory];
+      return deepClone([...dbPgs, ...unmergedMemory]);
     }
   } catch {
     // Fallback to memory
   }
 
-  return [...memoryPgs];
+  return deepClone(memoryPgs);
 }
 
 /**
@@ -149,7 +157,8 @@ export async function getAllPgs(): Promise<PgDetailItem[]> {
 export async function getPgBySlug(slug: string): Promise<PgDetailItem | null> {
   const normalized = slug.trim().toLowerCase();
   const all = await getAllPgs();
-  return all.find((p) => p.slug.toLowerCase() === normalized) || null;
+  const match = all.find((p) => p.slug.toLowerCase() === normalized) || null;
+  return match ? deepClone(match) : null;
 }
 
 /**
@@ -157,7 +166,8 @@ export async function getPgBySlug(slug: string): Promise<PgDetailItem | null> {
  */
 export async function getPgById(id: string): Promise<PgDetailItem | null> {
   const all = await getAllPgs();
-  return all.find((p) => p.id === id) || null;
+  const match = all.find((p) => p.id === id) || null;
+  return match ? deepClone(match) : null;
 }
 
 /**

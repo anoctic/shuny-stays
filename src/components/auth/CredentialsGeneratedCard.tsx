@@ -61,7 +61,7 @@ export function CredentialsGeneratedCard({
       `🔑 *Login ID / Phone:* ${loginId}\n` +
       `🔒 *Password:* ${password}\n` +
       (roomInfo ? `🛏 *Bed / Room:* ${roomInfo}\n` : "") +
-      `🌐 *Sign In Portal:* ${typeof window !== "undefined" ? window.location.origin : ""}/login\n\n` +
+      `🌐 *Sign In Portal:* ${typeof window !== "undefined" && window.location.origin ? window.location.origin : "https://shunystays.pages.dev"}/login\n\n` +
       `Please sign in to manage your bookings, attendance, passes & rent receipts.`
   );
 
@@ -76,7 +76,7 @@ export function CredentialsGeneratedCard({
       `Role: ${roleLabel}\n` +
       `Login ID: ${loginId}\n` +
       `Password: ${password}\n` +
-      `Portal: ${typeof window !== "undefined" ? window.location.origin : ""}/login`;
+      `Portal: ${typeof window !== "undefined" && window.location.origin ? window.location.origin : "https://shunystays.pages.dev"}/login`;
 
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);

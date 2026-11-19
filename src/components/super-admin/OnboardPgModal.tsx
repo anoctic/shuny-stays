@@ -274,7 +274,7 @@ export function OnboardPgModal({ triggerButton }: { triggerButton?: React.ReactN
                 </label>
                 <div className="flex items-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs">
                   <span className="text-slate-400 font-mono select-none mr-1">
-                    https://shunystays.app/pg/
+                    https://shunystays.pages.dev/pg/
                   </span>
                   <input
                     type="text"

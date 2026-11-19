@@ -21,6 +21,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://shunystays.pages.dev"),
   title: "Shuny Stays — Multi-Tenant PG & Hostel Operating System",
   description: "Cloud-native PG, hostel & co-living property management operating system with 5-level hierarchy, white-label branding, and role-based access.",
   manifest: "/manifest.webmanifest",

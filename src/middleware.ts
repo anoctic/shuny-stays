@@ -28,13 +28,16 @@ export async function middleware(request: NextRequest) {
   let userRole: "super_admin" | "owner" | "admin" | "tenant" | null = null;
   let hasSession = false;
 
-  // Check demo cookie override first
-  const demoRole = request.cookies.get("pg_demo_role")?.value as
-    | "super_admin"
-    | "owner"
-    | "admin"
-    | "tenant"
-    | undefined;
+  // Check demo cookie override (STRICTLY restricted to development mode)
+  const isDev = process.env.NODE_ENV === "development";
+  const demoRole = isDev
+    ? (request.cookies.get("pg_demo_role")?.value as
+        | "super_admin"
+        | "owner"
+        | "admin"
+        | "tenant"
+        | undefined)
+    : undefined;
 
   if (demoRole && ["super_admin", "owner", "admin", "tenant"].includes(demoRole)) {
     userRole = demoRole;

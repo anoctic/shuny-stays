@@ -5,6 +5,14 @@
 
 import { createClient } from "@/lib/supabase/server";
 
+// Safe deep-clone helper to prevent cross-request memory mutation in shared worker isolates
+function deepClone<T>(obj: T): T {
+  if (typeof structuredClone === "function") {
+    return structuredClone(obj);
+  }
+  return JSON.parse(JSON.stringify(obj));
+}
+
 export interface TenantProfileItem {
   id: string;
   pgId: string;
@@ -626,9 +634,9 @@ export async function getAllBuildings(selectedBuildingId?: string | null): Promi
   }
 
   if (!selectedBuildingId || selectedBuildingId === "all") {
-    return memoryBuildings;
+    return deepClone(memoryBuildings);
   }
-  return memoryBuildings.filter((b) => b.id === selectedBuildingId);
+  return deepClone(memoryBuildings.filter((b) => b.id === selectedBuildingId));
 }
 
 export function computePropertyStats(selectedBuildingId?: string | null) {
@@ -712,7 +720,7 @@ export function getBedDetails(buildingId: string, floorIdx: number, roomId: stri
   const bed = room.beds[bedIdx];
   if (!bed) return null;
 
-  return { building, floor, room, bed };
+  return deepClone({ building, floor, room, bed });
 }
 
 // --- MUTATION ACTIONS ---
@@ -1087,12 +1095,12 @@ export async function getAllSecurityDeposits(pgId?: string, buildingId?: string)
   if (buildingId && buildingId !== "all") {
     list = list.filter((d) => d.buildingId === buildingId);
   }
-  return list;
+  return deepClone(list);
 }
 
 export async function getSecurityDepositForTenant(tenantId: string): Promise<SecurityDepositItem | null> {
   const dep = memorySecurityDeposits.find((d) => d.tenantId === tenantId);
-  return dep || null;
+  return dep ? deepClone(dep) : null;
 }
 
 export async function collectSecurityDeposit(params: {
@@ -1288,18 +1296,18 @@ export async function getAllRentPayments(pgId?: string, buildingId?: string): Pr
   if (buildingId && buildingId !== "all") {
     list = list.filter((r) => r.buildingId === buildingId);
   }
-  return list;
+  return deepClone(list);
 }
 
 export async function getRentPaymentsForTenant(tenantId: string): Promise<RentPaymentRecord[]> {
-  return memoryRentPayments.filter((r) => r.tenantId === tenantId);
+  return deepClone(memoryRentPayments.filter((r) => r.tenantId === tenantId));
 }
 
 export async function getAdminCollections(adminName?: string): Promise<RentPaymentRecord[]> {
-  if (!adminName) return memoryRentPayments.filter((r) => r.collectedByRole === "admin");
-  return memoryRentPayments.filter(
+  if (!adminName) return deepClone(memoryRentPayments.filter((r) => r.collectedByRole === "admin"));
+  return deepClone(memoryRentPayments.filter(
     (r) => r.collectedByName?.toLowerCase().includes(adminName.toLowerCase()) || r.collectedByRole === "admin"
-  );
+  ));
 }
 
 export async function collectRentPayment(params: {
@@ -1462,7 +1470,7 @@ export async function settleRentPaymentWithOwner(params: {
 // --- LEDGER & EXPENSES ---
 
 export async function getExpenses() {
-  return memoryExpenses;
+  return deepClone(memoryExpenses);
 }
 
 export async function logExpense(category: string, amount: number, scope: string) {
@@ -1474,11 +1482,11 @@ export async function logExpense(category: string, amount: number, scope: string
     date: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
   };
   memoryExpenses.unshift(newExp);
-  return { success: true, expense: newExp };
+  return { success: true, expense: deepClone(newExp) };
 }
 
 export async function getUpiApprovals() {
-  return memoryUpiApprovals;
+  return deepClone(memoryUpiApprovals);
 }
 
 export async function approveUpiPayment(id: string) {
@@ -1501,7 +1509,7 @@ export async function rejectUpiPayment(id: string) {
 // --- STAFF & OPS ---
 
 export async function getStaffList() {
-  return memoryStaffList;
+  return deepClone(memoryStaffList);
 }
 
 export async function toggleStaffPermission(staffId: string, permKey: string) {
@@ -1510,11 +1518,11 @@ export async function toggleStaffPermission(staffId: string, permKey: string) {
     const k = permKey as keyof typeof staff.permissions;
     staff.permissions[k] = !staff.permissions[k];
   }
-  return { success: true, staff };
+  return { success: true, staff: staff ? deepClone(staff) : null };
 }
 
 export async function getComplaints() {
-  return memoryComplaints;
+  return deepClone(memoryComplaints);
 }
 
 export async function resolveComplaint(id: string, note?: string) {
@@ -1527,16 +1535,16 @@ export async function resolveComplaint(id: string, note?: string) {
 }
 
 export async function getMessMenu() {
-  return memoryMessMenu;
+  return deepClone(memoryMessMenu);
 }
 
 export async function updateMessMenu(data: Partial<MessMenu>) {
   memoryMessMenu = { ...memoryMessMenu, ...data };
-  return { success: true, messMenu: memoryMessMenu };
+  return { success: true, messMenu: deepClone(memoryMessMenu) };
 }
 
 export async function getAuditLogs() {
-  return memoryAuditLogs;
+  return deepClone(memoryAuditLogs);
 }
 
 // --- RECEIPTS & DINNER POLLS ---
@@ -1583,9 +1591,9 @@ let memoryDinnerPolls: Record<string, "Yes" | "No"> = {
 };
 
 export async function getTenantReceipts(tenantId?: string): Promise<ReceiptItem[]> {
-  if (!tenantId) return memoryReceipts;
+  if (!tenantId) return deepClone(memoryReceipts);
   const filtered = memoryReceipts.filter((r) => r.tenantId === tenantId);
-  return filtered.length > 0 ? filtered : memoryReceipts.slice(0, 2);
+  return deepClone(filtered.length > 0 ? filtered : memoryReceipts.slice(0, 2));
 }
 
 export async function addReceipt(data: Omit<ReceiptItem, "id">): Promise<ReceiptItem> {
@@ -1594,7 +1602,7 @@ export async function addReceipt(data: Omit<ReceiptItem, "id">): Promise<Receipt
     ...data,
   };
   memoryReceipts.unshift(newReceipt);
-  return newReceipt;
+  return deepClone(newReceipt);
 }
 
 export async function getTenantDinnerPoll(tenantId: string): Promise<"Yes" | "No"> {
