@@ -88,18 +88,25 @@ export async function onboardPgAction(formData: FormData) {
   }
 
   // 2. Onboard new PG linked directly to the real auth user id
-  const newPg = await onboardNewPg({
-    name,
-    slug,
-    logo_url: logoUrl,
-    primary_color: primaryColor,
-    owner_name: ownerName,
-    owner_email: ownerEmail,
-    owner_phone: cleanPhone,
-    subscription_tier: subscriptionTier,
-    city,
-    owner_id: creds.userId,
-  });
+  let newPg;
+  try {
+    newPg = await onboardNewPg({
+      name,
+      slug,
+      logo_url: logoUrl,
+      primary_color: primaryColor,
+      owner_name: ownerName,
+      owner_email: ownerEmail,
+      owner_phone: cleanPhone,
+      subscription_tier: subscriptionTier,
+      city,
+      owner_id: creds.userId,
+    });
+  } catch (err: any) {
+    return {
+      error: `Failed to register PG in database: ${err?.message || "Unknown database error"}.`,
+    };
+  }
 
   // 3. Ensure profiles and pgs are explicitly linked with newPg.id and cleanPhone
   try {

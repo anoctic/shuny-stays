@@ -108,7 +108,7 @@ export async function getCurrentUserSession(): Promise<CurrentUserSession> {
       if (user) {
         // Fetch profile
         const { data: profile } = await (supabase.from("profiles" as any) as any)
-          .select("id, role, full_name, phone")
+          .select("id, role, full_name, phone, pg_id, email")
           .eq("id", user.id)
           .single();
 
@@ -125,11 +125,22 @@ export async function getCurrentUserSession(): Promise<CurrentUserSession> {
         let bedId: string | null = null;
 
         if (role === "owner") {
-          const { data: pg } = await (supabase.from("pgs" as any) as any)
-            .select("id, name")
-            .eq("owner_id", user.id)
-            .limit(1)
-            .maybeSingle();
+          let pg: any = null;
+          if (profile?.pg_id) {
+            const { data } = await (supabase.from("pgs" as any) as any)
+              .select("id, name")
+              .eq("id", profile.pg_id)
+              .maybeSingle();
+            pg = data;
+          }
+          if (!pg) {
+            const { data } = await (supabase.from("pgs" as any) as any)
+              .select("id, name")
+              .eq("owner_id", user.id)
+              .limit(1)
+              .maybeSingle();
+            pg = data;
+          }
 
           if (pg) {
             pgId = pg.id;

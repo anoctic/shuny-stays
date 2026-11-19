@@ -253,21 +253,26 @@ export async function onboardNewPg(data: {
   try {
     const admin = createAdminClient();
 
-    // 1. Create or upsert owner profile
-    await admin.from("profiles").upsert(
+    // 1. Ensure owner profile exists with pg_id = null first
+    // (profiles_id_fkey requires auth.users(id); pg_id is set to null to avoid circular FK error 23503 before pgs row exists)
+    const { error: profErr1 } = await admin.from("profiles").upsert(
       {
         id: ownerId,
         full_name: data.owner_name,
         role: "owner" as UserRole,
         phone: data.owner_phone,
         email: data.owner_email,
-        pg_id: pgId,
+        pg_id: null,
       } as any,
       { onConflict: "id" }
     );
+    if (profErr1) {
+      console.error("onboardNewPg profiles step 1 error:", profErr1.message);
+      throw new Error(`Database profile initialization error: ${profErr1.message}`);
+    }
 
-    // 2. Create pgs record
-    await admin.from("pgs").insert({
+    // 2. Insert pgs record (pgs_owner_id_fkey requires profiles(id), which now exists)
+    const { error: pgErr } = await (admin.from("pgs" as any) as any).insert({
       id: pgId,
       owner_id: ownerId,
       name: newPg.name,
@@ -279,9 +284,21 @@ export async function onboardNewPg(data: {
       status: "active",
       subscription_tier: newPg.subscription_tier.toLowerCase().replace(" ", "_"),
     } as any);
+    if (pgErr) {
+      console.error("onboardNewPg pgs step 2 error:", pgErr.message);
+      throw new Error(`Database PG registration error: ${pgErr.message}`);
+    }
 
-    // 3. Link owner in pg_staff with ALL permissions
-    await admin.from("pg_staff").upsert(
+    // 3. Link owner profile to the newly created pg_id
+    const { error: profErr2 } = await (admin.from("profiles" as any) as any)
+      .update({ pg_id: pgId } as any)
+      .eq("id", ownerId);
+    if (profErr2) {
+      console.error("onboardNewPg profiles step 3 error:", profErr2.message);
+    }
+
+    // 4. Link owner in pg_staff with ALL permissions
+    const { error: staffErr } = await admin.from("pg_staff").upsert(
       {
         pg_id: pgId,
         user_id: ownerId,
@@ -291,8 +308,29 @@ export async function onboardNewPg(data: {
       } as any,
       { onConflict: "pg_id,user_id" }
     );
-  } catch (err) {
-    console.warn("DB Onboarding note: saved to active memory store.", err);
+    if (staffErr) {
+      console.error("onboardNewPg pg_staff step 4 error:", staffErr.message);
+    }
+
+    // 5. Create default building for the new PG so owner dashboard has an operational property
+    const defaultBuildingId = crypto.randomUUID();
+    await (admin.from("buildings" as any) as any).insert({
+      id: defaultBuildingId,
+      pg_id: pgId,
+      name: "Tower 1 - Main Wing",
+      gender_type: "coliving",
+      address: `${data.city || "Bengaluru"} Central`,
+      city: data.city || "Bengaluru",
+      state: "Karnataka",
+      pincode: "560001",
+      warden_name: data.owner_name,
+      warden_phone: data.owner_phone,
+      total_floors: 3,
+      amenities: ["High-speed Wi-Fi", "24/7 Power Backup", "RO Water", "Daily Housekeeping"],
+    } as any);
+  } catch (err: any) {
+    console.error("DB Onboarding critical error:", err?.message || err);
+    throw err;
   }
 
   return newPg;

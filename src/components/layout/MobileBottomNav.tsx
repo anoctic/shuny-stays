@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import {
   BedDouble,
   ClipboardCheck,
@@ -45,9 +45,48 @@ function MobileBottomNavInner({
   pendingDuesCount = 0,
   pendingPassesCount = 1,
 }: MobileBottomNavProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const superAdminCurrentTab = searchParams?.get("tab") || "overview";
+  const [activeTabOverride, setActiveTabOverride] = useState<string | null>(null);
+
+  // Sync activeTabOverride with route changes
+  useEffect(() => {
+    setActiveTabOverride(null);
+  }, [pathname, searchParams]);
+
+  // Listen to external tab switch events from SuperAdminDashboard
+  useEffect(() => {
+    const handleCustomTabSwitch = (e: Event) => {
+      const customEvent = e as CustomEvent<{ tab: string }>;
+      if (customEvent.detail?.tab) {
+        setActiveTabOverride(customEvent.detail.tab);
+      }
+    };
+
+    window.addEventListener("superadmin:switchtab", handleCustomTabSwitch);
+    return () => {
+      window.removeEventListener("superadmin:switchtab", handleCustomTabSwitch);
+    };
+  }, []);
+
+  const superAdminCurrentTab =
+    activeTabOverride || searchParams?.get("tab") || "overview";
+
+  const handleTabClick = (e: React.MouseEvent, tab: NavTab) => {
+    if (role === "super_admin") {
+      e.preventDefault();
+      setActiveTabOverride(tab.id);
+      window.dispatchEvent(
+        new CustomEvent("superadmin:switchtab", { detail: { tab: tab.id } })
+      );
+      if (pathname === "/super-admin") {
+        router.push(tab.href, { scroll: false });
+      } else {
+        router.push(tab.href);
+      }
+    }
+  };
 
   // If on onboarding or standalone auth pages, hide bottom nav
   if (pathname === "/onboarding" || pathname === "/login" || pathname === "/signup") {
@@ -234,6 +273,7 @@ function MobileBottomNavInner({
             <Link
               key={tab.id}
               href={tab.href}
+              onClick={(e) => handleTabClick(e, tab)}
               className={cn(
                 "relative flex flex-col items-center justify-center gap-0.5 py-1 px-0.5 rounded-xl transition-all duration-150 active:scale-95 touch-manipulation cursor-pointer",
                 tab.isActive

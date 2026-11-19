@@ -93,15 +93,6 @@ export async function createOrUpdateCredentials(
   let userId = crypto.randomUUID();
 
   try {
-    if (
-      !process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.SUPABASE_SERVICE_ROLE_KEY.includes("placeholder")
-    ) {
-      throw new Error(
-        "SUPABASE_SERVICE_ROLE_KEY is missing or invalid in server environment. Cannot provision Supabase Auth user."
-      );
-    }
-
     const admin = createAdminClient();
 
     // Check if user already exists with this loginEmail or phone
@@ -111,13 +102,26 @@ export async function createOrUpdateCredentials(
       console.warn("admin.auth.admin.listUsers warning:", listErr.message);
     }
 
-    const existing = usersList?.users?.find(
-      (u) =>
-        u.email?.toLowerCase() === loginEmail.toLowerCase() ||
-        (cleanPhone.length === 10 &&
-          (u.user_metadata?.phone === cleanPhone ||
-            (u.phone && normalizePhone(u.phone) === cleanPhone)))
+    // Priority 1: Match exact loginEmail (e.g. 9027003865@login.shunystays.app)
+    let existing = usersList?.users?.find(
+      (u) => u.email?.toLowerCase() === loginEmail.toLowerCase()
     );
+
+    // Priority 2: Match by phone field if available
+    if (!existing && cleanPhone.length === 10) {
+      existing = usersList?.users?.find(
+        (u) => u.phone && normalizePhone(u.phone) === cleanPhone
+      );
+    }
+
+    // Priority 3: Match by user_metadata.phone
+    if (!existing && cleanPhone.length === 10) {
+      existing = usersList?.users?.find(
+        (u) =>
+          u.user_metadata?.phone &&
+          normalizePhone(u.user_metadata.phone) === cleanPhone
+      );
+    }
 
     if (existing) {
       userId = existing.id;
@@ -128,7 +132,6 @@ export async function createOrUpdateCredentials(
           password,
           email: loginEmail,
           email_confirm: true,
-          phone: cleanPhone.length === 10 ? cleanPhone : undefined,
           user_metadata: {
             ...existing.user_metadata,
             full_name: name,
@@ -155,7 +158,6 @@ export async function createOrUpdateCredentials(
           email: loginEmail,
           password,
           email_confirm: true,
-          phone: cleanPhone.length === 10 ? cleanPhone : undefined,
           user_metadata: {
             full_name: name,
             role,
@@ -185,7 +187,14 @@ export async function createOrUpdateCredentials(
       updated_at: new Date().toISOString(),
     };
     if (pgId) {
-      profilePayload.pg_id = pgId;
+      // Only set pg_id if pgId already exists in pgs table to prevent foreign key violation 23503
+      const { data: pgExists } = await (admin.from("pgs" as any) as any)
+        .select("id")
+        .eq("id", pgId)
+        .maybeSingle();
+      if (pgExists?.id) {
+        profilePayload.pg_id = pgId;
+      }
     }
 
     const { error: profileErr } = await admin
