@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import {
   Sparkles,
   IdCard,
@@ -97,6 +99,9 @@ export function TenantHomeExplorer({
   wifiPass = "StayRoyal@2026",
   broadcasts = [],
 }: TenantHomeExplorerProps) {
+  const router = useRouter();
+  useRealtimeSync(["tenants", "payments", "complaints", "rooms"]);
+
   const [showHistory, setShowHistory] = useState(false);
   const [kycStatus, setKycStatus] = useState<"Verified" | "Pending">(initialKycStatus);
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
@@ -124,6 +129,7 @@ export function TenantHomeExplorer({
     setKycLoading(true);
     try {
       await verifySelfKycAction();
+      router.refresh();
       setKycStatus("Verified");
       setIsKycModalOpen(false);
       showToast("KYC Documents Verified & Synced!");
@@ -145,6 +151,7 @@ export function TenantHomeExplorer({
       fd.append("utr", utrInput);
       fd.append("amount", rentAmount.toString());
       await submitTenantUpiScreenshotAction(fd);
+      router.refresh();
       setUtrSubmitted(true);
       showToast("Payment screenshot submitted for Owner review!");
     } catch {

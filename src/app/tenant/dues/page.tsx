@@ -1,8 +1,11 @@
 "use client";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CreditCard,
   UploadCloud,
@@ -41,6 +44,7 @@ const mockReceipts: ReceiptItem[] = [
 ];
 
 export default function TenantDuesPage() {
+  const router = useRouter();
   const [utrInput, setUtrInput] = useState("UTR40988712");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -65,6 +69,7 @@ export default function TenantDuesPage() {
       fd.append("utr", utrInput);
       fd.append("amount", "8500");
       await submitTenantUpiScreenshotAction(fd);
+      router.refresh();
       setSubmitted(true);
       showToast("Payment screenshot submitted for Owner review!");
     } catch {

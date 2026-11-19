@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ShieldCheck,
   Ticket,
@@ -51,6 +52,7 @@ export function OpsAndStaffExplorer({
   userRole,
   initialSubTab = "passes_staff",
 }: OpsAndStaffExplorerProps) {
+  const router = useRouter();
   const isOwner = userRole === "owner";
   const [subTab, setSubTab] = useState<"passes_staff" | "audit_mess" | "complaints">(initialSubTab);
   const [isEditMessOpen, setIsEditMessOpen] = useState(false);
@@ -86,6 +88,7 @@ export function OpsAndStaffExplorer({
       });
       const data = await res.json();
       if (data.success) {
+        router.refresh();
         setCreatedWardenCreds({
           name: data.name,
           role: "admin",
@@ -252,6 +255,7 @@ export function OpsAndStaffExplorer({
                           type="button"
                           onClick={async () => {
                             await approveGatePassAction(gp.id);
+                            router.refresh();
                             setToastMsg(`Approved! Pass turned GREEN on ${gp.tenant_name}'s app ✅`);
                             setTimeout(() => setToastMsg(null), 3500);
                           }}
@@ -263,6 +267,7 @@ export function OpsAndStaffExplorer({
                           type="button"
                           onClick={async () => {
                             await rejectGatePassAction(gp.id, "Rejected by Owner");
+                            router.refresh();
                           }}
                           className="px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 text-[10.5px] font-extrabold transition active:scale-95"
                         >
@@ -318,6 +323,7 @@ export function OpsAndStaffExplorer({
                       type="button"
                       onClick={async () => {
                         await toggleStaffPermissionAction(st.id, permKey);
+                        router.refresh();
                       }}
                       className={`px-2 py-1 rounded-lg text-[9.5px] font-extrabold border transition ${
                         enabled
@@ -415,6 +421,7 @@ export function OpsAndStaffExplorer({
                   type="button"
                   onClick={async () => {
                     await resolveComplaintAction(c.id, "Resolved by Staff & Verified");
+                    router.refresh();
                   }}
                   className="w-full py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[10.5px] font-extrabold shadow-xs transition active:scale-95"
                 >
@@ -458,6 +465,7 @@ export function OpsAndStaffExplorer({
                   e.preventDefault();
                   const formData = new FormData(e.currentTarget);
                   await updateMessMenuAction(formData);
+                  router.refresh();
                   setIsEditMessOpen(false);
                 }}
                 className="space-y-2.5 text-xs"

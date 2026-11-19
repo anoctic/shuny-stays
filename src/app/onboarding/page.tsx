@@ -1,8 +1,11 @@
 "use client";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   Sparkles,
@@ -17,6 +20,7 @@ import {
 import { submitOnboardingAction } from "@/app/actions/auth";
 
 export default function OnboardingPage() {
+  const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +65,8 @@ export default function OnboardingPage() {
     if (res?.error) {
       setError(res.error);
       setIsSubmitting(false);
+    } else {
+      router.refresh();
     }
   };
 

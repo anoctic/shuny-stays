@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   Building2,
@@ -52,6 +53,7 @@ export function AttendanceSheet({
   userName,
   assignedBuildingIds = [],
 }: AttendanceSheetProps) {
+  const router = useRouter();
   const isAdminScoped = userRole === "admin";
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
   const [isPending, startTransition] = useTransition();
@@ -155,6 +157,7 @@ export function AttendanceSheet({
       });
 
       await saveAttendanceAction(itemsToSave);
+      router.refresh();
       setSaveSuccessMsg("Attendance saved & synced live to all Tenant apps!");
       setTimeout(() => setSaveSuccessMsg(null), 4000);
     });

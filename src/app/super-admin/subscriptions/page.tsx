@@ -2,6 +2,8 @@ import { CreditCard, CheckCircle2, AlertCircle, ArrowUpRight } from "lucide-reac
 import { DEMO_TENANTS } from "@/lib/tenant/constants";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default function SuperAdminSubscriptionsPage() {
   const tiers = [

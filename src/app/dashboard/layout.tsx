@@ -8,6 +8,8 @@ import { Building } from "@/types/schema.types";
 import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function DashboardLayout({
   children,

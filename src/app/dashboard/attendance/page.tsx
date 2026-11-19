@@ -4,6 +4,8 @@ import { getTodayAttendanceSheet } from "@/lib/data/attendance";
 import { AttendanceSheet } from "@/components/attendance/AttendanceSheet";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function AttendancePage() {
   const session = await getCurrentUserSession();

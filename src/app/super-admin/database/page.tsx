@@ -3,6 +3,8 @@ import { Database, ShieldCheck, Layers, Terminal } from "lucide-react";
 import { MOCK_PG_TABLES } from "@/lib/mock-data";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default function SuperAdminDatabasePage() {
   return (

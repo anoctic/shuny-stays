@@ -15,6 +15,8 @@ import { OnboardPgModal } from "@/components/super-admin/OnboardPgModal";
 import { EditBrandingModal } from "@/components/super-admin/EditBrandingModal";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
 import { enterViewAsOrgAction, exitViewAsOrgAction } from "@/app/actions/auth";
 

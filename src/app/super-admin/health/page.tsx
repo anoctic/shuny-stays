@@ -2,6 +2,8 @@ import { Activity, ShieldCheck, Database, CheckCircle2, Server, Cpu } from "luci
 import { MOCK_CLUSTER_STATS, MOCK_PG_TABLES } from "@/lib/mock-data";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default function SuperAdminHealthPage() {
   return (

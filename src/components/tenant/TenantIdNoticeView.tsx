@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   QrCode,
   ArrowLeft,
@@ -53,6 +54,7 @@ export function TenantIdNoticeView({
   emergencyPhone,
   passes,
 }: TenantIdNoticeViewProps) {
+  const router = useRouter();
   const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
   const [noticeDate, setNoticeDate] = useState("25 Dec 2026");
   const [noticeReason, setNoticeReason] = useState("Internship completed / Relocating");
@@ -72,6 +74,7 @@ export function TenantIdNoticeView({
       fd.append("date", noticeDate);
       fd.append("reason", noticeReason);
       await submitVacateNoticeAction(fd);
+      router.refresh();
       setIsNoticeModalOpen(false);
       showToast("Vacate notice sent to Owner & Warden!");
     } catch {

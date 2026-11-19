@@ -15,6 +15,8 @@ import { GatePassCard } from "@/components/passes/GatePassCard";
 import { RequestPassModal } from "@/components/passes/RequestPassModal";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import { TenantIdNoticeView } from "@/components/tenant/TenantIdNoticeView";
 
 export default async function TenantPassesPage() {

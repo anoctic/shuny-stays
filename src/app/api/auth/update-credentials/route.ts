@@ -13,8 +13,8 @@ export const dynamic = "force-dynamic";
  * Atomically updates user authentication credentials in `auth.users`
  * (via supabase.auth.admin.updateUserById) and updates `public.profiles`.
  *
- * Security: Callers can update their own credentials, or super_admin/owner/admin
- * can update subordinate credentials.
+ * Supports calls from AccountSecurityCard (currentPassword, newLoginIdentifier, newPassword)
+ * as well as direct management calls (userId, name, phone, email, password).
  */
 export async function POST(req: NextRequest) {
   try {
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Determine caller role
+    // Determine caller role from profiles or metadata
     const { data: callerProfile } = await (supabase.from("profiles" as any) as any)
       .select("role")
       .eq("id", callerUser.id)
@@ -45,7 +45,13 @@ export async function POST(req: NextRequest) {
       phone,
       email,
       password,
+      currentPassword,
+      newLoginIdentifier,
+      newPassword,
     } = body;
+
+    const finalPassword = (newPassword || password || "").trim();
+    const finalIdentifier = (newLoginIdentifier || "").trim();
 
     // Authorization check: only super_admin, owner, or staff (admin) can update other users
     const isSelf = targetUserId === callerUser.id;
@@ -58,37 +64,64 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // If caller is updating own password or login ID, verify currentPassword if provided
+    if (isSelf && currentPassword) {
+      const loginEmail = callerUser.email || "";
+      const { error: verifyErr } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: currentPassword,
+      });
+
+      if (verifyErr) {
+        return NextResponse.json(
+          { success: false, error: "Incorrect current password. Please re-enter your current password." },
+          { status: 400 }
+        );
+      }
+    }
+
     const admin = createAdminClient();
 
     // Prepare auth.users update payload
     const authUpdatePayload: any = {};
     const metadataUpdate: any = {};
 
-    if (password && password.trim().length >= 6) {
-      authUpdatePayload.password = password.trim();
+    if (finalPassword && finalPassword.length >= 6) {
+      authUpdatePayload.password = finalPassword;
     }
 
-    const cleanPhone = phone ? normalizePhone(phone) : undefined;
-    if (cleanPhone && cleanPhone.length >= 10) {
-      authUpdatePayload.phone = cleanPhone;
-      metadataUpdate.phone = cleanPhone;
-      // Dual login identifier
-      authUpdatePayload.email = `${cleanPhone}@login.shunystays.app`;
+    let resolvedPhone: string | undefined = phone ? normalizePhone(phone) : undefined;
+    let resolvedEmail: string | undefined = email ? email.trim().toLowerCase() : undefined;
+
+    if (finalIdentifier) {
+      const cleaned = finalIdentifier.replace(/\D/g, "");
+      if (cleaned.length >= 10) {
+        resolvedPhone = cleaned.slice(-10);
+        resolvedEmail = `${resolvedPhone}@login.shunystays.app`;
+      } else if (finalIdentifier.includes("@")) {
+        resolvedEmail = finalIdentifier.toLowerCase();
+      }
+    }
+
+    if (resolvedPhone && resolvedPhone.length >= 10) {
+      authUpdatePayload.phone = resolvedPhone;
+      metadataUpdate.phone = resolvedPhone;
+      // Phone-first auth format
+      authUpdatePayload.email = `${resolvedPhone}@login.shunystays.app`;
       authUpdatePayload.email_confirm = true;
-    } else if (email && email.trim().length > 0 && email.includes("@")) {
-      authUpdatePayload.email = email.trim().toLowerCase();
+    } else if (resolvedEmail && resolvedEmail.includes("@")) {
+      authUpdatePayload.email = resolvedEmail;
       authUpdatePayload.email_confirm = true;
     }
 
     if (name) {
       metadataUpdate.full_name = name.trim();
     }
-    if (email) {
-      metadataUpdate.contact_email = email.trim().toLowerCase();
+    if (resolvedEmail && !resolvedEmail.endsWith("@login.shunystays.app")) {
+      metadataUpdate.contact_email = resolvedEmail;
     }
 
     if (Object.keys(metadataUpdate).length > 0) {
-      // Merge with existing metadata
       const { data: existingUserData } = await admin.auth.admin.getUserById(targetUserId);
       authUpdatePayload.user_metadata = {
         ...(existingUserData?.user?.user_metadata || {}),
@@ -96,7 +129,7 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // 1. Update auth.users via admin client
+    // 1. Update auth.users atomically via admin client
     if (Object.keys(authUpdatePayload).length > 0) {
       const { error: authErr } = await admin.auth.admin.updateUserById(
         targetUserId,
@@ -116,8 +149,8 @@ export async function POST(req: NextRequest) {
       updated_at: new Date().toISOString(),
     };
     if (name) profileUpdatePayload.full_name = name.trim();
-    if (cleanPhone) profileUpdatePayload.phone = cleanPhone;
-    if (email) profileUpdatePayload.email = email.trim().toLowerCase();
+    if (resolvedPhone) profileUpdatePayload.phone = resolvedPhone;
+    if (resolvedEmail) profileUpdatePayload.email = resolvedEmail;
 
     const { error: profileErr } = await (admin.from("profiles" as any) as any)
       .update(profileUpdatePayload)
@@ -130,10 +163,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const returnLoginId = resolvedPhone || resolvedEmail || callerUser.email;
+
     return NextResponse.json({
       success: true,
       userId: targetUserId,
-      message: "Credentials and profile updated successfully.",
+      loginId: returnLoginId,
+      message: "Credentials and profile updated successfully in Supabase.",
     });
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : "Internal error updating credentials.";

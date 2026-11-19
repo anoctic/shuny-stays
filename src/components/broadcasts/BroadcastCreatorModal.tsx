@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Megaphone,
   Plus,
@@ -22,6 +23,7 @@ interface BroadcastCreatorModalProps {
 }
 
 export function BroadcastCreatorModal({ initialBroadcasts }: BroadcastCreatorModalProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +69,7 @@ export function BroadcastCreatorModal({ initialBroadcasts }: BroadcastCreatorMod
       setError(res.error);
       setIsSubmitting(false);
     } else {
+      router.refresh();
       setTitle("");
       setMessage("");
       setIsSubmitting(false);
@@ -300,7 +303,10 @@ export function BroadcastCreatorModal({ initialBroadcasts }: BroadcastCreatorMod
                       </p>
                     </div>
                     <button
-                      onClick={() => toggleBroadcastAction(b.id)}
+                      onClick={async () => {
+                        await toggleBroadcastAction(b.id);
+                        router.refresh();
+                      }}
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                         b.is_active ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-600"
                       }`}

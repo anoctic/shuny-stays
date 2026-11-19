@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   QrCode,
   Share2,
@@ -27,6 +28,7 @@ interface GatePassCardProps {
 }
 
 export function GatePassCard({ pass, viewerRole }: GatePassCardProps) {
+  const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -39,6 +41,7 @@ export function GatePassCard({ pass, viewerRole }: GatePassCardProps) {
   const handleApprove = async () => {
     setIsProcessing(true);
     await approveGatePassAction(pass.id);
+    router.refresh();
     setIsProcessing(false);
   };
 
@@ -49,6 +52,7 @@ export function GatePassCard({ pass, viewerRole }: GatePassCardProps) {
     }
     setIsProcessing(true);
     await rejectGatePassAction(pass.id, rejectReason);
+    router.refresh();
     setIsProcessing(false);
     setShowRejectInput(false);
   };

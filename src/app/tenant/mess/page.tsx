@@ -1,6 +1,8 @@
 import { Utensils, Clock } from "lucide-react";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default function TenantMessPage() {
   const menu = [

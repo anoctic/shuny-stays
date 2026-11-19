@@ -6,6 +6,8 @@ import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function SuperAdminLayout({
   children,

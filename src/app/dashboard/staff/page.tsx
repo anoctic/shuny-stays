@@ -9,6 +9,8 @@ import { getPassesForManagement } from "@/lib/data/gate-passes";
 import { OpsAndStaffExplorer } from "@/components/ops/OpsAndStaffExplorer";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function StaffPage() {
   const session = await getCurrentUserSession();

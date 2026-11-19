@@ -3,6 +3,8 @@ import { getAllPgs } from "@/lib/data/pgs";
 import { SuperAdminDashboard } from "@/components/super-admin/SuperAdminDashboard";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function SuperAdminPage({
   searchParams,

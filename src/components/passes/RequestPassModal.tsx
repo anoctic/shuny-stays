@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   QrCode,
   Plus,
@@ -28,6 +29,7 @@ export function RequestPassModal({
   defaultTenantName = "Aarav Patel",
   defaultRoomNumber = "Room 101 • Bed A",
 }: RequestPassModalProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +88,7 @@ export function RequestPassModal({
       setError(res.error);
       setIsSubmitting(false);
     } else {
+      router.refresh();
       setIsSubmitting(false);
       setIsOpen(false);
     }

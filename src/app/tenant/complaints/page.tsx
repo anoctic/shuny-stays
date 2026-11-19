@@ -1,8 +1,11 @@
 "use client";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   MessageSquareWarning,
   Plus,
@@ -42,6 +45,7 @@ const initialTickets: TicketItem[] = [
 ];
 
 export default function TenantComplaintsPage() {
+  const router = useRouter();
   const [tickets, setTickets] = useState<TicketItem[]>(initialTickets);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [cat, setCat] = useState("Wi-Fi");
@@ -64,6 +68,7 @@ export default function TenantComplaintsPage() {
       fd.append("cat", cat);
       fd.append("desc", desc);
       const res = await submitTenantComplaintAction(fd);
+      router.refresh();
 
       const newTicket: TicketItem = {
         id: res?.complaint?.id || `T-${Math.floor(220 + Math.random() * 700)}`,

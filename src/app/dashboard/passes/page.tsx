@@ -8,6 +8,8 @@ import { RequestPassModal } from "@/components/passes/RequestPassModal";
 import { BroadcastCreatorModal } from "@/components/broadcasts/BroadcastCreatorModal";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function DashboardPassesPage() {
   const session = await getCurrentUserSession();
