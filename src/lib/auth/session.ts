@@ -99,8 +99,13 @@ export async function getCurrentUserSession(): Promise<CurrentUserSession> {
   }
 
   // 2. Real Supabase Auth Session
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (supabaseUrl && !supabaseUrl.includes("placeholder")) {
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
+      ? process.env.NEXT_PUBLIC_SUPABASE_URL
+      : "https://lrghfxcmygytjkzaeccd.supabase.co";
+
+  if (supabaseUrl) {
     try {
       const supabase = await createClient();
       const { data: { user } } = await supabase.auth.getUser();
