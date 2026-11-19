@@ -5,7 +5,7 @@ export const runtime = "edge";
 import { useState, useEffect } from "react";
 import { User, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
-import { signInAction } from "@/app/actions/auth";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +19,7 @@ export default function LoginPage() {
     try {
       const saved = localStorage.getItem("shunystays_saved_login");
       if (saved) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoginId(saved);
         setRememberMe(true);
       }
@@ -33,12 +34,13 @@ export default function LoginPage() {
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const identifier = (formData.get("username") || formData.get("login") || loginId) as string;
+    const identifier = ((formData.get("username") as string) || loginId || "").trim();
+    const password = (formData.get("password") as string) || "";
 
     // Persist or clear saved login identifier
     try {
-      if (rememberMe && identifier.trim()) {
-        localStorage.setItem("shunystays_saved_login", identifier.trim());
+      if (rememberMe && identifier) {
+        localStorage.setItem("shunystays_saved_login", identifier);
       } else {
         localStorage.removeItem("shunystays_saved_login");
       }
@@ -46,10 +48,79 @@ export default function LoginPage() {
       // Ignore localStorage write error
     }
 
-    const res = await signInAction(formData);
+    if (!identifier || !password) {
+      setError("Please enter your Phone Number or Email, and Password.");
+      setIsLoading(false);
+      return;
+    }
 
-    if (res?.error) {
-      setError(res.error);
+    try {
+      // 1. Normalize the input: if it's a 10-digit phone number (strip spaces/+91/0),
+      // convert to ${cleanPhone}@login.shunystays.app; otherwise lowercase/trim email.
+      let normalizedEmail = identifier.toLowerCase();
+      if (!identifier.includes("@")) {
+        let digits = identifier.replace(/\D/g, "");
+        if (digits.startsWith("91") && digits.length === 12) {
+          digits = digits.slice(2);
+        } else if (digits.startsWith("0") && digits.length === 11) {
+          digits = digits.slice(1);
+        }
+        const cleanPhone = digits.slice(-10);
+        if (cleanPhone.length === 10) {
+          normalizedEmail = `${cleanPhone}@login.shunystays.app`;
+        } else {
+          setError("Please enter a valid 10-digit mobile number or email address.");
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // 2. Call signInWithPassword directly using browser Supabase client
+      const supabase = createClient();
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      });
+
+      // 3. If error, set errorMessage, set loading(false), and return immediately
+      if (signInError || !data?.user) {
+        setError(signInError?.message || "Invalid phone number/email or password.");
+        setIsLoading(false);
+        return;
+      }
+
+      // 4. On success, fetch /api/auth/resolve-role (with 8-second AbortController timeout) to get redirectTo
+      let redirectTo = "/dashboard";
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+        const res = await fetch("/api/auth/resolve-role", {
+          method: "GET",
+          signal: controller.signal,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const roleData = await res.json();
+          if (roleData?.redirectTo) {
+            redirectTo = roleData.redirectTo;
+          }
+        }
+      } catch (fetchErr) {
+        console.warn("Failed to resolve role, defaulting to /dashboard:", fetchErr);
+      }
+
+      // Execute redirect
+      window.location.href = redirectTo;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred during sign-in.";
+      setError(msg);
+    } finally {
+      // 5. Always reset setLoading(false) in a finally block so the button can NEVER stay stuck on "Authenticating..."
       setIsLoading(false);
     }
   };
@@ -89,7 +160,7 @@ export default function LoginPage() {
           )}
 
           {/* Clean Credential Form */}
-          <form onSubmit={handleSubmit} method="post" action="#" className="space-y-3.5 text-xs">
+          <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
             <div>
               <label htmlFor="username" className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
                 Phone Number or Email
