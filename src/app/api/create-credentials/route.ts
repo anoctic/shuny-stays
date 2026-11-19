@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
@@ -102,6 +103,16 @@ export async function POST(req: NextRequest) {
       permissions,
     });
 
+    if (!creds.success || creds.error) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: creds.error || "Failed to generate Supabase credentials. Verify SUPABASE_SERVICE_ROLE_KEY.",
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       login_id: creds.login_id,
@@ -112,12 +123,13 @@ export async function POST(req: NextRequest) {
       phone: creds.phone,
       pgName: creds.pgName,
     });
-  } catch (err: any) {
-    console.error("Error in /api/create-credentials:", err);
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Failed to generate credentials.";
+    console.error("Error in /api/create-credentials:", errorMsg);
     return NextResponse.json(
       {
         success: false,
-        error: err.message || "Failed to generate credentials.",
+        error: errorMsg,
       },
       { status: 500 }
     );

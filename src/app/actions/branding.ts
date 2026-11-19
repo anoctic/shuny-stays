@@ -6,7 +6,6 @@ import {
   onboardNewPg,
   updatePgBranding,
   uploadPgLogoToStorage,
-  getPgById,
 } from "@/lib/data/pgs";
 import { createOrUpdateCredentials } from "@/lib/auth/credentials";
 
@@ -57,7 +56,7 @@ export async function onboardPgAction(formData: FormData) {
       if (uploadRes.url) {
         logoUrl = uploadRes.url;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn("Logo upload warning:", err);
     }
   }
@@ -149,7 +148,7 @@ export async function updatePgBrandingAction(formData: FormData) {
       if (uploadRes.url) {
         logoUrl = uploadRes.url;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn("Logo re-upload warning:", err);
     }
   }

@@ -125,6 +125,7 @@ export async function walkInAddTenantAction(
 
   return {
     ...res,
+    warning: creds.error ? `Auth notice: ${creds.error}` : undefined,
     credentials: {
       name,
       role: "tenant" as const,

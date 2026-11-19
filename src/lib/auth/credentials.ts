@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createAdminClient } from "@/lib/supabase/admin";
 import { UserRole } from "@/types/schema.types";
 
@@ -51,7 +52,7 @@ export function normalizePhone(rawPhone?: string | null): string {
 export async function createOrUpdateCredentials(
   params: CreateCredentialsParams
 ): Promise<GeneratedCredentials> {
-  const { name, phone, email, role, pgId, pgName, buildingId, permissions } = params;
+  const { name, phone, email, role, pgId, pgName, permissions } = params;
 
   const cleanPhone = normalizePhone(phone);
   const password = generateReadablePassword();
@@ -76,6 +77,10 @@ export async function createOrUpdateCredentials(
   let userId = crypto.randomUUID();
 
   try {
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY.includes("placeholder")) {
+      throw new Error("SUPABASE_SERVICE_ROLE_KEY is missing or invalid in server environment. Cannot provision Supabase Auth user.");
+    }
+
     const admin = createAdminClient();
 
     // Check if user already exists with this loginEmail or phone
