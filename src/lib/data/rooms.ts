@@ -624,19 +624,96 @@ let memoryRentPayments: RentPaymentRecord[] = [
 export async function getAllBuildings(selectedBuildingId?: string | null): Promise<BuildingItem[]> {
   try {
     const supabase = await createClient();
-    // Attempt Supabase query if buildings table exists
-    const { data: dbBuildings } = await supabase.from("buildings").select("*");
-    if (dbBuildings && dbBuildings.length > 0) {
-      // Map database buildings or complement with in-memory beds
+    let query = supabase.from("buildings").select(`
+      id, pg_id, name, gender_type,
+      floors (
+        id, floor_number, floor_name,
+        rooms (
+          id, room_number, sharing_type, base_rent_monthly,
+          beds (
+            id, bed_name, status, monthly_rent,
+            tenants (
+              id, full_name, phone, emergency_contact_phone, work_or_college, check_in_date, rent_amount, deposit_amount, is_active
+            )
+          )
+        )
+      )
+    `);
+
+    if (selectedBuildingId && selectedBuildingId !== "all") {
+      query = query.eq("id", selectedBuildingId);
     }
-  } catch {
-    // Keep in-memory fallback
+
+    const { data: dbBuildings, error } = await query;
+    if (dbBuildings && dbBuildings.length > 0) {
+      return dbBuildings.map((b: any) => {
+        const sortedFloors = (b.floors || []).sort(
+          (f1: any, f2: any) => (f1.floor_number ?? 0) - (f2.floor_number ?? 0)
+        );
+
+        return {
+          id: b.id,
+          pgId: b.pg_id,
+          name: b.name,
+          type: b.gender_type === "boys" ? "Boys Hostel" : b.gender_type === "girls" ? "Girls Hostel" : "Co-living PG",
+          floors: sortedFloors.map((f: any) => {
+            const sortedRooms = (f.rooms || []).sort((r1: any, r2: any) =>
+              String(r1.room_number).localeCompare(String(r2.room_number), undefined, { numeric: true })
+            );
+
+            return {
+              id: f.id,
+              name: f.floor_name || `Floor ${f.floor_number}`,
+              rooms: sortedRooms.map((r: any) => {
+                const sortedBeds = (r.beds || []).sort((b1: any, b2: any) =>
+                  String(b1.bed_name).localeCompare(String(b2.bed_name))
+                );
+
+                return {
+                  id: r.id,
+                  number: r.room_number,
+                  sharing: r.sharing_type,
+                  rent: Number(r.base_rent_monthly) || 0,
+                  beds: sortedBeds.map((bed: any) => {
+                    const rawTenant = Array.isArray(bed.tenants) ? bed.tenants[0] : bed.tenants;
+                    const isOccupied = bed.status === "occupied" || !!rawTenant;
+
+                    let tenantProfile: TenantProfileItem | null = null;
+                    if (rawTenant) {
+                      tenantProfile = {
+                        id: rawTenant.id,
+                        pgId: b.pg_id,
+                        name: rawTenant.full_name,
+                        phone: rawTenant.phone,
+                        parentPhone: rawTenant.emergency_contact_phone || "",
+                        college: rawTenant.work_or_college || "",
+                        joinDate: rawTenant.check_in_date || "2026-08-01",
+                        deposit: Number(rawTenant.deposit_amount) || 0,
+                        depositStatus: "paid",
+                        rentPaid: true,
+                        kycStatus: "Verified",
+                      };
+                    }
+
+                    return {
+                      id: bed.id,
+                      label: bed.bed_name,
+                      occupied: isOccupied,
+                      tenant: tenantProfile,
+                    };
+                  }),
+                };
+              }),
+            };
+          }),
+        };
+      });
+    }
+  } catch (err) {
+    console.error("Error fetching live buildings from Supabase:", err);
   }
 
-  if (!selectedBuildingId || selectedBuildingId === "all") {
-    return deepClone(memoryBuildings);
-  }
-  return deepClone(memoryBuildings.filter((b) => b.id === selectedBuildingId));
+  return [];
 }
 
 export function computePropertyStats(selectedBuildingId?: string | null) {
@@ -1085,22 +1162,97 @@ export async function markBedRentPaid(tenantId: string) {
 export async function getAllSecurityDeposits(pgId?: string, buildingId?: string): Promise<SecurityDepositItem[]> {
   try {
     const supabase = await createClient();
-    const { data } = await supabase.from("security_deposits").select("*").order("created_at", { ascending: false });
-    if (data && data.length > 0) {
-      // Return Supabase data if available
-    }
-  } catch {}
+    let query = supabase
+      .from("security_deposits")
+      .select("*, buildings ( name ), tenants ( full_name )")
+      .order("created_at", { ascending: false });
 
-  let list = [...memorySecurityDeposits];
-  if (buildingId && buildingId !== "all") {
-    list = list.filter((d) => d.buildingId === buildingId);
+    if (buildingId && buildingId !== "all") {
+      query = query.eq("building_id", buildingId);
+    }
+
+    const { data } = await query;
+    if (data && data.length > 0) {
+      return data.map((d: any) => ({
+        id: d.id,
+        pgId: d.pg_id,
+        buildingId: d.building_id,
+        buildingName: d.buildings?.name || "Block A",
+        tenantId: d.tenant_id,
+        tenantName: d.tenants?.full_name || "Resident",
+        roomNumber: "101",
+        bedLabel: "Bed A",
+        expectedAmount: Number(d.expected_amount) || 0,
+        paidAmount: Number(d.paid_amount) || 0,
+        status: d.status,
+        paymentMode: d.payment_mode || "upi",
+        transactionRef: d.transaction_ref,
+        collectedBy: d.collected_by,
+        collectedByName: d.collected_by_name || "Anoctic",
+        collectedAt: d.collected_at || d.created_at,
+        deductionAmount: Number(d.deduction_amount) || 0,
+        deductionReason: d.deduction_reason,
+        refundedAmount: Number(d.refunded_amount) || 0,
+        refundedAt: d.refunded_at,
+        createdAt: d.created_at,
+      }));
+    }
+  } catch (err) {
+    console.error("Error fetching security deposits from Supabase:", err);
   }
-  return deepClone(list);
+
+  return [];
 }
 
 export async function getSecurityDepositForTenant(tenantId: string): Promise<SecurityDepositItem | null> {
-  const dep = memorySecurityDeposits.find((d) => d.tenantId === tenantId);
-  return dep ? deepClone(dep) : null;
+  try {
+    const supabase = await createClient();
+    const { data: tenantData } = await supabase
+      .from("tenants")
+      .select("id, full_name, room_id, bed_id, rooms(room_number), beds(bed_name), buildings(name)")
+      .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
+      .limit(1)
+      .single();
+
+    const actualTenantId = tenantData?.id || tenantId;
+
+    const { data: d } = await supabase
+      .from("security_deposits")
+      .select("*, buildings(name)")
+      .eq("tenant_id", actualTenantId)
+      .limit(1)
+      .single();
+
+    if (d) {
+      return {
+        id: d.id,
+        pgId: d.pg_id,
+        buildingId: d.building_id,
+        buildingName: d.buildings?.name || tenantData?.buildings?.name || "Block A",
+        tenantId: d.tenant_id,
+        tenantName: tenantData?.full_name || "Resident",
+        roomNumber: tenantData?.rooms?.room_number || "101",
+        bedLabel: tenantData?.beds?.bed_name || "Bed A",
+        expectedAmount: Number(d.expected_amount) || 0,
+        paidAmount: Number(d.paid_amount) || 0,
+        status: d.status,
+        paymentMode: d.payment_mode || "upi",
+        transactionRef: d.transaction_ref,
+        collectedBy: d.collected_by,
+        collectedByName: d.collected_by_name || "Management",
+        collectedAt: d.collected_at || d.created_at,
+        deductionAmount: Number(d.deduction_amount) || 0,
+        deductionReason: d.deduction_reason,
+        refundedAmount: Number(d.refunded_amount) || 0,
+        refundedAt: d.refunded_at,
+        createdAt: d.created_at,
+      };
+    }
+  } catch (err) {
+    console.error("Error fetching security deposit for tenant:", err);
+  }
+
+  return null;
 }
 
 export async function collectSecurityDeposit(params: {
@@ -1286,21 +1438,85 @@ export async function refundSecurityDeposit(params: {
 export async function getAllRentPayments(pgId?: string, buildingId?: string): Promise<RentPaymentRecord[]> {
   try {
     const supabase = await createClient();
-    const { data } = await supabase.from("rent_payments").select("*").order("created_at", { ascending: false });
-    if (data && data.length > 0) {
-      // return Supabase data
-    }
-  } catch {}
+    let query = supabase
+      .from("rent_payments")
+      .select("*, tenants ( full_name )")
+      .order("created_at", { ascending: false });
 
-  let list = [...memoryRentPayments];
-  if (buildingId && buildingId !== "all") {
-    list = list.filter((r) => r.buildingId === buildingId);
+    if (buildingId && buildingId !== "all") {
+      query = query.eq("building_id", buildingId);
+    }
+    const { data } = await query;
+    if (data && data.length > 0) {
+      return data.map((r: any) => ({
+        id: r.invoice_number || r.id,
+        pgId: r.pg_id,
+        buildingId: r.building_id,
+        tenantId: r.tenant_id,
+        tenantName: r.tenants?.full_name || "Resident",
+        room: "Room 101",
+        billingMonth: r.billing_month || "2026-11-01",
+        amount: Number(r.amount) || 0,
+        status: r.status,
+        paymentMode: r.payment_mode,
+        transactionRef: r.utr_number || r.transaction_ref,
+        collectedBy: r.collected_by,
+        collectedByName: r.collected_by_name || "Anoctic",
+        collectedByRole: r.collected_by_role || "owner",
+        collectedAt: r.collected_at || r.created_at,
+        settledAt: r.settled_at,
+        settledBy: r.settled_by,
+      }));
+    }
+  } catch (err) {
+    console.error("Error fetching rent payments:", err);
   }
-  return deepClone(list);
+  return [];
 }
 
 export async function getRentPaymentsForTenant(tenantId: string): Promise<RentPaymentRecord[]> {
-  return deepClone(memoryRentPayments.filter((r) => r.tenantId === tenantId));
+  try {
+    const supabase = await createClient();
+    const { data: tenantData } = await supabase
+      .from("tenants")
+      .select("id, full_name, rooms(room_number)")
+      .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
+      .limit(1)
+      .single();
+
+    const actualTenantId = tenantData?.id || tenantId;
+
+    const { data } = await supabase
+      .from("rent_payments")
+      .select("*")
+      .eq("tenant_id", actualTenantId)
+      .order("created_at", { ascending: false });
+
+    if (data && data.length > 0) {
+      return data.map((r: any) => ({
+        id: r.invoice_number || r.id,
+        pgId: r.pg_id,
+        buildingId: r.building_id,
+        tenantId: r.tenant_id,
+        tenantName: tenantData?.full_name || "Resident",
+        room: tenantData?.rooms?.room_number ? `Room ${tenantData.rooms.room_number}` : "Room 101",
+        billingMonth: r.billing_month || "2026-11-01",
+        amount: Number(r.amount) || 0,
+        status: r.status,
+        paymentMode: r.payment_mode,
+        transactionRef: r.utr_number || r.transaction_ref,
+        collectedBy: r.collected_by,
+        collectedByName: r.collected_by_name || "Anoctic",
+        collectedByRole: r.collected_by_role || "owner",
+        collectedAt: r.collected_at || r.created_at,
+        settledAt: r.settled_at,
+        settledBy: r.settled_by,
+      }));
+    }
+  } catch (err) {
+    console.error("Error fetching tenant rent payments:", err);
+  }
+  return [];
 }
 
 export async function getAdminCollections(adminName?: string): Promise<RentPaymentRecord[]> {
@@ -1508,8 +1724,32 @@ export async function rejectUpiPayment(id: string) {
 
 // --- STAFF & OPS ---
 
-export async function getStaffList() {
-  return deepClone(memoryStaffList);
+export async function getStaffList(): Promise<StaffItem[]> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, full_name, phone, role")
+      .in("role", ["admin", "owner"]);
+    if (data && data.length > 0) {
+      return data.map((s: any) => ({
+        id: s.id,
+        name: s.full_name,
+        phone: s.phone || "9876543210",
+        assignedBuildingIds: ["a0000000-0000-0000-0000-000000000001", "a0000000-0000-0000-0000-000000000002"],
+        permissions: {
+          manage_tenants: true,
+          collect_cash: true,
+          resolve_complaints: true,
+          manage_mess: true,
+          issue_passes: true,
+        },
+      }));
+    }
+  } catch (err) {
+    console.error("Error fetching staff list:", err);
+  }
+  return [];
 }
 
 export async function toggleStaffPermission(staffId: string, permKey: string) {
@@ -1521,26 +1761,101 @@ export async function toggleStaffPermission(staffId: string, permKey: string) {
   return { success: true, staff: staff ? deepClone(staff) : null };
 }
 
-export async function getComplaints() {
-  return deepClone(memoryComplaints);
+export async function getComplaints(): Promise<ComplaintItem[]> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("complaints")
+      .select("*, tenants ( full_name ), rooms ( room_number )")
+      .order("created_at", { ascending: false });
+    if (data && data.length > 0) {
+      return data.map((c: any) => ({
+        id: c.id,
+        tenantId: c.tenant_id,
+        tenantName: c.tenants?.full_name || "Resident",
+        room: c.rooms?.room_number || "Room 101",
+        category: c.category,
+        issue: c.title,
+        status: c.status === "resolved" ? "Resolved" : c.status === "in_progress" ? "In Progress" : "Pending",
+        time: c.created_at,
+        priority: c.priority,
+        note: c.resolution_notes,
+      }));
+    }
+  } catch (err) {
+    console.error("Error fetching complaints:", err);
+  }
+  return [];
 }
 
 export async function resolveComplaint(id: string, note?: string) {
-  const comp = memoryComplaints.find((c) => c.id === id);
-  if (comp) {
-    comp.status = "Resolved";
-    comp.note = note || "Resolved by Staff";
+  try {
+    const supabase = await createClient();
+    await supabase.from("complaints").update({
+      status: "resolved",
+      resolution_notes: note || "Resolved by Staff & Verified",
+      resolved_at: new Date().toISOString(),
+    }).eq("id", id);
+  } catch (err) {
+    console.error("Error resolving complaint in Supabase:", err);
   }
   return { success: true };
 }
 
-export async function getMessMenu() {
-  return deepClone(memoryMessMenu);
+export async function getMessMenu(): Promise<MessMenu> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.from("mess_menu").select("*");
+    if (data && data.length > 0) {
+      const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      const currentDay = days[new Date().getDay()];
+      const todayMeals = data.filter((m: any) => m.day_of_week === currentDay);
+      const getMeal = (type: string) => todayMeals.find((m: any) => m.meal_type === type)?.menu_items;
+
+      return {
+        breakfast: getMeal("breakfast") || "Aloo Paratha, Curd, Pickle & Masala Chai",
+        lunch: getMeal("lunch") || "Paneer Butter Masala, Dal Tadka, Jeera Rice, Phulka & Fresh Salad",
+        snacks: getMeal("snacks") || "Samosa / Poha with Evening Filter Coffee & Tea",
+        dinner: getMeal("dinner") || "Mix Veg Korma, Dal Makhani, Steamed Basmati Rice & Roti",
+        updatedAt: "Today",
+      };
+    }
+  } catch (err) {
+    console.error("Error fetching mess menu:", err);
+  }
+  return {
+    breakfast: "Aloo Paratha, Curd & Chai",
+    lunch: "Dal Makhani, Rice, Roti & Salad",
+    snacks: "Tea & Samosa",
+    dinner: "Paneer, Dal, Roti & Rice",
+    updatedAt: "Today",
+  };
 }
 
 export async function updateMessMenu(data: Partial<MessMenu>) {
-  memoryMessMenu = { ...memoryMessMenu, ...data };
-  return { success: true, messMenu: deepClone(memoryMessMenu) };
+  try {
+    const supabase = await createClient();
+    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    const currentDay = days[new Date().getDay()];
+
+    const updates = [
+      { type: "breakfast", val: data.breakfast },
+      { type: "lunch", val: data.lunch },
+      { type: "snacks", val: data.snacks },
+      { type: "dinner", val: data.dinner },
+    ].filter((u) => !!u.val);
+
+    for (const u of updates) {
+      await supabase
+        .from("mess_menu")
+        .update({ menu_items: u.val, updated_at: new Date().toISOString() })
+        .eq("day_of_week", currentDay)
+        .eq("meal_type", u.type);
+    }
+  } catch (err) {
+    console.error("Error updating mess menu in Supabase:", err);
+  }
+  return { success: true };
 }
 
 export async function getAuditLogs() {

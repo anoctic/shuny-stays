@@ -57,7 +57,7 @@ export default function LoginPage() {
     try {
       // 1. Normalize the input: if it's a 10-digit phone number (strip spaces/+91/0),
       // convert to ${cleanPhone}@login.shunystays.app; otherwise lowercase/trim email.
-      let normalizedEmail = identifier.toLowerCase();
+      let normalizedEmail = identifier.trim().toLowerCase();
       if (!identifier.includes("@")) {
         let digits = identifier.replace(/\D/g, "");
         if (digits.startsWith("91") && digits.length === 12) {
@@ -77,12 +77,39 @@ export default function LoginPage() {
 
       // 2. Call signInWithPassword directly using browser Supabase client
       const supabase = createClient();
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      let { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password,
       });
 
-      // 3. If error, set errorMessage, set loading(false), and return immediately
+      // 3. Fallback: if user typed email but account is provisioned under phone-first format
+      if (signInError && identifier.includes("@")) {
+        try {
+          const { data: profile } = await (supabase.from("profiles" as any) as any)
+            .select("phone")
+            .eq("email", normalizedEmail)
+            .maybeSingle();
+
+          const profileData = profile as { phone?: string | null } | null;
+          if (profileData?.phone) {
+            const pDigits = profileData.phone.replace(/\D/g, "").slice(-10);
+            if (pDigits.length === 10) {
+              const retryRes = await supabase.auth.signInWithPassword({
+                email: `${pDigits}@login.shunystays.app`,
+                password,
+              });
+              if (!retryRes.error && retryRes.data?.user) {
+                data = retryRes.data;
+                signInError = null;
+              }
+            }
+          }
+        } catch {
+          // ignore fallback error
+        }
+      }
+
+      // 4. If error, set errorMessage, set loading(false), and return immediately
       if (signInError || !data?.user) {
         setError(signInError?.message || "Invalid phone number/email or password.");
         setIsLoading(false);

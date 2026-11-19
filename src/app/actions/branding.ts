@@ -7,7 +7,8 @@ import {
   updatePgBranding,
   uploadPgLogoToStorage,
 } from "@/lib/data/pgs";
-import { createOrUpdateCredentials } from "@/lib/auth/credentials";
+import { createOrUpdateCredentials, normalizePhone } from "@/lib/auth/credentials";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Super Admin Server Action: Onboard New PG with White-Label Branding
@@ -66,6 +67,27 @@ export async function onboardPgAction(formData: FormData) {
     logoUrl = "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=200&h=200&q=80";
   }
 
+  const cleanPhone = normalizePhone(ownerPhone);
+  if (cleanPhone.length !== 10) {
+    return { error: "Please enter a valid 10-digit mobile number for the owner." };
+  }
+
+  // 1. Provision Owner credentials in Supabase Auth FIRST using Service Role Key
+  const creds = await createOrUpdateCredentials({
+    name: ownerName,
+    phone: cleanPhone,
+    email: ownerEmail,
+    role: "owner",
+    pgName: name,
+  });
+
+  if (!creds.success || creds.error) {
+    return {
+      error: `Failed to provision Owner Supabase Auth credentials: ${creds.error || "Authentication error"}. Verify SUPABASE_SERVICE_ROLE_KEY.`,
+    };
+  }
+
+  // 2. Onboard new PG linked directly to the real auth user id
   const newPg = await onboardNewPg({
     name,
     slug,
@@ -73,20 +95,45 @@ export async function onboardPgAction(formData: FormData) {
     primary_color: primaryColor,
     owner_name: ownerName,
     owner_email: ownerEmail,
-    owner_phone: ownerPhone,
+    owner_phone: cleanPhone,
     subscription_tier: subscriptionTier,
     city,
+    owner_id: creds.userId,
   });
 
-  // Auto-generate Owner credentials using Supabase Service Role Key
-  const creds = await createOrUpdateCredentials({
-    name: ownerName,
-    phone: ownerPhone,
-    email: ownerEmail,
-    role: "owner",
-    pgId: newPg.id,
-    pgName: newPg.name,
-  });
+  // 3. Ensure profiles and pgs are explicitly linked with newPg.id and cleanPhone
+  try {
+    const admin = createAdminClient();
+    await admin.from("profiles").upsert(
+      {
+        id: creds.userId,
+        role: "owner",
+        full_name: ownerName,
+        phone: cleanPhone,
+        email: ownerEmail || creds.email,
+        pg_id: newPg.id,
+        updated_at: new Date().toISOString(),
+      } as any,
+      { onConflict: "id" }
+    );
+
+    await (admin.from("pgs" as any) as any)
+      .update({ owner_id: creds.userId } as any)
+      .eq("id", newPg.id);
+
+    await admin.from("pg_staff").upsert(
+      {
+        pg_id: newPg.id,
+        user_id: creds.userId,
+        designation: "Owner",
+        permissions: ["ALL"],
+        is_active: true,
+      } as any,
+      { onConflict: "pg_id,user_id" }
+    );
+  } catch (linkErr) {
+    console.error("Database linkage error after provisioning:", linkErr);
+  }
 
   revalidatePath("/super-admin");
   revalidatePath("/super-admin/organizations");
@@ -95,11 +142,10 @@ export async function onboardPgAction(formData: FormData) {
   return {
     success: true,
     pg: newPg,
-    warning: creds.error ? `Auth notice: ${creds.error}` : undefined,
     credentials: {
       name: ownerName,
       role: "owner" as const,
-      loginId: creds.login_id,
+      loginId: creds.phone || creds.login_id,
       password: creds.password,
       phone: creds.phone,
       email: creds.email,

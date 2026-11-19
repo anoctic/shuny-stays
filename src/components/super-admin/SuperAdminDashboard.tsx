@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import {
   Sparkles,
@@ -50,12 +50,38 @@ export function SuperAdminDashboard({
   initialTab = "overview",
 }: SuperAdminDashboardProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   useRealtimeSync(["pgs", "profiles"]);
 
-  const [activeTab, setActiveTab] = useState<"overview" | "pgs" | "broadcast" | "billing" | "settings">(initialTab);
+  const tabFromQuery = searchParams?.get("tab") as
+    | "overview"
+    | "pgs"
+    | "broadcast"
+    | "billing"
+    | "settings"
+    | null;
+
+  const currentTab = tabFromQuery || initialTab || "overview";
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "pgs" | "broadcast" | "billing" | "settings"
+  >(currentTab);
   const [pgsList, setPgsList] = useState<PgDetailItem[]>(initialPgs);
   const [broadcastsList, setBroadcastsList] = useState<PlatformBroadcast[]>(initialBroadcasts);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Sync with searchParams / bottom navigation
+  useEffect(() => {
+    if (tabFromQuery && tabFromQuery !== activeTab) {
+      setActiveTab(tabFromQuery);
+    }
+  }, [tabFromQuery]);
+
+  const handleTabChange = (
+    newTab: "overview" | "pgs" | "broadcast" | "billing" | "settings"
+  ) => {
+    setActiveTab(newTab);
+    router.push(`/super-admin?tab=${newTab}`, { scroll: false });
+  };
 
   useEffect(() => {
     setPgsList(initialPgs);
@@ -65,18 +91,13 @@ export function SuperAdminDashboard({
     setBroadcastsList(initialBroadcasts);
   }, [initialBroadcasts]);
 
-  // New Onboarded Owner Credentials Banner state
+  // New Onboarded Owner Credentials Banner state (null by default; populated on real PG onboarding)
   const [newOwnerCredentials, setNewOwnerCredentials] = useState<{
     pgName: string;
     email: string;
     tempPass: string;
     portalUrl: string;
-  } | null>({
-    pgName: "Royal Stay PG",
-    email: "owner@stanzaliving.com",
-    tempPass: "StayRoyal#2026",
-    portalUrl: "/dashboard",
-  });
+  } | null>(null);
 
   // Broadcast Creator Form State
   const [targetOwner, setTargetOwner] = useState(true);
@@ -223,7 +244,7 @@ export function SuperAdminDashboard({
       <div className="grid grid-cols-5 gap-1 p-1 bg-slate-100 rounded-2xl text-[11px] font-extrabold text-slate-600 border border-slate-200/80">
         <button
           type="button"
-          onClick={() => setActiveTab("overview")}
+          onClick={() => handleTabChange("overview")}
           className={`py-1.5 rounded-xl transition ${
             activeTab === "overview"
               ? "bg-white text-indigo-600 shadow-xs"
@@ -234,7 +255,7 @@ export function SuperAdminDashboard({
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab("pgs")}
+          onClick={() => handleTabChange("pgs")}
           className={`py-1.5 rounded-xl transition ${
             activeTab === "pgs"
               ? "bg-white text-indigo-600 shadow-xs"
@@ -245,7 +266,7 @@ export function SuperAdminDashboard({
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab("broadcast")}
+          onClick={() => handleTabChange("broadcast")}
           className={`py-1.5 rounded-xl transition ${
             activeTab === "broadcast"
               ? "bg-white text-indigo-600 shadow-xs"
@@ -256,7 +277,7 @@ export function SuperAdminDashboard({
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab("billing")}
+          onClick={() => handleTabChange("billing")}
           className={`py-1.5 rounded-xl transition ${
             activeTab === "billing"
               ? "bg-white text-indigo-600 shadow-xs"
@@ -267,7 +288,7 @@ export function SuperAdminDashboard({
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab("settings")}
+          onClick={() => handleTabChange("settings")}
           className={`py-1.5 rounded-xl transition ${
             activeTab === "settings"
               ? "bg-white text-indigo-600 shadow-xs"

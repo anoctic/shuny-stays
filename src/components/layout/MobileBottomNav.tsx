@@ -165,9 +165,11 @@ function MobileBottomNavInner({
     {
       id: "overview",
       label: "Overview",
-      href: "/super-admin",
+      href: "/super-admin?tab=overview",
       icon: Activity,
-      isActive: pathname === "/super-admin" && superAdminCurrentTab === "overview",
+      isActive:
+        pathname === "/super-admin" &&
+        (!superAdminCurrentTab || superAdminCurrentTab === "overview"),
     },
     {
       id: "pgs",
@@ -184,8 +186,7 @@ function MobileBottomNavInner({
       href: "/super-admin?tab=broadcast",
       icon: Megaphone,
       isActive:
-        (pathname === "/super-admin" && superAdminCurrentTab === "broadcast") ||
-        pathname.includes("broadcast"),
+        pathname === "/super-admin" && superAdminCurrentTab === "broadcast",
     },
     {
       id: "billing",
@@ -195,6 +196,15 @@ function MobileBottomNavInner({
       isActive:
         (pathname === "/super-admin" && superAdminCurrentTab === "billing") ||
         pathname.startsWith("/super-admin/subscriptions"),
+    },
+    {
+      id: "settings",
+      label: "Security",
+      href: "/super-admin?tab=settings",
+      icon: ShieldCheck,
+      isActive:
+        (pathname === "/super-admin" && superAdminCurrentTab === "settings") ||
+        pathname.startsWith("/super-admin/settings"),
     },
   ];
 
@@ -209,10 +219,15 @@ function MobileBottomNavInner({
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 max-w-[480px] mx-auto bg-white/90 backdrop-blur-md border-t border-slate-200/80 py-1 px-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] transition-all"
+      className="fixed bottom-0 left-0 right-0 z-40 max-w-[480px] mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200/80 py-1 px-1 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] transition-all select-none"
       aria-label="Mobile Bottom Navigation"
     >
-      <div className="grid grid-cols-4 items-center">
+      <div
+        className={cn(
+          "grid items-center",
+          tabs.length === 5 ? "grid-cols-5" : "grid-cols-4"
+        )}
+      >
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
@@ -220,7 +235,7 @@ function MobileBottomNavInner({
               key={tab.id}
               href={tab.href}
               className={cn(
-                "relative flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-150 active:scale-95",
+                "relative flex flex-col items-center justify-center gap-0.5 py-1 px-0.5 rounded-xl transition-all duration-150 active:scale-95 touch-manipulation cursor-pointer",
                 tab.isActive
                   ? "text-[#4F46E5] font-extrabold"
                   : "text-[#64748B] hover:text-[#0F172A] font-semibold"
@@ -239,7 +254,7 @@ function MobileBottomNavInner({
                   </span>
                 )}
               </div>
-              <span className="text-[10px] tracking-tight leading-none text-center">
+              <span className="text-[9.5px] tracking-tight leading-none text-center">
                 {tab.label}
               </span>
             </Link>

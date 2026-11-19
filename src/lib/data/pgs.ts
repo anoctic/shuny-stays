@@ -219,9 +219,10 @@ export async function onboardNewPg(data: {
   owner_phone: string;
   subscription_tier: "Free Trial" | "Starter" | "Pro" | "Enterprise";
   city?: string;
+  owner_id?: string;
 }): Promise<PgDetailItem> {
   const pgId = crypto.randomUUID();
-  const ownerId = crypto.randomUUID();
+  const ownerId = data.owner_id || crypto.randomUUID();
   const now = new Date().toISOString();
 
   const newPg: PgDetailItem = {
@@ -258,6 +259,8 @@ export async function onboardNewPg(data: {
         full_name: data.owner_name,
         role: "owner" as UserRole,
         phone: data.owner_phone,
+        email: data.owner_email,
+        pg_id: pgId,
       } as any,
       { onConflict: "id" }
     );
@@ -277,13 +280,16 @@ export async function onboardNewPg(data: {
     } as any);
 
     // 3. Link owner in pg_staff with ALL permissions
-    await admin.from("pg_staff").insert({
-      pg_id: pgId,
-      user_id: ownerId,
-      role: "owner",
-      permissions: ["ALL"],
-      is_active: true,
-    } as any);
+    await admin.from("pg_staff").upsert(
+      {
+        pg_id: pgId,
+        user_id: ownerId,
+        designation: "Owner",
+        permissions: ["ALL"],
+        is_active: true,
+      } as any,
+      { onConflict: "pg_id,user_id" }
+    );
   } catch (err) {
     console.warn("DB Onboarding note: saved to active memory store.", err);
   }

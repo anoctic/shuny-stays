@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getAllBroadcasts } from "@/lib/data/broadcasts";
 import { getAllPgs } from "@/lib/data/pgs";
 import { SuperAdminDashboard } from "@/components/super-admin/SuperAdminDashboard";
@@ -20,10 +21,12 @@ export default async function SuperAdminPage({
   const pgs = await getAllPgs();
 
   return (
-    <SuperAdminDashboard
-      pgs={pgs}
-      broadcasts={broadcasts}
-      initialTab={tab}
-    />
+    <Suspense fallback={null}>
+      <SuperAdminDashboard
+        pgs={pgs}
+        broadcasts={broadcasts}
+        initialTab={tab}
+      />
+    </Suspense>
   );
 }

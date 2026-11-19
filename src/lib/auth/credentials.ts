@@ -18,8 +18,8 @@ export interface CreateCredentialsParams {
 export interface GeneratedCredentials {
   success: boolean;
   userId: string;
-  login_id: string; // Phone number or email
-  email: string; // The normalized Supabase Auth email
+  login_id: string; // Clean 10-digit phone number or email
+  email: string; // The normalized Supabase Auth email (${cleanPhone}@login.shunystays.app)
   password: string;
   name: string;
   phone: string;
@@ -38,16 +38,25 @@ export function generateReadablePassword(): string {
 
 /**
  * Normalizes a 10-digit Indian phone number
+ * Strips +91, 91 prefix, leading zeros, and all non-digits.
  */
 export function normalizePhone(rawPhone?: string | null): string {
   if (!rawPhone) return "";
-  const cleaned = rawPhone.replace(/\D/g, "");
+  let cleaned = rawPhone.replace(/\D/g, "");
+  if (cleaned.startsWith("91") && cleaned.length === 12) {
+    cleaned = cleaned.slice(2);
+  } else if (cleaned.startsWith("0") && cleaned.length === 11) {
+    cleaned = cleaned.slice(1);
+  }
   return cleaned.slice(-10);
 }
 
 /**
  * Server-side helper using Service Role Key to create or update user credentials
- * without logging out or modifying the currently active staff/owner session.
+ * in Supabase Auth and public.profiles.
+ *
+ * Never fails silently: Throws or returns exact error if SUPABASE_SERVICE_ROLE_KEY
+ * is missing or auth provisioning fails.
  */
 export async function createOrUpdateCredentials(
   params: CreateCredentialsParams
@@ -57,34 +66,47 @@ export async function createOrUpdateCredentials(
   const cleanPhone = normalizePhone(phone);
   const password = generateReadablePassword();
 
-  // CRITICAL FIX: Phone-first auth identifier.
+  // Strict Phone-First Authentication Identifier:
   // When a 10-digit phone number is available, ALWAYS provision Supabase Auth using
   // ${cleanPhone}@login.shunystays.app so phone-based sign-in matches auth.users 100%.
-  // Any real email is preserved in user_metadata.contact_email and profiles.email.
+  // Contact email is saved in profiles.email and user_metadata.contact_email.
   let loginEmail: string;
-  if (cleanPhone.length >= 10) {
+  if (cleanPhone.length === 10) {
     loginEmail = `${cleanPhone}@login.shunystays.app`;
   } else if (email && email.trim().length > 0 && email.includes("@")) {
     loginEmail = email.trim().toLowerCase();
   } else {
-    // Fallback if neither phone nor email provided
-    const randomCode = Math.random().toString(36).substring(2, 8);
-    loginEmail = `user.${randomCode}@login.shunystays.app`;
+    return {
+      success: false,
+      userId: "",
+      login_id: "",
+      email: "",
+      password: "",
+      name,
+      phone: cleanPhone,
+      role,
+      error: "Valid 10-digit mobile number or email address is required.",
+    };
   }
 
-  const loginId = cleanPhone.length >= 10 ? cleanPhone : (email || loginEmail);
-
+  const loginId = cleanPhone.length === 10 ? cleanPhone : (email || loginEmail);
   let userId = crypto.randomUUID();
 
   try {
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY.includes("placeholder")) {
-      throw new Error("SUPABASE_SERVICE_ROLE_KEY is missing or invalid in server environment. Cannot provision Supabase Auth user.");
+    if (
+      !process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY.includes("placeholder")
+    ) {
+      throw new Error(
+        "SUPABASE_SERVICE_ROLE_KEY is missing or invalid in server environment. Cannot provision Supabase Auth user."
+      );
     }
 
     const admin = createAdminClient();
 
     // Check if user already exists with this loginEmail or phone
-    const { data: usersList, error: listErr } = await admin.auth.admin.listUsers({ perPage: 1000 });
+    const { data: usersList, error: listErr } =
+      await admin.auth.admin.listUsers({ perPage: 1000 });
     if (listErr) {
       console.warn("admin.auth.admin.listUsers warning:", listErr.message);
     }
@@ -92,86 +114,110 @@ export async function createOrUpdateCredentials(
     const existing = usersList?.users?.find(
       (u) =>
         u.email?.toLowerCase() === loginEmail.toLowerCase() ||
-        (cleanPhone.length >= 10 && (u.user_metadata?.phone === cleanPhone || (u.phone && normalizePhone(u.phone) === cleanPhone)))
+        (cleanPhone.length === 10 &&
+          (u.user_metadata?.phone === cleanPhone ||
+            (u.phone && normalizePhone(u.phone) === cleanPhone)))
     );
 
     if (existing) {
       userId = existing.id;
-      // Update password and auto-confirm so the user can immediately log in
-      const { error: updateErr } = await admin.auth.admin.updateUserById(userId, {
-        password,
-        email: loginEmail,
-        email_confirm: true,
-        user_metadata: {
-          ...existing.user_metadata,
-          full_name: name,
-          role,
-          phone: cleanPhone,
-          contact_email: email ? email.trim().toLowerCase() : (existing.user_metadata?.contact_email || null),
-          pg_id: pgId || existing.user_metadata?.pg_id || null,
-        },
-      });
+      // Update password and auto-confirm email so the user can immediately log in
+      const { error: updateErr } = await admin.auth.admin.updateUserById(
+        userId,
+        {
+          password,
+          email: loginEmail,
+          email_confirm: true,
+          phone: cleanPhone.length === 10 ? cleanPhone : undefined,
+          user_metadata: {
+            ...existing.user_metadata,
+            full_name: name,
+            role,
+            phone: cleanPhone,
+            contact_email: email
+              ? email.trim().toLowerCase()
+              : existing.user_metadata?.contact_email || null,
+            pg_id: pgId || existing.user_metadata?.pg_id || null,
+            email_verified: true,
+          },
+        }
+      );
 
       if (updateErr) {
-        throw new Error(`Failed to update existing user credentials: ${updateErr.message}`);
+        throw new Error(
+          `Failed to update existing Supabase Auth user credentials: ${updateErr.message}`
+        );
       }
     } else {
       // Create new Supabase Auth user with confirmed email
-      const { data: created, error: createErr } = await admin.auth.admin.createUser({
-        email: loginEmail,
-        password,
-        email_confirm: true,
-        user_metadata: {
-          full_name: name,
-          role,
-          phone: cleanPhone,
-          contact_email: email ? email.trim().toLowerCase() : null,
-          pg_id: pgId || null,
-        },
-      });
+      const { data: created, error: createErr } =
+        await admin.auth.admin.createUser({
+          email: loginEmail,
+          password,
+          email_confirm: true,
+          phone: cleanPhone.length === 10 ? cleanPhone : undefined,
+          user_metadata: {
+            full_name: name,
+            role,
+            phone: cleanPhone,
+            contact_email: email ? email.trim().toLowerCase() : null,
+            pg_id: pgId || null,
+            email_verified: true,
+          },
+        });
 
-      if (createErr) {
-        throw new Error(`Failed to create Supabase user: ${createErr.message}`);
+      if (createErr || !created?.user) {
+        throw new Error(
+          `Failed to create Supabase Auth user: ${createErr?.message || "User creation failed"}`
+        );
       }
 
-      if (created?.user) {
-        userId = created.user.id;
-      }
+      userId = created.user.id;
     }
 
     // Upsert into public.profiles
-    await admin.from("profiles").upsert(
-      {
-        id: userId,
-        full_name: name,
-        role: role,
-        phone: cleanPhone || null,
-        email: email ? email.trim().toLowerCase() : loginEmail,
-        updated_at: new Date().toISOString(),
-      } as any,
-      { onConflict: "id" }
-    );
+    const profilePayload: Record<string, any> = {
+      id: userId,
+      full_name: name,
+      role: role,
+      phone: cleanPhone || null,
+      email: email ? email.trim().toLowerCase() : loginEmail,
+      updated_at: new Date().toISOString(),
+    };
+    if (pgId) {
+      profilePayload.pg_id = pgId;
+    }
 
-    // Link pg_staff or pgs based on role
+    const { error: profileErr } = await admin
+      .from("profiles")
+      .upsert(profilePayload as any, { onConflict: "id" });
+
+    if (profileErr) {
+      throw new Error(`Failed to upsert public.profiles record: ${profileErr.message}`);
+    }
+
+    // Link pg_staff and pgs based on role
     if (role === "owner" && pgId) {
       await admin.from("pg_staff").upsert(
         {
           pg_id: pgId,
           user_id: userId,
-          role: "owner",
+          designation: "Owner",
           permissions: ["ALL"],
           is_active: true,
         } as any,
         { onConflict: "pg_id,user_id" }
       );
 
-      await (admin.from("pgs" as any) as any).update({ owner_id: userId } as any).eq("id", pgId);
+      await (admin.from("pgs" as any) as any)
+        .update({ owner_id: userId } as any)
+        .eq("id", pgId);
     } else if (role === "admin" && pgId) {
       await admin.from("pg_staff").upsert(
         {
           pg_id: pgId,
           user_id: userId,
-          role: "warden",
+          designation: "Warden",
           permissions: permissions || [
             "manage_tenants",
             "collect_cash",
@@ -184,7 +230,8 @@ export async function createOrUpdateCredentials(
       );
     }
   } catch (err: any) {
-    console.error("createOrUpdateCredentials error:", err);
+    const errorMsg = err?.message || String(err);
+    console.error("createOrUpdateCredentials error:", errorMsg);
     return {
       success: false,
       userId,
@@ -195,7 +242,7 @@ export async function createOrUpdateCredentials(
       phone: cleanPhone,
       role,
       pgName: pgName || undefined,
-      error: err?.message || String(err),
+      error: errorMsg,
     };
   }
 
