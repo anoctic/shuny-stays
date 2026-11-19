@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import {
   FileSpreadsheet,
   Layers,
@@ -33,6 +35,9 @@ export function RoomsExplorer({
   userRole,
   activePasses = [],
 }: RoomsExplorerProps) {
+  const router = useRouter();
+  useRealtimeSync(["rooms", "beds", "tenants", "payments", "complaints", "pgs"]);
+
   const isAdminScoped = userRole === "admin";
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
   const [selectedFloorByBuilding, setSelectedFloorByBuilding] = useState<Record<string, number>>({});

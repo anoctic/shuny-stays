@@ -10,7 +10,9 @@ export default async function SuperAdminPage({
   searchParams?: Promise<{ tab?: string }>;
 }) {
   const resolvedParams = searchParams ? await searchParams : {};
-  const tab = (resolvedParams?.tab as "overview" | "pgs" | "broadcast" | "billing") || "overview";
+  const tab =
+    (resolvedParams?.tab as "overview" | "pgs" | "broadcast" | "billing" | "settings") ||
+    "overview";
 
   const broadcasts = await getAllBroadcasts();
   const pgs = await getAllPgs();

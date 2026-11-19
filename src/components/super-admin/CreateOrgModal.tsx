@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, X, Building2, CheckCircle2 } from "lucide-react";
 import { createOrganizationAction } from "@/app/actions/auth";
 
 export function CreateOrgModal() {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -15,6 +17,7 @@ export function CreateOrgModal() {
     const formData = new FormData(e.currentTarget);
     try {
       await createOrganizationAction(formData);
+      router.refresh();
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);

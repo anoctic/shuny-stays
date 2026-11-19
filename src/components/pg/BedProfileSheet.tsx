@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   X,
   Phone,
@@ -59,6 +60,7 @@ export function BedProfileSheet({
   userRole,
   initialTemplate = "rent_reminder",
 }: BedProfileSheetProps) {
+  const router = useRouter();
   const [whatsappTemplate, setWhatsappTemplate] = useState<"rent_reminder" | "welcome_info" | "custom">(initialTemplate);
   const [whatsappAutoApi, setWhatsappAutoApi] = useState(false);
   const [customMsg, setCustomMsg] = useState("Namaste! Aapke PG room se juda ek zaroori update hai.");
@@ -121,6 +123,7 @@ export function BedProfileSheet({
   const handleVerifyKyc = async () => {
     setIsProcessing(true);
     await verifyTenantKycAction(t.id);
+    router.refresh();
     t.kycStatus = "Verified";
     setIsProcessing(false);
     setToastMsg("KYC verified successfully ✓");
@@ -139,6 +142,7 @@ export function BedProfileSheet({
       paymentMode: rentPaymentMode,
       transactionRef: rentTxRef || undefined,
     });
+    router.refresh();
 
     if ("invoice" in res && res.invoice) {
       setGeneratedInvoice(res.invoice);
@@ -158,6 +162,7 @@ export function BedProfileSheet({
     setIsProcessing(true);
     const invId = generatedInvoice?.id || (t.id === "t-rahul" ? "INV-202611-04" : "INV-202611-05");
     await settleRentPaymentAction(invId);
+    router.refresh();
     setIsHandoverPending(false);
     setIsProcessing(false);
     setToastMsg("Cash confirmed & settled with Owner Ledger ✅");
@@ -173,6 +178,7 @@ export function BedProfileSheet({
       paymentMode: depositModeInput,
       transactionRef: depositRefInput || undefined,
     });
+    router.refresh();
 
     t.deposit = depositAmountInput;
     t.depositStatus = "paid";
@@ -194,6 +200,7 @@ export function BedProfileSheet({
       deductionAmount,
       deductionReason: deductionReason || "Checkout room inspection",
     });
+    router.refresh();
 
     t.depositStatus = deductionAmount > 0 ? "partially_refunded" : "refunded";
     t.depositDeduction = deductionAmount;
@@ -209,6 +216,7 @@ export function BedProfileSheet({
   const handleVacate = async () => {
     setIsProcessing(true);
     await vacateBedAction(building.id, floorIdx, room.id, bedIdx);
+    router.refresh();
     setIsProcessing(false);
     onClose();
   };

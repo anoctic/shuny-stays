@@ -17,6 +17,7 @@ import {
 import { GatePassItem } from "@/types/schema.types";
 import { GatePassCard } from "@/components/passes/GatePassCard";
 import { RequestPassModal } from "@/components/passes/RequestPassModal";
+import { AccountSecurityCard } from "@/components/settings/AccountSecurityCard";
 import { submitVacateNoticeAction } from "@/app/actions/rooms-and-ops";
 
 interface TenantIdNoticeViewProps {
@@ -24,6 +25,7 @@ interface TenantIdNoticeViewProps {
     id: string;
     full_name: string;
     phone: string;
+    email?: string | null;
     room_id?: string | null;
     building_id?: string | null;
   };
@@ -146,6 +148,13 @@ export function TenantIdNoticeView({
       >
         Submit Vacate / Notice Period Request
       </button>
+
+      {/* Resident Account & Login Security */}
+      <AccountSecurityCard
+        role="tenant"
+        currentPhone={session.phone}
+        currentEmail={session.email}
+      />
 
       {/* Active Day / Night Passes Section */}
       <div className="space-y-3 pt-2">

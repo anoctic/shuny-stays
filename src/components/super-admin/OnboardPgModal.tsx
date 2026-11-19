@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   Building2,
@@ -32,6 +33,7 @@ const COLOR_PRESETS = [
 ];
 
 export function OnboardPgModal({ triggerButton }: { triggerButton?: React.ReactNode } = {}) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +95,7 @@ export function OnboardPgModal({ triggerButton }: { triggerButton?: React.ReactN
       if (res?.error) {
         setError(res.error);
       } else if (res?.success) {
+        router.refresh();
         setSuccess(`Successfully onboarded "${res.pg.name}" on Shuny Stays!`);
         if (res.credentials) {
           setCreatedCreds(res.credentials);

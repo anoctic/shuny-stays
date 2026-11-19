@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   Palette,
   Sparkles,
@@ -30,6 +31,7 @@ interface EditBrandingModalProps {
 }
 
 export function EditBrandingModal({ pg, triggerButton }: EditBrandingModalProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +70,7 @@ export function EditBrandingModal({ pg, triggerButton }: EditBrandingModalProps)
       if (res?.error) {
         setError(res.error);
       } else if (res?.success) {
+        router.refresh();
         setSuccess("Branding updated successfully!");
         setTimeout(() => {
           setIsOpen(false);

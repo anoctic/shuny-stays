@@ -26,6 +26,7 @@ import { ActiveBroadcastBanner } from "@/components/broadcasts/ActiveBroadcastBa
 import { RequestPassModal } from "@/components/passes/RequestPassModal";
 import { RentReceiptModal } from "@/components/tenant/RentReceiptModal";
 import { DepositReceiptModal } from "@/components/tenant/DepositReceiptModal";
+import { AccountSecurityCard } from "@/components/settings/AccountSecurityCard";
 import { SecurityDepositItem, RentPaymentRecord } from "@/lib/data/rooms";
 import {
   submitTenantUpiScreenshotAction,
@@ -653,6 +654,15 @@ export function TenantHomeExplorer({
           </div>
         </div>
       )}
+
+      {/* Resident Account & Login Security */}
+      <div className="pt-2">
+        <AccountSecurityCard
+          role="tenant"
+          currentPhone={session.phone}
+          currentEmail={session.email}
+        />
+      </div>
 
       {/* 7. Subtle White-Label Footer: "Powered by Shuny Stays Software" */}
       <footer className="pt-3 pb-1 text-center space-y-1">

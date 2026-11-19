@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import {
   Sparkles,
   Building2,
@@ -27,6 +29,7 @@ import { PlatformBroadcast, UserRole } from "@/types/schema.types";
 import { OnboardPgModal } from "@/components/super-admin/OnboardPgModal";
 import { EditBrandingModal } from "@/components/super-admin/EditBrandingModal";
 import { CredentialsGeneratedCard } from "@/components/auth/CredentialsGeneratedCard";
+import { AccountSecurityCard } from "@/components/settings/AccountSecurityCard";
 import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
 import { togglePgStatusAction } from "@/app/actions/branding";
 import {
@@ -38,7 +41,7 @@ import { switchDemoPersonaAction } from "@/app/actions/auth";
 interface SuperAdminDashboardProps {
   pgs: PgDetailItem[];
   broadcasts: PlatformBroadcast[];
-  initialTab?: "overview" | "pgs" | "broadcast" | "billing";
+  initialTab?: "overview" | "pgs" | "broadcast" | "billing" | "settings";
 }
 
 export function SuperAdminDashboard({
@@ -46,10 +49,21 @@ export function SuperAdminDashboard({
   broadcasts: initialBroadcasts,
   initialTab = "overview",
 }: SuperAdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "pgs" | "broadcast" | "billing">(initialTab);
+  const router = useRouter();
+  useRealtimeSync(["pgs", "profiles"]);
+
+  const [activeTab, setActiveTab] = useState<"overview" | "pgs" | "broadcast" | "billing" | "settings">(initialTab);
   const [pgsList, setPgsList] = useState<PgDetailItem[]>(initialPgs);
   const [broadcastsList, setBroadcastsList] = useState<PlatformBroadcast[]>(initialBroadcasts);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPgsList(initialPgs);
+  }, [initialPgs]);
+
+  useEffect(() => {
+    setBroadcastsList(initialBroadcasts);
+  }, [initialBroadcasts]);
 
   // New Onboarded Owner Credentials Banner state
   const [newOwnerCredentials, setNewOwnerCredentials] = useState<{
@@ -97,6 +111,7 @@ export function SuperAdminDashboard({
 
     try {
       await togglePgStatusAction(pgId, nextStatus);
+      router.refresh();
       setPgsList((prev) =>
         prev.map((p) => (p.id === pgId ? { ...p, status: nextStatus } : p))
       );
@@ -148,6 +163,7 @@ export function SuperAdminDashboard({
       roles.forEach((r) => fd.append("target_roles", r));
 
       await createBroadcastAction(fd);
+      router.refresh();
 
       const newBc: PlatformBroadcast = {
         id: `bc-${Date.now()}`,
@@ -173,6 +189,7 @@ export function SuperAdminDashboard({
   const handleToggleBroadcast = async (bcId: string) => {
     try {
       await toggleBroadcastAction(bcId);
+      router.refresh();
       setBroadcastsList((prev) =>
         prev.map((b) => (b.id === bcId ? { ...b, is_active: !b.is_active } : b))
       );
@@ -203,7 +220,7 @@ export function SuperAdminDashboard({
       )}
 
       {/* Sub-Tab Navigation Bar */}
-      <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-2xl text-[11px] font-extrabold text-slate-600 border border-slate-200/80">
+      <div className="grid grid-cols-5 gap-1 p-1 bg-slate-100 rounded-2xl text-[11px] font-extrabold text-slate-600 border border-slate-200/80">
         <button
           type="button"
           onClick={() => setActiveTab("overview")}
@@ -247,6 +264,17 @@ export function SuperAdminDashboard({
           }`}
         >
           Billing
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("settings")}
+          className={`py-1.5 rounded-xl transition ${
+            activeTab === "settings"
+              ? "bg-white text-indigo-600 shadow-xs"
+              : "hover:text-slate-900"
+          }`}
+        >
+          Security
         </button>
       </div>
 
@@ -578,6 +606,17 @@ export function SuperAdminDashboard({
             </div>
             <span className="font-extrabold text-emerald-600">₹2,499 / mo</span>
           </div>
+        </div>
+      )}
+
+      {/* TAB 5: SETTINGS & ACCOUNT SECURITY */}
+      {activeTab === "settings" && (
+        <div className="space-y-4 animate-in fade-in">
+          <AccountSecurityCard
+            role="super_admin"
+            currentEmail="superadmin@apnapg.com"
+            currentPhone="9999900001"
+          />
         </div>
       )}
 

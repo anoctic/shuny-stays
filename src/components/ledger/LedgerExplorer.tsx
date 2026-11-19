@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   IndianRupee,
   CheckCircle2,
@@ -46,6 +47,7 @@ export function LedgerExplorer({
   userRole,
   currentUserName = "Manoj Kumar",
 }: LedgerExplorerProps) {
+  const router = useRouter();
   const isOwner = userRole === "owner";
   const isAdmin = userRole === "admin";
 
@@ -64,6 +66,7 @@ export function LedgerExplorer({
   const handleConfirmHandover = async (record: RentPaymentRecord) => {
     setIsProcessingId(record.id);
     await settleRentPaymentAction(record.id);
+    router.refresh();
 
     setRentPayments((prev) =>
       prev.map((r) =>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   ShieldCheck,
   Ticket,
@@ -11,6 +12,7 @@ import {
   Plus,
   QrCode,
   Sparkles,
+  KeyRound,
 } from "lucide-react";
 import {
   StaffItem,
@@ -165,6 +167,18 @@ export function OpsAndStaffExplorer({
       {/* SUB-TAB 1: PASSES & STAFF */}
       {subTab === "passes_staff" && (
         <div className="space-y-3.5">
+          {/* Quick Account Security Shortcut */}
+          <Link
+            href="/dashboard/settings"
+            className="flex items-center justify-between p-3 rounded-2xl bg-indigo-50/70 hover:bg-indigo-100/60 border border-indigo-200/80 text-xs font-bold text-indigo-900 transition"
+          >
+            <span className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-indigo-600" />
+              Manage Account & Login Security (Password / Email / Phone)
+            </span>
+            <span className="text-[10px] text-indigo-600 font-extrabold">Settings →</span>
+          </Link>
+
           {/* Day & Night Pass Approval Queue */}
           <div className="p-3.5 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-2.5">
             <div className="flex items-center justify-between">

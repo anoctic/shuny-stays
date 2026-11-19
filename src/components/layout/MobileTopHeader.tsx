@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { LogOut, Sparkles, Building2, Ticket, PhoneCall, ChevronDown } from "lucide-react";
+import Link from "next/link";
+import { LogOut, Sparkles, Building2, Ticket, PhoneCall, ChevronDown, KeyRound } from "lucide-react";
 import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
 import { UserRole, Building, PlatformBroadcast } from "@/types/schema.types";
 import { BuildingSwitcher } from "./BuildingSwitcher";
@@ -128,6 +129,21 @@ export function MobileTopHeader({
 
           {/* Top Navigation Notification Bell */}
           <NotificationCenter broadcasts={broadcasts} userRole={role} />
+
+          {/* Account Security & Credentials Settings */}
+          <Link
+            href={
+              role === "super_admin"
+                ? "/super-admin?tab=settings"
+                : role === "tenant"
+                ? "/tenant/settings"
+                : "/dashboard/settings"
+            }
+            title="Account & Login Security Settings"
+            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-colors"
+          >
+            <KeyRound className="w-3.5 h-3.5" />
+          </Link>
 
           {/* Role Pill with pulsating live dot */}
           <button

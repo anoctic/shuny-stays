@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { X, Layers, Plus, FileSpreadsheet, UserPlus, CheckCircle2 } from "lucide-react";
 import { BuildingItem, FloorItem, RoomItem } from "@/lib/data/rooms";
 import {
@@ -34,6 +35,7 @@ export function WalkInSheet({
   room,
   bedIdx,
 }: WalkInSheetProps) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdCreds, setCreatedCreds] = useState<{
     name: string;
@@ -58,6 +60,7 @@ export function WalkInSheet({
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
     const res = await walkInAddTenantAction(building.id, floorIdx, room.id, bedIdx, formData);
+    router.refresh();
     setIsSubmitting(false);
     if (res && "credentials" in res && res.credentials) {
       setCreatedCreds(res.credentials);
@@ -257,6 +260,7 @@ export function AutoBuildingSheet({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   if (!isOpen) return null;
 
@@ -265,6 +269,7 @@ export function AutoBuildingSheet({
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
     await addAutoBuildingAction(formData);
+    router.refresh();
     setIsSubmitting(false);
     onClose();
   };
@@ -389,6 +394,7 @@ export function AddFloorSheet({
   onClose: () => void;
   building: BuildingItem | null;
 }) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   if (!isOpen || !building) return null;
 
@@ -399,6 +405,7 @@ export function AddFloorSheet({
     const name = formData.get("name") as string;
     const roomsCount = parseInt(formData.get("roomsCount") as string) || 3;
     await addFloorAction(building.id, name, roomsCount);
+    router.refresh();
     setIsSubmitting(false);
     onClose();
   };
@@ -471,6 +478,7 @@ export function AddRoomSheet({
   building: BuildingItem | null;
   floorIdx: number;
 }) {
+  const router = useRouter();
   const [mode, setMode] = useState<"single" | "bulk">("single");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -494,6 +502,7 @@ export function AddRoomSheet({
       await addRoomAction(building.id, floorIdx, "bulk", { startNo, endNo, sharing, rent });
     }
 
+    router.refresh();
     setIsSubmitting(false);
     onClose();
   };
@@ -630,6 +639,7 @@ export function AddBedSheet({
   floorIdx: number;
   roomId: string | null;
 }) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   if (!isOpen || !building || !roomId) return null;
 
@@ -645,6 +655,7 @@ export function AddBedSheet({
     const formData = new FormData(e.currentTarget);
     const label = formData.get("label") as string;
     await addBedAction(building.id, floorIdx, roomId, label);
+    router.refresh();
     setIsSubmitting(false);
     onClose();
   };

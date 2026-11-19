@@ -34,6 +34,7 @@ export default async function TenantPassesPage() {
         id: session.id,
         full_name: session.full_name,
         phone: session.phone || "+91 98765 43210",
+        email: session.email,
         room_id: session.room_id,
         building_id: session.building_id,
       }}
