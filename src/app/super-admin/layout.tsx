@@ -18,6 +18,10 @@ export default async function SuperAdminLayout({
   const session = await getCurrentUserSession();
 
   // Strict Server Route Guard
+  if (!session.id) {
+    redirect("/login");
+  }
+
   if (session.role !== "super_admin") {
     if (session.role === "owner" || session.role === "admin") {
       redirect("/dashboard");

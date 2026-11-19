@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Layers, Plus, FileSpreadsheet, UserPlus, CheckCircle2 } from "lucide-react";
+import { X, Layers, Plus, FileSpreadsheet, UserPlus, CheckCircle2, AlertCircle } from "lucide-react";
 import { BuildingItem, FloorItem, RoomItem } from "@/lib/data/rooms";
 import {
   addAutoBuildingAction,
@@ -37,6 +37,7 @@ export function WalkInSheet({
 }: WalkInSheetProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [createdCreds, setCreatedCreds] = useState<{
     name: string;
     role: "tenant";
@@ -52,20 +53,32 @@ export function WalkInSheet({
 
   const handleClose = () => {
     setCreatedCreds(null);
+    setError(null);
     onClose();
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const formData = new FormData(e.currentTarget);
-    const res = await walkInAddTenantAction(building.id, floorIdx, room.id, bedIdx, formData);
-    router.refresh();
-    setIsSubmitting(false);
-    if (res && "credentials" in res && res.credentials) {
-      setCreatedCreds(res.credentials);
-    } else {
-      handleClose();
+    setError(null);
+    try {
+      const formData = new FormData(e.currentTarget);
+      const res = await walkInAddTenantAction(building.id, floorIdx, room.id, bedIdx, formData);
+      if (res && "error" in res && (res as any).error) {
+        setError((res as any).error);
+        setIsSubmitting(false);
+        return;
+      }
+      router.refresh();
+      setIsSubmitting(false);
+      if (res && "credentials" in res && (res as any).credentials) {
+        setCreatedCreds((res as any).credentials);
+      } else {
+        handleClose();
+      }
+    } catch (err: any) {
+      setError(err?.message || "Failed to add tenant");
+      setIsSubmitting(false);
     }
   };
 
@@ -93,6 +106,13 @@ export function WalkInSheet({
               <X className="w-4 h-4" />
             </button>
           </div>
+
+          {error && (
+            <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
           {createdCreds ? (
             <div className="space-y-3">
@@ -262,22 +282,39 @@ export function AutoBuildingSheet({
 }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   if (!isOpen) return null;
+
+  const handleClose = () => {
+    setError(null);
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const formData = new FormData(e.currentTarget);
-    await addAutoBuildingAction(formData);
-    router.refresh();
-    setIsSubmitting(false);
-    onClose();
+    setError(null);
+    try {
+      const formData = new FormData(e.currentTarget);
+      const res = await addAutoBuildingAction(formData);
+      if (res && "error" in res && res.error) {
+        setError(res.error);
+        setIsSubmitting(false);
+        return;
+      }
+      router.refresh();
+      setIsSubmitting(false);
+      handleClose();
+    } catch (err: any) {
+      setError(err?.message || "Failed to create building");
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div
       className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="w-full max-w-[480px] mx-auto rounded-t-[28px] p-5 pb-8 shadow-2xl border-t border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up"
@@ -287,12 +324,19 @@ export function AutoBuildingSheet({
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-extrabold text-[#0F172A]">Smart Auto-Building Builder</h3>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-1.5 rounded-full bg-[#F1F5F9] text-[#64748B] hover:text-[#0F172A]"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
+
+          {error && (
+            <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-2.5 text-xs">
             <div className="grid grid-cols-3 gap-2">
@@ -396,24 +440,41 @@ export function AddFloorSheet({
 }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   if (!isOpen || !building) return null;
+
+  const handleClose = () => {
+    setError(null);
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get("name") as string;
-    const roomsCount = parseInt(formData.get("roomsCount") as string) || 3;
-    await addFloorAction(building.id, name, roomsCount);
-    router.refresh();
-    setIsSubmitting(false);
-    onClose();
+    setError(null);
+    try {
+      const formData = new FormData(e.currentTarget);
+      const name = formData.get("name") as string;
+      const roomsCount = parseInt(formData.get("roomsCount") as string) || 3;
+      const res = await addFloorAction(building.id, name, roomsCount);
+      if (res && "error" in res && (res as any).error) {
+        setError((res as any).error);
+        setIsSubmitting(false);
+        return;
+      }
+      router.refresh();
+      setIsSubmitting(false);
+      handleClose();
+    } catch (err: any) {
+      setError(err?.message || "Failed to add floor");
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div
       className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="w-full max-w-[480px] mx-auto rounded-t-[28px] p-5 pb-8 shadow-2xl border-t border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up"
@@ -423,12 +484,19 @@ export function AddFloorSheet({
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-extrabold text-[#0F172A]">+ Add Floor to {building.name}</h3>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-1.5 rounded-full bg-[#F1F5F9] text-[#64748B] hover:text-[#0F172A]"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
+
+          {error && (
+            <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-2.5 text-xs">
             <div>
@@ -481,36 +549,55 @@ export function AddRoomSheet({
   const router = useRouter();
   const [mode, setMode] = useState<"single" | "bulk">("single");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen || !building) return null;
   const floor = building.floors[floorIdx];
   if (!floor) return null;
 
+  const handleClose = () => {
+    setError(null);
+    onClose();
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const formData = new FormData(e.currentTarget);
-    const sharing = parseInt(formData.get("sharing") as string) || 2;
-    const rent = parseInt(formData.get("rent") as string) || 8500;
+    setError(null);
+    try {
+      const formData = new FormData(e.currentTarget);
+      const sharing = parseInt(formData.get("sharing") as string) || 2;
+      const rent = parseInt(formData.get("rent") as string) || 8500;
 
-    if (mode === "single") {
-      const roomNumber = formData.get("roomNumber") as string;
-      await addRoomAction(building.id, floorIdx, "single", { roomNumber, sharing, rent });
-    } else {
-      const startNo = parseInt(formData.get("startNo") as string) || 102;
-      const endNo = parseInt(formData.get("endNo") as string) || 105;
-      await addRoomAction(building.id, floorIdx, "bulk", { startNo, endNo, sharing, rent });
+      let res;
+      if (mode === "single") {
+        const roomNumber = formData.get("roomNumber") as string;
+        res = await addRoomAction(building.id, floorIdx, "single", { roomNumber, sharing, rent });
+      } else {
+        const startNo = parseInt(formData.get("startNo") as string) || 102;
+        const endNo = parseInt(formData.get("endNo") as string) || 105;
+        res = await addRoomAction(building.id, floorIdx, "bulk", { startNo, endNo, sharing, rent });
+      }
+
+      if (res && "error" in res && (res as any).error) {
+        setError((res as any).error);
+        setIsSubmitting(false);
+        return;
+      }
+
+      router.refresh();
+      setIsSubmitting(false);
+      handleClose();
+    } catch (err: any) {
+      setError(err?.message || "Failed to add room(s)");
+      setIsSubmitting(false);
     }
-
-    router.refresh();
-    setIsSubmitting(false);
-    onClose();
   };
 
   return (
     <div
       className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="w-full max-w-[480px] mx-auto rounded-t-[28px] p-5 pb-8 shadow-2xl border-t border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up"
@@ -522,12 +609,19 @@ export function AddRoomSheet({
               + Add Room ({building.name} • {floor.name})
             </h3>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-1.5 rounded-full bg-[#F1F5F9] text-[#64748B] hover:text-[#0F172A]"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
+
+          {error && (
+            <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] text-[10.5px] font-extrabold">
             <button
@@ -641,6 +735,7 @@ export function AddBedSheet({
 }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   if (!isOpen || !building || !roomId) return null;
 
   const floor = building.floors[floorIdx];
@@ -649,21 +744,37 @@ export function AddBedSheet({
 
   const nextLabel = `Bed ${String.fromCharCode(65 + room.beds.length)}`;
 
+  const handleClose = () => {
+    setError(null);
+    onClose();
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const formData = new FormData(e.currentTarget);
-    const label = formData.get("label") as string;
-    await addBedAction(building.id, floorIdx, roomId, label);
-    router.refresh();
-    setIsSubmitting(false);
-    onClose();
+    setError(null);
+    try {
+      const formData = new FormData(e.currentTarget);
+      const label = formData.get("label") as string;
+      const res = await addBedAction(building.id, floorIdx, roomId, label);
+      if (res && "error" in res && (res as any).error) {
+        setError((res as any).error);
+        setIsSubmitting(false);
+        return;
+      }
+      router.refresh();
+      setIsSubmitting(false);
+      handleClose();
+    } catch (err: any) {
+      setError(err?.message || "Failed to add bed");
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div
       className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="w-full max-w-[480px] mx-auto rounded-t-[28px] p-5 pb-8 shadow-2xl border-t border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up"
@@ -675,12 +786,19 @@ export function AddBedSheet({
               + Add Extra Bed (Room {room.number})
             </h3>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-1.5 rounded-full bg-[#F1F5F9] text-[#64748B] hover:text-[#0F172A]"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
+
+          {error && (
+            <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-3 text-xs">
             <input

@@ -87,6 +87,7 @@ let memoryPasses: GatePass[] = [
  * Get all passes for a specific tenant
  */
 export async function getPassesForTenant(tenantId: string): Promise<GatePass[]> {
+  if (!tenantId) return [];
   try {
     const supabase = await createClient();
     const { data, error } = await supabase

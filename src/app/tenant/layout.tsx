@@ -15,6 +15,12 @@ export default async function TenantLayout({
   children: React.ReactNode;
 }) {
   const session = await getCurrentUserSession();
+
+  // If unauthenticated, redirect to login
+  if (!session.id) {
+    redirect("/login");
+  }
+
   const broadcasts = await getActiveBroadcastsForRole("tenant");
 
   // If super_admin or owner/admin, redirect to respective portals

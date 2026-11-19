@@ -199,18 +199,40 @@ export function RoomsExplorer({
 
       {/* 3. Buildings -> Floors -> Rooms -> Beds */}
       <div className="space-y-3.5">
-        {visibleBuildings.map((building) => {
-          const floorIdx = Math.min(
-            selectedFloorByBuilding[building.id] || 0,
-            Math.max(0, building.floors.length - 1)
-          );
-          const activeFloor = building.floors[floorIdx];
+        {visibleBuildings.length === 0 ? (
+          <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-8 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+              <Layers className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-extrabold text-slate-800">No Buildings Added Yet</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Create your first building block with automated floors, rooms, and beds to start managing your PG.
+              </p>
+            </div>
+            {!isAdminScoped && (
+              <button
+                onClick={() => setIsAutoBuildingOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold shadow-sm active:scale-95 transition"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add First Building Block</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          visibleBuildings.map((building) => {
+            const floorIdx = Math.min(
+              selectedFloorByBuilding[building.id] || 0,
+              Math.max(0, building.floors.length - 1)
+            );
+            const activeFloor = building.floors[floorIdx];
 
-          return (
-            <section
-              key={building.id}
-              className="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden"
-            >
+            return (
+              <section
+                key={building.id}
+                className="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden"
+              >
               {/* Building Header */}
               <div className="p-3 bg-slate-900 text-white flex items-center justify-between gap-2">
                 <div className="min-w-0">
@@ -399,7 +421,7 @@ export function RoomsExplorer({
               ) : null}
             </section>
           );
-        })}
+        }))}
       </div>
 
       {/* 360 Occupied Bed Profile Bottom Sheet */}

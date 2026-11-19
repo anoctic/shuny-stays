@@ -8,6 +8,10 @@ export const revalidate = 0;
 export default async function RootPage() {
   const session = await getCurrentUserSession();
 
+  if (!session.id) {
+    redirect("/login");
+  }
+
   if (session.role === "super_admin") {
     redirect("/super-admin");
   } else if (session.role === "owner") {

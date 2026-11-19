@@ -19,6 +19,11 @@ export default async function DashboardLayout({
 }) {
   const session = await getCurrentUserSession();
 
+  // Route guard: require valid authenticated session
+  if (!session.id) {
+    redirect("/login");
+  }
+
   // Route guard: only owner and admin can access /dashboard
   if (session.role === "super_admin") {
     redirect("/super-admin");
