@@ -828,235 +828,245 @@ export async function addAutoBuilding(data: {
   sharing: number;
   rent: number;
 }) {
-  const admin = createAdminClient();
-  const bId = crypto.randomUUID();
+  try {
+    const admin = createAdminClient();
+    const bId = crypto.randomUUID();
 
-  // Determine target pgId
-  let targetPgId: string = data.pgId || "";
-  if (!targetPgId) {
-    const { data: firstPg } = await (admin.from("pgs" as any) as any)
-      .select("id")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    targetPgId = firstPg?.id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
-  }
+    // Determine target pgId
+    let targetPgId: string = data.pgId || "";
+    if (!targetPgId) {
+      const { data: firstPg } = await (admin.from("pgs" as any) as any)
+        .select("id")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      targetPgId = firstPg?.id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
+    }
 
-  // Map gender_type ('boys' | 'girls' | 'coliving')
-  let genderType: "boys" | "girls" | "coliving" = "coliving";
-  const rawType = (data.type || "").toLowerCase();
-  if (rawType.includes("boy")) {
-    genderType = "boys";
-  } else if (rawType.includes("girl")) {
-    genderType = "girls";
-  }
+    // Map gender_type ('boys' | 'girls' | 'coliving')
+    let genderType: "boys" | "girls" | "coliving" = "coliving";
+    const rawType = (data.type || "").toLowerCase();
+    if (rawType.includes("boy")) {
+      genderType = "boys";
+    } else if (rawType.includes("girl")) {
+      genderType = "girls";
+    }
 
-  const floorsCount = Math.max(1, Math.min(10, data.floorsCount || 3));
-  const roomsPerFloor = Math.max(1, Math.min(50, data.roomsPerFloor || 3));
-  const sharing = Math.max(1, Math.min(10, data.sharing || 2));
-  const rent = Math.max(0, data.rent || 8500);
+    const floorsCount = Math.max(1, Math.min(10, data.floorsCount || 3));
+    const roomsPerFloor = Math.max(1, Math.min(50, data.roomsPerFloor || 3));
+    const sharing = Math.max(1, Math.min(10, data.sharing || 2));
+    const rent = Math.max(0, data.rent || 8500);
 
-  // 1. Insert building record into Supabase
-  const { error: bErr } = await (admin.from("buildings" as any) as any).insert({
-    id: bId,
-    pg_id: targetPgId,
-    name: data.name.trim(),
-    gender_type: genderType,
-    address: `${data.name.trim()}, Silicon Valley Road`,
-    city: "Bengaluru",
-    state: "Karnataka",
-    pincode: "560034",
-    total_floors: floorsCount,
-    amenities: ["High-speed Wi-Fi", "24/7 Power Backup", "RO Water", "Daily Housekeeping"],
-  } as any);
-
-  if (bErr) {
-    console.error("addAutoBuilding insert building error:", bErr);
-    return { error: `Failed to insert building: ${bErr.message}` };
-  }
-
-  // 2. Generate and batch insert floors into Supabase
-  const floorsToInsert: any[] = [];
-  const floorsStructure: FloorItem[] = [];
-
-  for (let f = 0; f < floorsCount; f++) {
-    const fId = crypto.randomUUID();
-    const floorName =
-      f === 0
-        ? "Ground Floor"
-        : f === 1
-        ? "1st Floor"
-        : f === 2
-        ? "2nd Floor"
-        : f === 3
-        ? "3rd Floor"
-        : `${f}th Floor`;
-
-    floorsToInsert.push({
-      id: fId,
+    // 1. Insert building record into Supabase
+    const { error: bErr } = await (admin.from("buildings" as any) as any).insert({
+      id: bId,
       pg_id: targetPgId,
-      building_id: bId,
-      floor_number: f,
-      floor_name: floorName,
-    });
-  }
+      name: data.name.trim(),
+      gender_type: genderType,
+      address: `${data.name.trim()}, Silicon Valley Road`,
+      city: "Bengaluru",
+      state: "Karnataka",
+      pincode: "560034",
+      total_floors: floorsCount,
+      amenities: ["High-speed Wi-Fi", "24/7 Power Backup", "RO Water", "Daily Housekeeping"],
+    } as any);
 
-  const { error: fErr } = await (admin.from("floors" as any) as any).insert(floorsToInsert);
-  if (fErr) {
-    console.error("addAutoBuilding insert floors error:", fErr);
-    return { error: `Failed to insert floors: ${fErr.message}` };
-  }
+    if (bErr) {
+      console.error("addAutoBuilding insert building error:", bErr);
+      return { error: `Failed to insert building: ${bErr.message || JSON.stringify(bErr)}` };
+    }
 
-  // 3. Generate and batch insert rooms into Supabase
-  // (Postgres trigger trg_rooms_auto_create_beds will automatically create the vacant beds for each room!)
-  const roomsToInsert: any[] = [];
+    // 2. Generate and batch insert floors into Supabase
+    const floorsToInsert: any[] = [];
+    const floorsStructure: FloorItem[] = [];
 
-  for (let f = 0; f < floorsCount; f++) {
-    const floorRow = floorsToInsert[f];
-    const floorRooms: RoomItem[] = [];
+    for (let f = 0; f < floorsCount; f++) {
+      const fId = crypto.randomUUID();
+      const floorName =
+        f === 0
+          ? "Ground Floor"
+          : f === 1
+          ? "1st Floor"
+          : f === 2
+          ? "2nd Floor"
+          : f === 3
+          ? "3rd Floor"
+          : `${f}th Floor`;
 
-    for (let r = 1; r <= roomsPerFloor; r++) {
-      const roomId = crypto.randomUUID();
-      const roomNum = f === 0 ? `G-0${r}` : `${f * 100 + r}`;
-
-      roomsToInsert.push({
-        id: roomId,
+      floorsToInsert.push({
+        id: fId,
         pg_id: targetPgId,
         building_id: bId,
-        floor_id: floorRow.id,
-        room_number: roomNum,
-        sharing_type: sharing,
-        room_type: "standard",
-        is_ac: false,
-        has_attached_bathroom: true,
-        has_balcony: false,
-        base_rent_monthly: rent,
-        default_deposit: rent,
+        floor_number: f,
+        floor_name: floorName,
       });
+    }
 
-      const beds: BedItem[] = [];
-      for (let b = 0; b < sharing; b++) {
-        beds.push({
-          id: `bed-${roomId}-${b}`,
-          label: `Bed ${String.fromCharCode(65 + b)}`,
-          occupied: false,
-          tenant: null,
+    const { error: fErr } = await (admin.from("floors" as any) as any).insert(floorsToInsert);
+    if (fErr) {
+      console.error("addAutoBuilding insert floors error:", fErr);
+      return { error: `Failed to insert floors: ${fErr.message || JSON.stringify(fErr)}` };
+    }
+
+    // 3. Generate and batch insert rooms into Supabase
+    // (Postgres trigger trg_rooms_auto_create_beds will automatically create the vacant beds for each room!)
+    const roomsToInsert: any[] = [];
+
+    for (let f = 0; f < floorsCount; f++) {
+      const floorRow = floorsToInsert[f];
+      const floorRooms: RoomItem[] = [];
+
+      for (let r = 1; r <= roomsPerFloor; r++) {
+        const roomId = crypto.randomUUID();
+        const roomNum = f === 0 ? (r < 10 ? `G-0${r}` : `G-${r}`) : `${f * 100 + r}`;
+
+        roomsToInsert.push({
+          id: roomId,
+          pg_id: targetPgId,
+          building_id: bId,
+          floor_id: floorRow.id,
+          room_number: roomNum,
+          sharing_type: sharing,
+          room_type: "standard",
+          is_ac: false,
+          has_attached_bathroom: true,
+          has_balcony: false,
+          base_rent_monthly: rent,
+          default_deposit: rent,
+        });
+
+        const beds: BedItem[] = [];
+        for (let b = 0; b < sharing; b++) {
+          beds.push({
+            id: `bed-${roomId}-${b}`,
+            label: `Bed ${String.fromCharCode(65 + b)}`,
+            occupied: false,
+            tenant: null,
+          });
+        }
+
+        floorRooms.push({
+          id: roomId,
+          number: roomNum,
+          sharing,
+          rent,
+          beds,
         });
       }
 
-      floorRooms.push({
-        id: roomId,
-        number: roomNum,
-        sharing,
-        rent,
-        beds,
+      floorsStructure.push({
+        id: floorRow.id,
+        name: floorRow.floor_name,
+        rooms: floorRooms,
       });
     }
 
-    floorsStructure.push({
-      id: floorRow.id,
-      name: floorRow.floor_name,
-      rooms: floorRooms,
-    });
+    const { error: rErr } = await (admin.from("rooms" as any) as any).insert(roomsToInsert);
+    if (rErr) {
+      console.error("addAutoBuilding insert rooms error:", rErr);
+      return { error: `Failed to insert rooms: ${rErr.message || JSON.stringify(rErr)}` };
+    }
+
+    const newBuilding: BuildingItem = {
+      id: bId,
+      pgId: targetPgId || "23594b9e-da90-4884-95aa-5f978d91a0d2",
+      name: data.name.trim(),
+      type: genderType === "boys" ? "Boys Hostel" : genderType === "girls" ? "Girls Hostel" : "Co-living PG",
+      floors: floorsStructure,
+    };
+
+    memoryBuildings.push(newBuilding);
+    return { success: true, building: newBuilding };
+  } catch (err: any) {
+    console.error("Unhandled error in addAutoBuilding:", err);
+    return { error: `Building creation failed: ${err?.message || "Unknown error"}` };
   }
-
-  const { error: rErr } = await (admin.from("rooms" as any) as any).insert(roomsToInsert);
-  if (rErr) {
-    console.error("addAutoBuilding insert rooms error:", rErr);
-    return { error: `Failed to insert rooms: ${rErr.message}` };
-  }
-
-  const newBuilding: BuildingItem = {
-    id: bId,
-    pgId: targetPgId || "23594b9e-da90-4884-95aa-5f978d91a0d2",
-    name: data.name.trim(),
-    type: genderType === "boys" ? "Boys Hostel" : genderType === "girls" ? "Girls Hostel" : "Co-living PG",
-    floors: floorsStructure,
-  };
-
-  memoryBuildings.push(newBuilding);
-  return { success: true, building: newBuilding };
 }
 
 export async function addFloor(buildingId: string, name: string, initialRooms: number) {
-  const admin = createAdminClient();
+  try {
+    const admin = createAdminClient();
 
-  const { data: bldg, error: bErr } = await (admin.from("buildings" as any) as any)
-    .select("id, pg_id, total_floors")
-    .eq("id", buildingId)
-    .single();
+    const { data: bldg, error: bErr } = await (admin.from("buildings" as any) as any)
+      .select("id, pg_id, total_floors")
+      .eq("id", buildingId)
+      .single();
 
-  if (bErr || !bldg) {
-    return { error: "Building not found in database." };
-  }
-
-  const { data: existingFloors } = await (admin.from("floors" as any) as any)
-    .select("floor_number")
-    .eq("building_id", buildingId);
-
-  const maxFloorNum = (existingFloors || []).reduce(
-    (max: number, fl: any) => Math.max(max, fl.floor_number ?? 0),
-    -1
-  );
-  const nextFloorNum = maxFloorNum + 1;
-  const floorId = crypto.randomUUID();
-  const floorName = name.trim() || `${nextFloorNum}th Floor`;
-
-  const { error: fErr } = await (admin.from("floors" as any) as any).insert({
-    id: floorId,
-    pg_id: bldg.pg_id,
-    building_id: buildingId,
-    floor_number: nextFloorNum,
-    floor_name: floorName,
-  } as any);
-
-  if (fErr) {
-    return { error: `Failed to add floor: ${fErr.message}` };
-  }
-
-  await (admin.from("buildings" as any) as any)
-    .update({ total_floors: Math.max(bldg.total_floors || 0, nextFloorNum + 1) } as any)
-    .eq("id", buildingId);
-
-  if (initialRooms > 0) {
-    const roomsToInsert: any[] = [];
-    for (let r = 1; r <= initialRooms; r++) {
-      const roomNum = nextFloorNum === 0 ? `G-0${r}` : `${nextFloorNum * 100 + r}`;
-      roomsToInsert.push({
-        id: crypto.randomUUID(),
-        pg_id: bldg.pg_id,
-        building_id: buildingId,
-        floor_id: floorId,
-        room_number: roomNum,
-        sharing_type: 2,
-        room_type: "standard",
-        base_rent_monthly: 8500,
-        default_deposit: 8500,
-      });
+    if (bErr || !bldg) {
+      return { error: "Building not found in database." };
     }
-    await (admin.from("rooms" as any) as any).insert(roomsToInsert);
-  }
 
-  const b = memoryBuildings.find((x) => x.id === buildingId);
-  if (b) {
-    const fIdx = b.floors.length;
-    const rooms: RoomItem[] = [];
-    for (let r = 1; r <= initialRooms; r++) {
-      rooms.push({
-        id: `rm-${buildingId}-${fIdx}-${r}`,
-        number: `${fIdx * 100 + r}`,
-        sharing: 2,
-        rent: 8500,
-        beds: [
-          { id: `bed-${Date.now()}-1`, label: "Bed A", occupied: false, tenant: null },
-          { id: `bed-${Date.now()}-2`, label: "Bed B", occupied: false, tenant: null },
-        ],
-      });
+    const { data: existingFloors } = await (admin.from("floors" as any) as any)
+      .select("floor_number")
+      .eq("building_id", buildingId);
+
+    const maxFloorNum = (existingFloors || []).reduce(
+      (max: number, fl: any) => Math.max(max, fl.floor_number ?? 0),
+      -1
+    );
+    const nextFloorNum = maxFloorNum + 1;
+    const floorId = crypto.randomUUID();
+    const floorName = name.trim() || `${nextFloorNum}th Floor`;
+
+    const { error: fErr } = await (admin.from("floors" as any) as any).insert({
+      id: floorId,
+      pg_id: bldg.pg_id,
+      building_id: buildingId,
+      floor_number: nextFloorNum,
+      floor_name: floorName,
+    } as any);
+
+    if (fErr) {
+      return { error: `Failed to add floor: ${fErr.message}` };
     }
-    b.floors.push({ id: floorId, name: floorName, rooms });
-  }
 
-  return { success: true };
+    await (admin.from("buildings" as any) as any)
+      .update({ total_floors: Math.max(bldg.total_floors || 0, nextFloorNum + 1) } as any)
+      .eq("id", buildingId);
+
+    if (initialRooms > 0) {
+      const roomsToInsert: any[] = [];
+      for (let r = 1; r <= initialRooms; r++) {
+        const roomNum = nextFloorNum === 0 ? (r < 10 ? `G-0${r}` : `G-${r}`) : `${nextFloorNum * 100 + r}`;
+        roomsToInsert.push({
+          id: crypto.randomUUID(),
+          pg_id: bldg.pg_id,
+          building_id: buildingId,
+          floor_id: floorId,
+          room_number: roomNum,
+          sharing_type: 2,
+          room_type: "standard",
+          base_rent_monthly: 8500,
+          default_deposit: 8500,
+        });
+      }
+      await (admin.from("rooms" as any) as any).insert(roomsToInsert);
+    }
+
+    const b = memoryBuildings.find((x) => x.id === buildingId);
+    if (b) {
+      const fIdx = b.floors.length;
+      const rooms: RoomItem[] = [];
+      for (let r = 1; r <= initialRooms; r++) {
+        rooms.push({
+          id: `rm-${buildingId}-${fIdx}-${r}`,
+          number: `${fIdx * 100 + r}`,
+          sharing: 2,
+          rent: 8500,
+          beds: [
+            { id: `bed-${Date.now()}-1`, label: "Bed A", occupied: false, tenant: null },
+            { id: `bed-${Date.now()}-2`, label: "Bed B", occupied: false, tenant: null },
+          ],
+        });
+      }
+      b.floors.push({ id: floorId, name: floorName, rooms });
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("Unhandled error in addFloor:", err);
+    return { error: `Failed to add floor: ${err?.message || "Unknown error"}` };
+  }
 }
 
 export async function addRoom(
@@ -1065,132 +1075,142 @@ export async function addRoom(
   mode: "single" | "bulk",
   data: { roomNumber?: string; startNo?: number; endNo?: number; sharing: number; rent: number }
 ) {
-  const admin = createAdminClient();
+  try {
+    const admin = createAdminClient();
 
-  const { data: bldg, error: bErr } = await (admin.from("buildings" as any) as any)
-    .select("id, pg_id")
-    .eq("id", buildingId)
-    .single();
+    const { data: bldg, error: bErr } = await (admin.from("buildings" as any) as any)
+      .select("id, pg_id")
+      .eq("id", buildingId)
+      .single();
 
-  if (bErr || !bldg) return { error: "Building not found in database." };
+    if (bErr || !bldg) return { error: "Building not found in database." };
 
-  const { data: floorList } = await (admin.from("floors" as any) as any)
-    .select("id, floor_number")
-    .eq("building_id", buildingId)
-    .order("floor_number", { ascending: true });
+    const { data: floorList } = await (admin.from("floors" as any) as any)
+      .select("id, floor_number")
+      .eq("building_id", buildingId)
+      .order("floor_number", { ascending: true });
 
-  const targetFloor = (floorList || [])[floorIdx] || (floorList || [])[0];
-  if (!targetFloor) return { error: "Floor not found in database." };
+    const targetFloor = (floorList || [])[floorIdx] || (floorList || [])[0];
+    if (!targetFloor) return { error: "Floor not found in database." };
 
-  const roomsToInsert: any[] = [];
-  if (mode === "single") {
-    const roomNum = data.roomNumber?.trim() || `${(targetFloor.floor_number + 1) * 100 + 1}`;
-    roomsToInsert.push({
-      id: crypto.randomUUID(),
-      pg_id: bldg.pg_id,
-      building_id: buildingId,
-      floor_id: targetFloor.id,
-      room_number: roomNum,
-      sharing_type: data.sharing,
-      room_type: "standard",
-      base_rent_monthly: data.rent,
-      default_deposit: data.rent,
-    });
-  } else {
-    const start = data.startNo || 101;
-    const end = data.endNo || 104;
-    for (let n = start; n <= end; n++) {
+    const roomsToInsert: any[] = [];
+    if (mode === "single") {
+      const roomNum = data.roomNumber?.trim() || `${(targetFloor.floor_number + 1) * 100 + 1}`;
       roomsToInsert.push({
         id: crypto.randomUUID(),
         pg_id: bldg.pg_id,
         building_id: buildingId,
         floor_id: targetFloor.id,
-        room_number: `${n}`,
+        room_number: roomNum,
         sharing_type: data.sharing,
         room_type: "standard",
         base_rent_monthly: data.rent,
         default_deposit: data.rent,
       });
-    }
-  }
-
-  const { error: rErr } = await (admin.from("rooms" as any) as any).insert(roomsToInsert);
-  if (rErr) {
-    return { error: `Failed to insert rooms: ${rErr.message}` };
-  }
-
-  const b = memoryBuildings.find((x) => x.id === buildingId);
-  if (b && b.floors[floorIdx]) {
-    const floor = b.floors[floorIdx];
-    const createBeds = (roomId: string, count: number) => {
-      const beds: BedItem[] = [];
-      for (let i = 0; i < count; i++) {
-        beds.push({
-          id: `bed-${roomId}-${i}`,
-          label: `Bed ${String.fromCharCode(65 + i)}`,
-          occupied: false,
-          tenant: null,
+    } else {
+      const start = data.startNo || 101;
+      const end = data.endNo || 104;
+      for (let n = start; n <= end; n++) {
+        roomsToInsert.push({
+          id: crypto.randomUUID(),
+          pg_id: bldg.pg_id,
+          building_id: buildingId,
+          floor_id: targetFloor.id,
+          room_number: `${n}`,
+          sharing_type: data.sharing,
+          room_type: "standard",
+          base_rent_monthly: data.rent,
+          default_deposit: data.rent,
         });
       }
-      return beds;
-    };
-    roomsToInsert.forEach((r) => {
-      floor.rooms.push({
-        id: r.id,
-        number: r.room_number,
-        sharing: r.sharing_type,
-        rent: r.base_rent_monthly,
-        beds: createBeds(r.id, r.sharing_type),
-      });
-    });
-  }
+    }
 
-  return { success: true };
+    const { error: rErr } = await (admin.from("rooms" as any) as any).insert(roomsToInsert);
+    if (rErr) {
+      return { error: `Failed to insert rooms: ${rErr.message}` };
+    }
+
+    const b = memoryBuildings.find((x) => x.id === buildingId);
+    if (b && b.floors[floorIdx]) {
+      const floor = b.floors[floorIdx];
+      const createBeds = (roomId: string, count: number) => {
+        const beds: BedItem[] = [];
+        for (let i = 0; i < count; i++) {
+          beds.push({
+            id: `bed-${roomId}-${i}`,
+            label: `Bed ${String.fromCharCode(65 + i)}`,
+            occupied: false,
+            tenant: null,
+          });
+        }
+        return beds;
+      };
+      roomsToInsert.forEach((r) => {
+        floor.rooms.push({
+          id: r.id,
+          number: r.room_number,
+          sharing: r.sharing_type,
+          rent: r.base_rent_monthly,
+          beds: createBeds(r.id, r.sharing_type),
+        });
+      });
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("Unhandled error in addRoom:", err);
+    return { error: `Failed to add room: ${err?.message || "Unknown error"}` };
+  }
 }
 
 export async function addBed(buildingId: string, floorIdx: number, roomId: string, label: string) {
-  const admin = createAdminClient();
+  try {
+    const admin = createAdminClient();
 
-  const { data: room, error: rErr } = await (admin.from("rooms" as any) as any)
-    .select("id, pg_id, building_id, sharing_type, base_rent_monthly")
-    .eq("id", roomId)
-    .single();
+    const { data: room, error: rErr } = await (admin.from("rooms" as any) as any)
+      .select("id, pg_id, building_id, sharing_type, base_rent_monthly")
+      .eq("id", roomId)
+      .single();
 
-  if (rErr || !room) return { error: "Room not found in database." };
+    if (rErr || !room) return { error: "Room not found in database." };
 
-  const { error: bedErr } = await (admin.from("beds" as any) as any).insert({
-    id: crypto.randomUUID(),
-    pg_id: room.pg_id,
-    building_id: room.building_id,
-    room_id: room.id,
-    bed_name: label.trim() || `Bed ${room.sharing_type + 1}`,
-    status: "vacant",
-    monthly_rent: room.base_rent_monthly,
-  } as any);
+    const { error: bedErr } = await (admin.from("beds" as any) as any).insert({
+      id: crypto.randomUUID(),
+      pg_id: room.pg_id,
+      building_id: room.building_id,
+      room_id: room.id,
+      bed_name: label.trim() || `Bed ${room.sharing_type + 1}`,
+      status: "vacant",
+      monthly_rent: room.base_rent_monthly,
+    } as any);
 
-  if (bedErr) {
-    return { error: `Failed to add bed: ${bedErr.message}` };
-  }
-
-  await (admin.from("rooms" as any) as any)
-    .update({ sharing_type: Math.min(10, room.sharing_type + 1) } as any)
-    .eq("id", roomId);
-
-  const b = memoryBuildings.find((x) => x.id === buildingId);
-  if (b) {
-    const r = b.floors[floorIdx]?.rooms.find((x) => x.id === roomId);
-    if (r) {
-      r.beds.push({
-        id: `bed-${Date.now()}`,
-        label: label.trim() || `Bed ${r.beds.length + 1}`,
-        occupied: false,
-        tenant: null,
-      });
-      r.sharing = Math.min(10, r.sharing + 1);
+    if (bedErr) {
+      return { error: `Failed to add bed: ${bedErr.message}` };
     }
-  }
 
-  return { success: true };
+    await (admin.from("rooms" as any) as any)
+      .update({ sharing_type: Math.min(10, room.sharing_type + 1) } as any)
+      .eq("id", roomId);
+
+    const b = memoryBuildings.find((x) => x.id === buildingId);
+    if (b) {
+      const r = b.floors[floorIdx]?.rooms.find((x) => x.id === roomId);
+      if (r) {
+        r.beds.push({
+          id: `bed-${Date.now()}`,
+          label: label.trim() || `Bed ${r.beds.length + 1}`,
+          occupied: false,
+          tenant: null,
+        });
+        r.sharing = Math.min(10, r.sharing + 1);
+      }
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("Unhandled error in addBed:", err);
+    return { error: `Failed to add bed: ${err?.message || "Unknown error"}` };
+  }
 }
 
 export async function walkInAddTenant(

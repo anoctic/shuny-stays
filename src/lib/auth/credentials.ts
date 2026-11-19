@@ -169,9 +169,48 @@ export async function createOrUpdateCredentials(
         });
 
       if (createErr || !created?.user) {
-        throw new Error(
-          `Failed to create Supabase Auth user: ${createErr?.message || "User creation failed"}`
-        );
+        const errMsg = createErr?.message || "User creation failed";
+        if (
+          errMsg.toLowerCase().includes("already registered") ||
+          errMsg.toLowerCase().includes("already exists") ||
+          errMsg.toLowerCase().includes("duplicate")
+        ) {
+          // Re-fetch list of users to find them and update
+          const { data: retryList } = await admin.auth.admin.listUsers({ perPage: 1000 });
+          const userMatch = retryList?.users?.find(
+            (u) =>
+              u.email?.toLowerCase() === loginEmail.toLowerCase() ||
+              (cleanPhone.length === 10 && u.phone && normalizePhone(u.phone) === cleanPhone) ||
+              (cleanPhone.length === 10 &&
+                u.user_metadata?.phone &&
+                normalizePhone(u.user_metadata.phone) === cleanPhone)
+          );
+          if (userMatch) {
+            userId = userMatch.id;
+            await admin.auth.admin.updateUserById(userId, {
+              password,
+              email: loginEmail,
+              email_confirm: true,
+              user_metadata: {
+                ...userMatch.user_metadata,
+                full_name: name,
+                role,
+                phone: cleanPhone,
+                contact_email: email ? email.trim().toLowerCase() : null,
+                pg_id: pgId || null,
+                email_verified: true,
+              },
+            });
+          } else {
+            throw new Error(`Failed to create Supabase Auth user: ${errMsg}`);
+          }
+        } else {
+          throw new Error(`Failed to create Supabase Auth user: ${errMsg}`);
+        }
+      }
+
+      if (!created.user?.id) {
+        throw new Error("Failed to create Supabase Auth user: No user ID returned.");
       }
 
       userId = created.user.id;

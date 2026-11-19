@@ -22,17 +22,16 @@ export async function middleware(request: NextRequest) {
   }
 
   // 2. Setup Supabase SSR client to refresh cookies
-  const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
-      ? process.env.NEXT_PUBLIC_SUPABASE_URL
-      : "https://lrghfxcmygytjkzaeccd.supabase.co";
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const urlMatch = rawUrl && !rawUrl.includes("placeholder") ? rawUrl.match(/https?:\/\/[^\s"'“”‘’\r\n]+/i) : null;
+  const supabaseUrl = urlMatch ? urlMatch[0].replace(/\/+$/, "") : "https://lrghfxcmygytjkzaeccd.supabase.co";
 
-  const supabaseAnonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes("placeholder")
-      ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxyZ2hmeGNteWd5dGpremFlY2NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ5Mjk5NjMsImV4cCI6MjExMDUwNTk2M30.3khqrllzC1S69EFGFXDdNp-f87dZSpqkogiWYk9tJBo";
+  const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const keyClean = rawKey ? rawKey.replace(/[\u200B-\u200D\uFEFF\u00A0\r\n\t"']/g, "").trim().replace(/^bearer\s+/i, "") : "";
+  const keyMatch = keyClean.match(/[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/);
+  const supabaseAnonKey = keyMatch && keyMatch[0].length > 40
+    ? keyMatch[0]
+    : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxyZ2hmeGNteWd5dGpremFlY2NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ5Mjk5NjMsImV4cCI6MjExMDUwNTk2M30.3khqrllzC1S69EFGFXDdNp-f87dZSpqkogiWYk9tJBo";
 
   let userRole: "super_admin" | "owner" | "admin" | "tenant" | null = null;
   let hasSession = false;
