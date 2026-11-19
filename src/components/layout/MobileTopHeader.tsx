@@ -65,7 +65,7 @@ export function MobileTopHeader({
     : "U";
 
   return (
-    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-3.5 py-2.5 shadow-xs transition-colors">
+    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-3.5 py-2.5 shadow-xs transition-colors">
       <div className="flex items-center justify-between gap-2.5">
         {/* Left: Role-Specific Monogram & Brand / Identity */}
         <div className="flex items-center gap-2 min-w-0">

@@ -20,6 +20,7 @@ export interface PgDetailItem {
   residents_count: number;
   city: string;
   created_at: string;
+  upi_id?: string | null;
 }
 
 // Safe deep-clone helper to prevent shared isolate memory mutations

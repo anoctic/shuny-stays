@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUserSession } from "@/lib/auth/session";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function RootPage() {
   const session = await getCurrentUserSession();

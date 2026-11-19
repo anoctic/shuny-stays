@@ -6,6 +6,7 @@ import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { Building } from "@/types/schema.types";
 import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
+import { RealtimeSyncSubscriber } from "@/components/common/RealtimeSyncSubscriber";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -37,65 +38,44 @@ export default async function DashboardLayout({
   let buildings: Building[] = [];
   try {
     const supabase = await createClient();
+    let query = supabase.from("buildings").select("*");
+
     if (session.pg_id) {
-      let query = supabase.from("buildings").select("*").eq("pg_id", session.pg_id);
-
-      // If staff/admin, filter to their assigned buildings
-      if (session.role === "admin" && session.assigned_building_ids && session.assigned_building_ids.length > 0) {
-        query = query.in("id", session.assigned_building_ids);
-      }
-
-      const { data } = await query;
-      if (data && data.length > 0) {
-        buildings = data as Building[];
-      }
+      query = query.eq("pg_id", session.pg_id);
     }
-  } catch {
-    // Keep fallback demo buildings
-  }
 
-  // Fallback demo buildings if database has no records yet
-  if (buildings.length === 0) {
-    buildings = [
-      {
-        id: "20000000-0000-0000-0000-000000000001",
-        pg_id: session.pg_id || "10000000-0000-0000-0000-000000000001",
-        name: "Block A - Krishna Bhawan",
-        gender_type: "boys",
-        address: "Plot 42, Knowledge Park III",
-        city: "Greater Noida",
-        state: "UP",
-        pincode: "201310",
-        warden_name: "Manoj Kumar",
-        warden_phone: "+91 98765 12345",
-        total_floors: 3,
-        amenities: ["High Speed WiFi", "RO Water", "Power Backup"],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        id: "20000000-0000-0000-0000-000000000002",
-        pg_id: session.pg_id || "10000000-0000-0000-0000-000000000001",
-        name: "Block B - Saraswati Bhawan",
-        gender_type: "girls",
-        address: "Plot 43, Knowledge Park III",
-        city: "Greater Noida",
-        state: "UP",
-        pincode: "201310",
-        warden_name: "Sunita Devi",
-        warden_phone: "+91 98765 54321",
-        total_floors: 3,
-        amenities: ["High Speed WiFi", "Biometric Entry", "Gym"],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ];
+    // If staff/admin, filter to their assigned buildings
+    if (session.role === "admin" && session.assigned_building_ids && session.assigned_building_ids.length > 0) {
+      query = query.in("id", session.assigned_building_ids);
+    }
+
+    const { data } = await query;
+    if (data && data.length > 0) {
+      buildings = data as Building[];
+    }
+  } catch (err) {
+    console.error("Error fetching buildings in DashboardLayout:", err);
   }
 
   const broadcasts = await getActiveBroadcastsForRole(session.role);
 
   return (
     <div className="flex-1 flex flex-col min-h-screen">
+      <RealtimeSyncSubscriber
+        tables={[
+          "buildings",
+          "rooms",
+          "beds",
+          "tenants",
+          "rent_payments",
+          "security_deposits",
+          "attendance_logs",
+          "complaints",
+          "mess_menu",
+          "gate_passes",
+          "platform_broadcasts",
+        ]}
+      />
       <MobileTopHeader
         fullName={session.full_name}
         role={session.role}

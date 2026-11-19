@@ -4,6 +4,7 @@ import { getCurrentUserSession } from "@/lib/auth/session";
 import { getAllBroadcasts } from "@/lib/data/broadcasts";
 import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { RealtimeSyncSubscriber } from "@/components/common/RealtimeSyncSubscriber";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -29,6 +30,9 @@ export default async function SuperAdminLayout({
 
   return (
     <div className="flex-1 flex flex-col min-h-screen">
+      <RealtimeSyncSubscriber
+        tables={["pgs", "profiles", "buildings", "platform_broadcasts"]}
+      />
       <MobileTopHeader
         fullName={session.full_name}
         role="super_admin"

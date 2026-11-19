@@ -1,4 +1,6 @@
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 import Link from "next/link";
 import { ArrowLeft, ShieldCheck, Building2, User, KeyRound } from "lucide-react";

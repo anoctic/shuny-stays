@@ -148,11 +148,14 @@ export interface ComplaintItem {
   id: string;
   tenantId: string;
   tenantName: string;
-  buildingId: string;
+  buildingId?: string;
   room: string;
-  cat: string;
-  desc: string;
-  status: "Open" | "In Progress" | "Resolved";
+  cat?: string;
+  category?: string;
+  desc?: string;
+  issue?: string;
+  priority?: string;
+  status: "Open" | "In Progress" | "Resolved" | "Pending";
   note?: string;
   time: string;
 }
@@ -178,8 +181,10 @@ export interface ReceiptItem {
 export interface MessMenu {
   breakfast: string;
   lunch: string;
+  snacks?: string;
   dinner: string;
   baseYes: number;
+  updatedAt?: string;
 }
 
 // In-Memory Global State for Shuny Stays Prototype Data
@@ -434,6 +439,7 @@ let memoryAuditLogs: AuditLogItem[] = [
 let memoryMessMenu: MessMenu = {
   breakfast: "Aloo Paratha, Curd & Ginger Tea (8:00 - 9:30 AM)",
   lunch: "Rajma Chawal, Mix Veg & Roti (1:00 - 2:30 PM)",
+  snacks: "Tea, Biscuits & Samosa (5:00 - 6:00 PM)",
   dinner: "Paneer Butter Masala, Dal Tadka & Roti (8:00 - 10:00 PM)",
   baseYes: 34,
 };
@@ -1207,8 +1213,7 @@ export async function getAllSecurityDeposits(pgId?: string, buildingId?: string)
 export async function getSecurityDepositForTenant(tenantId: string): Promise<SecurityDepositItem | null> {
   try {
     const supabase = await createClient();
-    const { data: tenantData } = await supabase
-      .from("tenants")
+    const { data: tenantData } = await (supabase.from("tenants" as any) as any)
       .select("id, full_name, room_id, bed_id, rooms(room_number), beds(bed_name), buildings(name)")
       .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
       .limit(1)
@@ -1216,8 +1221,7 @@ export async function getSecurityDepositForTenant(tenantId: string): Promise<Sec
 
     const actualTenantId = tenantData?.id || tenantId;
 
-    const { data: d } = await supabase
-      .from("security_deposits")
+    const { data: d } = await (supabase.from("security_deposits" as any) as any)
       .select("*, buildings(name)")
       .eq("tenant_id", actualTenantId)
       .limit(1)
@@ -1477,8 +1481,7 @@ export async function getAllRentPayments(pgId?: string, buildingId?: string): Pr
 export async function getRentPaymentsForTenant(tenantId: string): Promise<RentPaymentRecord[]> {
   try {
     const supabase = await createClient();
-    const { data: tenantData } = await supabase
-      .from("tenants")
+    const { data: tenantData } = await (supabase.from("tenants" as any) as any)
       .select("id, full_name, rooms(room_number)")
       .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
       .limit(1)
@@ -1486,8 +1489,7 @@ export async function getRentPaymentsForTenant(tenantId: string): Promise<RentPa
 
     const actualTenantId = tenantData?.id || tenantId;
 
-    const { data } = await supabase
-      .from("rent_payments")
+    const { data } = await (supabase.from("rent_payments" as any) as any)
       .select("*")
       .eq("tenant_id", actualTenantId)
       .order("created_at", { ascending: false });
@@ -1764,8 +1766,7 @@ export async function toggleStaffPermission(staffId: string, permKey: string) {
 export async function getComplaints(): Promise<ComplaintItem[]> {
   try {
     const supabase = await createClient();
-    const { data } = await supabase
-      .from("complaints")
+    const { data } = await (supabase.from("complaints" as any) as any)
       .select("*, tenants ( full_name ), rooms ( room_number )")
       .order("created_at", { ascending: false });
     if (data && data.length > 0) {
@@ -1773,12 +1774,14 @@ export async function getComplaints(): Promise<ComplaintItem[]> {
         id: c.id,
         tenantId: c.tenant_id,
         tenantName: c.tenants?.full_name || "Resident",
+        buildingId: c.building_id || "",
         room: c.rooms?.room_number || "Room 101",
-        category: c.category,
-        issue: c.title,
-        status: c.status === "resolved" ? "Resolved" : c.status === "in_progress" ? "In Progress" : "Pending",
+        cat: c.category || "Maintenance",
+        category: c.category || "Maintenance",
+        desc: c.description || c.title || "Complaint",
+        issue: c.title || c.description || "Complaint",
+        status: c.status === "resolved" ? ("Resolved" as const) : c.status === "in_progress" ? ("In Progress" as const) : ("Open" as const),
         time: c.created_at,
-        priority: c.priority,
         note: c.resolution_notes,
       }));
     }
@@ -1791,7 +1794,7 @@ export async function getComplaints(): Promise<ComplaintItem[]> {
 export async function resolveComplaint(id: string, note?: string) {
   try {
     const supabase = await createClient();
-    await supabase.from("complaints").update({
+    await (supabase.from("complaints" as any) as any).update({
       status: "resolved",
       resolution_notes: note || "Resolved by Staff & Verified",
       resolved_at: new Date().toISOString(),
@@ -1805,7 +1808,7 @@ export async function resolveComplaint(id: string, note?: string) {
 export async function getMessMenu(): Promise<MessMenu> {
   try {
     const supabase = await createClient();
-    const { data } = await supabase.from("mess_menu").select("*");
+    const { data } = await (supabase.from("mess_menu" as any) as any).select("*");
     if (data && data.length > 0) {
       const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
       const currentDay = days[new Date().getDay()];
@@ -1817,6 +1820,7 @@ export async function getMessMenu(): Promise<MessMenu> {
         lunch: getMeal("lunch") || "Paneer Butter Masala, Dal Tadka, Jeera Rice, Phulka & Fresh Salad",
         snacks: getMeal("snacks") || "Samosa / Poha with Evening Filter Coffee & Tea",
         dinner: getMeal("dinner") || "Mix Veg Korma, Dal Makhani, Steamed Basmati Rice & Roti",
+        baseYes: 42,
         updatedAt: "Today",
       };
     }
@@ -1828,6 +1832,7 @@ export async function getMessMenu(): Promise<MessMenu> {
     lunch: "Dal Makhani, Rice, Roti & Salad",
     snacks: "Tea & Samosa",
     dinner: "Paneer, Dal, Roti & Rice",
+    baseYes: 42,
     updatedAt: "Today",
   };
 }
@@ -1846,8 +1851,7 @@ export async function updateMessMenu(data: Partial<MessMenu>) {
     ].filter((u) => !!u.val);
 
     for (const u of updates) {
-      await supabase
-        .from("mess_menu")
+      await (supabase.from("mess_menu" as any) as any)
         .update({ menu_items: u.val, updated_at: new Date().toISOString() })
         .eq("day_of_week", currentDay)
         .eq("meal_type", u.type);
