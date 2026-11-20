@@ -183,9 +183,12 @@ export function SuperAdminDashboard({
           : "PG Membership Suspended"
       );
       router.refresh();
-    } catch {
-      showToast("Updated PG status.");
-      router.refresh();
+    } catch (err: any) {
+      // Rollback on network/client error
+      setPgsList((prev) =>
+        prev.map((p) => (p.id === pgId ? { ...p, status: currentStatus } : p))
+      );
+      showToast(`Error: ${err?.message || "Failed to update PG status"}`);
     }
   };
 

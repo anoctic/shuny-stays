@@ -416,18 +416,21 @@ export async function updatePgBranding(
 export async function togglePgStatus(
   pgId: string,
   targetStatus?: "active" | "pending" | "suspended"
-): Promise<PgDetailItem | null> {
+): Promise<PgDetailItem> {
   let currentStatus: "active" | "pending" | "suspended" = "active";
 
   const admin = createAdminClient();
 
   // 1. Fetch current status from Supabase
   try {
-    const { data: dbData } = await (admin.from("pgs" as any) as any)
+    const { data: dbData, error: fetchErr } = await (admin.from("pgs" as any) as any)
       .select("id, status")
       .eq("id", pgId)
       .maybeSingle();
 
+    if (fetchErr) {
+      console.warn("togglePgStatus current status query notice:", fetchErr.message);
+    }
     if (dbData && dbData.status) {
       currentStatus = dbData.status;
     } else {
@@ -448,50 +451,73 @@ export async function togglePgStatus(
     newStatus = "active";
   }
 
-  let updated: PgDetailItem | null = null;
+  let updatedDb: any = null;
 
-  // 2. Persist directly to Supabase
+  // 2. Try Atomic Stored Procedure RPC first (bypasses RLS, guarantees atomic transaction)
   try {
-    const { data: updatedDb, error } = await (admin.from("pgs" as any) as any)
+    const { data: rpcData, error: rpcErr } = await (admin.rpc as any)("toggle_pg_status", {
+      target_pg_id: pgId,
+      new_status: newStatus,
+    });
+
+    if (!rpcErr && rpcData) {
+      updatedDb = rpcData;
+    } else if (rpcErr) {
+      console.warn("toggle_pg_status RPC fallback to direct update:", rpcErr.message);
+    }
+  } catch (rpcCatch) {
+    console.warn("toggle_pg_status RPC invocation notice:", rpcCatch);
+  }
+
+  // Fallback to direct table update if RPC did not execute
+  if (!updatedDb) {
+    const { data, error: updateError } = await (admin.from("pgs" as any) as any)
       .update({ status: newStatus, updated_at: new Date().toISOString() } as any)
       .eq("id", pgId)
       .select()
       .maybeSingle();
 
-    if (!error && updatedDb) {
-      updated = {
-        id: updatedDb.id,
-        name: updatedDb.name,
-        slug: updatedDb.slug,
-        logo_url: updatedDb.logo_url,
-        primary_color: updatedDb.primary_color || "#4F46E5",
-        contact_email: updatedDb.contact_email,
-        contact_phone: updatedDb.contact_phone,
-        owner_id: updatedDb.owner_id,
-        owner_name: "PG Owner",
-        status: updatedDb.status,
-        subscription_tier: (updatedDb.subscription_tier || "Starter") as any,
-        subscription_valid_until: updatedDb.subscription_valid_until,
-        buildings_count: 1,
-        beds_count: 12,
-        residents_count: 8,
-        city: "Bengaluru",
-        created_at: updatedDb.created_at,
-      };
+    if (updateError) {
+      console.error("togglePgStatus Supabase table update error:", updateError);
+      throw new Error(`Database error on pgs table: ${updateError.message || updateError.code || "Update failed"}`);
     }
-  } catch (err) {
-    console.error("togglePgStatus database update error:", err);
+
+    if (!data) {
+      throw new Error(`PG with ID "${pgId}" not found in database to update.`);
+    }
+
+    updatedDb = data;
   }
+
+  const updated: PgDetailItem = {
+    id: updatedDb.id,
+    name: updatedDb.name,
+    slug: updatedDb.slug,
+    logo_url: updatedDb.logo_url,
+    primary_color: updatedDb.primary_color || "#4F46E5",
+    contact_email: updatedDb.contact_email,
+    contact_phone: updatedDb.contact_phone,
+    owner_id: updatedDb.owner_id,
+    owner_name: "PG Owner",
+    status: updatedDb.status,
+    subscription_tier: (updatedDb.subscription_tier || "Starter") as any,
+    subscription_valid_until: updatedDb.subscription_valid_until,
+    buildings_count: 1,
+    beds_count: 12,
+    residents_count: 8,
+    city: "Bengaluru",
+    created_at: updatedDb.created_at,
+  };
 
   // 3. Keep memory in sync
   const index = memoryPgs.findIndex((p) => p.id === pgId);
   if (index !== -1) {
     memoryPgs[index] = {
       ...memoryPgs[index],
+      ...updated,
       status: newStatus,
     };
-    if (!updated) updated = memoryPgs[index];
-  } else if (updated) {
+  } else {
     memoryPgs.push(updated);
   }
 

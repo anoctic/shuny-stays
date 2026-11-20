@@ -256,16 +256,21 @@ export async function togglePgStatusAction(
     return { error: auth.error };
   }
 
-  const { togglePgStatus } = await import("@/lib/data/pgs");
-  const updated = await togglePgStatus(pgId, targetStatus);
+  try {
+    const { togglePgStatus } = await import("@/lib/data/pgs");
+    const updated = await togglePgStatus(pgId, targetStatus);
 
-  revalidatePath("/super-admin");
-  revalidatePath("/super-admin/organizations");
-  if (updated?.slug) {
-    revalidatePath(`/pg/${updated.slug}`);
+    revalidatePath("/super-admin");
+    revalidatePath("/super-admin/organizations");
+    if (updated?.slug) {
+      revalidatePath(`/pg/${updated.slug}`);
+    }
+
+    return { success: true, pg: updated };
+  } catch (err: any) {
+    console.error("togglePgStatusAction error:", err);
+    return { error: err?.message || "Failed to update PG status in database." };
   }
-
-  return { success: true, pg: updated };
 }
 
 /**
