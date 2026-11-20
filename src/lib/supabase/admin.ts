@@ -45,12 +45,8 @@ function resolveServiceRoleKey(): string {
 }
 
 function cleanFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const mergedInit: RequestInit = {
-    ...init,
-    cache: "no-store",
-  };
-  if (mergedInit.headers) {
-    const rawHeaders = mergedInit.headers as any;
+  if (init && init.headers) {
+    const rawHeaders = init.headers as any;
     const cleanHeaders: Record<string, string> = {};
     if (typeof rawHeaders.forEach === "function") {
       rawHeaders.forEach((val: string, key: string) => {
@@ -67,9 +63,9 @@ function cleanFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Respo
         }
       }
     }
-    mergedInit.headers = cleanHeaders;
+    init.headers = cleanHeaders;
   }
-  return fetch(input, mergedInit);
+  return fetch(input, init);
 }
 
 /**

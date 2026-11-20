@@ -35,17 +35,22 @@ export async function getActiveBroadcastsForRole(role: UserRole): Promise<Platfo
  * Get all broadcasts for Super Admin and management portals from Supabase
  */
 export async function getAllBroadcasts(): Promise<PlatformBroadcast[]> {
-  const admin = createAdminClient();
-  const { data, error } = await (admin.from("platform_broadcasts" as any) as any)
-    .select("*")
-    .order("created_at", { ascending: false });
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await (admin.from("platform_broadcasts" as any) as any)
+      .select("*")
+      .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error("getAllBroadcasts database error:", error.message);
-    throw new Error(`Failed to fetch broadcasts: ${error.message}`);
+    if (error) {
+      console.warn("getAllBroadcasts database error:", error.message);
+      return [];
+    }
+
+    return (data || []) as PlatformBroadcast[];
+  } catch (err) {
+    console.error("getAllBroadcasts critical error:", err);
+    return [];
   }
-
-  return (data || []) as PlatformBroadcast[];
 }
 
 /**
