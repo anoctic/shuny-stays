@@ -16,7 +16,11 @@ import {
   Trash2,
 } from "lucide-react";
 import { PlatformBroadcast, UserRole, BroadcastPriority } from "@/types/schema.types";
-import { createBroadcastAction, toggleBroadcastAction } from "@/app/actions/passes-and-broadcasts";
+import {
+  createBroadcastAction,
+  toggleBroadcastAction,
+  deleteBroadcastAction,
+} from "@/app/actions/passes-and-broadcasts";
 
 interface BroadcastCreatorModalProps {
   initialBroadcasts: PlatformBroadcast[];
@@ -302,17 +306,31 @@ export function BroadcastCreatorModal({ initialBroadcasts }: BroadcastCreatorMod
                         {b.target_roles.join(", ")} • {b.priority}
                       </p>
                     </div>
-                    <button
-                      onClick={async () => {
-                        await toggleBroadcastAction(b.id);
-                        router.refresh();
-                      }}
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                        b.is_active ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-600"
-                      }`}
-                    >
-                      {b.is_active ? "Active" : "Paused"}
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await toggleBroadcastAction(b.id);
+                          router.refresh();
+                        }}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                          b.is_active ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-600"
+                        }`}
+                      >
+                        {b.is_active ? "Active" : "Paused"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await deleteBroadcastAction(b.id);
+                          router.refresh();
+                        }}
+                        title="Delete announcement"
+                        className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

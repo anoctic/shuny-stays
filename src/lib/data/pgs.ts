@@ -97,9 +97,8 @@ let memoryPgs: PgDetailItem[] = [
  */
 export async function getAllPgs(): Promise<PgDetailItem[]> {
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("pgs")
+    const admin = createAdminClient();
+    const { data, error } = await (admin.from("pgs" as any) as any)
       .select(`
         id,
         name,
@@ -121,7 +120,7 @@ export async function getAllPgs(): Promise<PgDetailItem[]> {
       const ownerMap: Record<string, string> = {};
       if (ownerIds.length > 0) {
         try {
-          const { data: owners } = await (supabase.from("profiles" as any) as any)
+          const { data: owners } = await (admin.from("profiles" as any) as any)
             .select("id, full_name")
             .in("id", ownerIds);
           if (owners) {

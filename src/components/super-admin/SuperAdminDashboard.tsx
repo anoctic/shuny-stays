@@ -47,6 +47,7 @@ import { deleteSubscriptionPlanAction } from "@/app/actions/subscriptions";
 import {
   createBroadcastAction,
   toggleBroadcastAction,
+  deleteBroadcastAction,
 } from "@/app/actions/passes-and-broadcasts";
 import { switchDemoPersonaAction } from "@/app/actions/auth";
 
@@ -288,6 +289,26 @@ export function SuperAdminDashboard({
       setBroadcastsList((prev) =>
         prev.map((b) => (b.id === bcId ? { ...b, is_active: !b.is_active } : b))
       );
+    }
+  };
+
+  // Permanently delete broadcast
+  const handleDeleteBroadcast = async (bcId: string) => {
+    const prevList = [...broadcastsList];
+    setBroadcastsList((prev) => prev.filter((b) => b.id !== bcId));
+
+    try {
+      const res = await deleteBroadcastAction(bcId);
+      if (res?.error) {
+        setBroadcastsList(prevList);
+        showToast(`Failed: ${res.error}`);
+        return;
+      }
+      showToast("Broadcast message permanently deleted.");
+      router.refresh();
+    } catch {
+      setBroadcastsList(prevList);
+      showToast("Failed to delete broadcast announcement.");
     }
   };
 
@@ -710,17 +731,27 @@ export function SuperAdminDashboard({
                   <span className="text-xs font-extrabold text-slate-900">
                     {b.title}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleBroadcast(b.id)}
-                    className={`px-2 py-0.5 rounded text-[9px] font-extrabold transition border ${
-                      b.is_active
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-slate-200 text-slate-600 border-slate-300"
-                    }`}
-                  >
-                    {b.is_active ? "Live" : "Paused"}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleBroadcast(b.id)}
+                      className={`px-2 py-0.5 rounded text-[9px] font-extrabold transition border ${
+                        b.is_active
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-slate-200 text-slate-600 border-slate-300"
+                      }`}
+                    >
+                      {b.is_active ? "Live" : "Paused"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteBroadcast(b.id)}
+                      title="Delete broadcast"
+                      className="p-1 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <p className="text-[10.5px] text-slate-500">{b.message}</p>
                 <div className="flex gap-1 pt-0.5">
