@@ -6,8 +6,9 @@ import {
 
 export * from "@/types/subscription.types";
 
-let memoryPlans: SubscriptionPlanItem[] = [...DEFAULT_SUBSCRIPTION_PLANS];
-
+/**
+ * Fetch all subscription plans directly from Supabase
+ */
 export async function getAllSubscriptionPlans(): Promise<SubscriptionPlanItem[]> {
   try {
     const admin = createAdminClient();
@@ -33,16 +34,18 @@ export async function getAllSubscriptionPlans(): Promise<SubscriptionPlanItem[]>
         updated_at: d.updated_at,
       }));
 
-      memoryPlans = parsed;
       return parsed;
     }
   } catch (err) {
-    console.warn("getAllSubscriptionPlans fallback to memory:", err);
+    console.error("getAllSubscriptionPlans database error:", err);
   }
 
-  return memoryPlans;
+  return [...DEFAULT_SUBSCRIPTION_PLANS];
 }
 
+/**
+ * Upsert a subscription plan in Supabase
+ */
 export async function upsertSubscriptionPlan(
   plan: SubscriptionPlanItem
 ): Promise<SubscriptionPlanItem> {
@@ -58,35 +61,32 @@ export async function upsertSubscriptionPlan(
     updated_at: new Date().toISOString(),
   };
 
-  try {
-    const admin = createAdminClient();
-    await (admin.from("subscription_plans" as any) as any).upsert(planData as any, {
-      onConflict: "id",
-    });
-  } catch (err) {
-    console.warn("upsertSubscriptionPlan db error:", err);
-  }
+  const admin = createAdminClient();
+  const { error } = await (admin.from("subscription_plans" as any) as any).upsert(planData as any, {
+    onConflict: "id",
+  });
 
-  const existingIdx = memoryPlans.findIndex((p) => p.id === planData.id);
-  if (existingIdx !== -1) {
-    memoryPlans[existingIdx] = planData;
-  } else {
-    memoryPlans.push(planData);
+  if (error) {
+    console.error("upsertSubscriptionPlan Supabase error:", error);
+    throw new Error(`Failed to save subscription plan: ${error.message}`);
   }
 
   return planData;
 }
 
+/**
+ * Delete a subscription plan from Supabase
+ */
 export async function deleteSubscriptionPlan(planId: string): Promise<boolean> {
-  try {
-    const admin = createAdminClient();
-    await (admin.from("subscription_plans" as any) as any)
-      .delete()
-      .eq("id", planId);
-  } catch (err) {
-    console.warn("deleteSubscriptionPlan db error:", err);
+  const admin = createAdminClient();
+  const { error } = await (admin.from("subscription_plans" as any) as any)
+    .delete()
+    .eq("id", planId);
+
+  if (error) {
+    console.error("deleteSubscriptionPlan database error:", error);
+    throw new Error(`Failed to delete subscription plan: ${error.message}`);
   }
 
-  memoryPlans = memoryPlans.filter((p) => p.id !== planId);
   return true;
 }

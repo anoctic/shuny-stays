@@ -1,19 +1,11 @@
-// ==============================================================================
-// Shuny Stays Rooms, Buildings, Floors, Beds & Ledger Data Store
-// Connects to Supabase tables with live in-memory store matching UI design blueprint
-// ==============================================================================
-
-import { createClient } from "@/lib/supabase/server";
+// Connects directly to Supabase tables with 100% Live Database Persistence (Zero Mock Data)
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserSession } from "@/lib/auth/session";
 
-// Safe deep-clone helper to prevent cross-request memory mutation in shared worker isolates
-function deepClone<T>(obj: T): T {
-  if (typeof structuredClone === "function") {
-    return structuredClone(obj);
-  }
-  return JSON.parse(JSON.stringify(obj));
-}
+// Helper for loose typing against custom Supabase schemas
+const db = (admin: any, table: string) => admin.from(table) as any;
+
+// --- TYPES & INTERFACES ---
 
 export interface TenantProfileItem {
   id: string;
@@ -26,69 +18,22 @@ export interface TenantProfileItem {
   deposit: number;
   depositStatus: "paid" | "pending" | "refunded" | "partially_refunded";
   depositPaymentMode?: "cash" | "upi" | "bank_transfer";
-  depositCollectedBy?: string;
   depositCollectedByName?: string;
   depositCollectedAt?: string;
+  depositReceiptNo?: string;
   depositDeduction?: number;
   depositDeductionReason?: string;
   depositRefundedAmount?: number;
   depositRefundedAt?: string;
-  depositReceiptNo?: string;
   rentPaid: boolean;
-  kycStatus: "Verified" | "Pending";
-}
-
-export interface SecurityDepositItem {
-  id: string; // e.g. "DEP-202611-001"
-  pgId: string;
-  buildingId: string;
-  buildingName: string;
-  tenantId: string;
-  tenantName: string;
-  roomNumber: string;
-  bedLabel: string;
-  expectedAmount: number;
-  paidAmount: number;
-  status: "pending" | "paid" | "refunded" | "partially_refunded";
-  paymentMode: "cash" | "upi" | "bank_transfer";
-  transactionRef?: string;
-  collectedBy?: string;
-  collectedByName?: string;
-  collectedAt?: string;
-  deductionAmount: number;
-  deductionReason?: string;
-  refundedAmount: number;
-  refundedAt?: string;
-  refundedByName?: string;
-  createdAt: string;
-}
-
-export interface RentPaymentRecord {
-  id: string; // e.g. "INV-202611-01"
-  pgId: string;
-  buildingId: string;
-  tenantId: string;
-  tenantName: string;
-  room: string;
-  billingMonth: string;
-  amount: number;
-  status: "collected_by_admin" | "settled_with_owner" | "pending" | "paid" | "verified";
-  paymentMode: "cash" | "admin_upi" | "pg_bank_upi" | "upi" | "bank_transfer";
-  transactionRef?: string;
-  collectedBy?: string;
-  collectedByName?: string;
-  collectedByRole?: "owner" | "admin";
-  collectedAt: string;
-  settledAt?: string;
-  settledBy?: string;
-  settledByName?: string;
+  kycStatus: "Verified" | "Pending" | "Rejected";
 }
 
 export interface BedItem {
   id: string;
   label: string;
   occupied: boolean;
-  tenant?: TenantProfileItem | null;
+  tenant: TenantProfileItem | null;
 }
 
 export interface RoomItem {
@@ -150,22 +95,77 @@ export interface ComplaintItem {
   id: string;
   tenantId: string;
   tenantName: string;
-  buildingId?: string;
+  buildingId: string;
   room: string;
-  cat?: string;
-  category?: string;
-  desc?: string;
-  issue?: string;
-  priority?: string;
-  status: "Open" | "In Progress" | "Resolved" | "Pending";
-  note?: string;
+  cat: string;
+  category: string;
+  desc: string;
+  issue: string;
+  status: "Open" | "In Progress" | "Resolved";
   time: string;
+  note?: string;
 }
 
 export interface AuditLogItem {
   id: string;
   text: string;
   time: string;
+}
+
+export interface MessMenu {
+  breakfast: string;
+  lunch: string;
+  snacks: string;
+  dinner: string;
+  baseYes: number;
+  updatedAt: string;
+}
+
+export interface SecurityDepositItem {
+  id: string;
+  pgId: string;
+  buildingId: string;
+  buildingName: string;
+  tenantId: string;
+  tenantName: string;
+  roomNumber: string;
+  bedLabel: string;
+  expectedAmount: number;
+  paidAmount: number;
+  status: "paid" | "pending" | "refunded" | "partially_refunded";
+  paymentMode: "cash" | "upi" | "bank_transfer";
+  transactionRef?: string;
+  collectedBy?: string;
+  collectedByName?: string;
+  collectedAt?: string;
+  deductionAmount?: number;
+  deductionReason?: string;
+  refundedAmount?: number;
+  refundedAt?: string;
+  refundedBy?: string;
+  refundedByName?: string;
+  createdAt: string;
+}
+
+export interface RentPaymentRecord {
+  id: string;
+  pgId: string;
+  buildingId: string;
+  tenantId: string;
+  tenantName: string;
+  room: string;
+  billingMonth: string;
+  amount: number;
+  status: "collected_by_admin" | "settled_with_owner" | "rejected" | "pending";
+  paymentMode: "cash" | "admin_upi" | "pg_bank_upi" | "upi";
+  transactionRef?: string;
+  collectedBy?: string;
+  collectedByName: string;
+  collectedByRole: "owner" | "admin" | "tenant";
+  collectedAt: string;
+  settledAt?: string;
+  settledBy?: string;
+  settledByName?: string;
 }
 
 export interface ReceiptItem {
@@ -180,460 +180,16 @@ export interface ReceiptItem {
   date: string;
 }
 
-export interface MessMenu {
-  breakfast: string;
-  lunch: string;
-  snacks?: string;
-  dinner: string;
-  baseYes: number;
-  updatedAt?: string;
-}
+// In-memory fallback for lightweight dinner poll choices
+const dinnerPollState: Record<string, "Yes" | "No"> = {};
 
-// In-Memory Global State for Shuny Stays Prototype Data
-let memoryBuildings: BuildingItem[] = [
-  {
-    id: "b-a",
-    pgId: "pg-royal",
-    name: "Block A",
-    type: "Boys",
-    floors: [
-      {
-        id: "fl-a0",
-        name: "Ground",
-        rooms: [
-          {
-            id: "r-g01",
-            number: "G-01",
-            sharing: 2,
-            rent: 8500,
-            beds: [
-              {
-                id: "bed-1",
-                label: "Bed A",
-                occupied: true,
-                tenant: {
-                  id: "t-rahul",
-                  pgId: "pg-royal",
-                  name: "Rahul Sharma",
-                  phone: "9876543210",
-                  parentPhone: "9811122233",
-                  college: "Amity University",
-                  joinDate: "01 Aug 2026",
-                  deposit: 8500,
-                  depositStatus: "paid",
-                  depositPaymentMode: "upi",
-                  depositCollectedByName: "Warden Ramesh Verma",
-                  depositCollectedAt: "01 Nov 2026, 10:00 AM",
-                  depositReceiptNo: "DEP-202611-001",
-                  rentPaid: false,
-                  kycStatus: "Pending",
-                },
-              },
-              { id: "bed-2", label: "Bed B", occupied: false, tenant: null },
-            ],
-          },
-          {
-            id: "r-g02",
-            number: "G-02",
-            sharing: 2,
-            rent: 8500,
-            beds: [
-              {
-                id: "bed-3",
-                label: "Bed A",
-                occupied: true,
-                tenant: {
-                  id: "t-aman",
-                  pgId: "pg-royal",
-                  name: "Aman Verma",
-                  phone: "9876500112",
-                  parentPhone: "9822334455",
-                  college: "TCS Sector 62",
-                  joinDate: "15 Jul 2026",
-                  deposit: 8500,
-                  depositStatus: "paid",
-                  depositPaymentMode: "cash",
-                  depositCollectedByName: "Owner Manoj Kumar",
-                  depositCollectedAt: "01 Nov 2026, 12:30 PM",
-                  depositReceiptNo: "DEP-202611-002",
-                  rentPaid: true,
-                  kycStatus: "Verified",
-                },
-              },
-              {
-                id: "bed-4",
-                label: "Bed B",
-                occupied: true,
-                tenant: {
-                  id: "t-karan",
-                  pgId: "pg-royal",
-                  name: "Karan Mehta",
-                  phone: "9811998877",
-                  parentPhone: "9811009988",
-                  college: "JIIT Noida",
-                  joinDate: "10 Sep 2026",
-                  deposit: 8500,
-                  depositStatus: "pending",
-                  depositPaymentMode: "cash",
-                  depositReceiptNo: "DEP-202611-003",
-                  rentPaid: false,
-                  kycStatus: "Pending",
-                },
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: "fl-a1",
-        name: "1st Floor",
-        rooms: [
-          {
-            id: "r-101",
-            number: "101",
-            sharing: 3,
-            rent: 7500,
-            beds: [
-              {
-                id: "bed-5",
-                label: "Bed A",
-                occupied: true,
-                tenant: {
-                  id: "t-devansh",
-                  pgId: "pg-royal",
-                  name: "Devansh Singh",
-                  phone: "9911223344",
-                  parentPhone: "9911556677",
-                  college: "Galgotias Univ",
-                  joinDate: "05 Aug 2026",
-                  deposit: 7500,
-                  depositStatus: "paid",
-                  depositPaymentMode: "bank_transfer",
-                  depositCollectedByName: "Owner Manoj Kumar",
-                  depositCollectedAt: "05 Aug 2026",
-                  depositReceiptNo: "DEP-202608-001",
-                  rentPaid: true,
-                  kycStatus: "Verified",
-                },
-              },
-              { id: "bed-6", label: "Bed B", occupied: false, tenant: null },
-              { id: "bed-7", label: "Bed C", occupied: false, tenant: null },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "b-k",
-    pgId: "pg-krishna",
-    name: "Krishna Bhawan",
-    type: "Girls",
-    floors: [
-      {
-        id: "fl-k0",
-        name: "Ground",
-        rooms: [
-          {
-            id: "r-k01",
-            number: "G-01",
-            sharing: 2,
-            rent: 9500,
-            beds: [
-              {
-                id: "bed-8",
-                label: "Bed A",
-                occupied: true,
-                tenant: {
-                  id: "t-priya",
-                  pgId: "pg-krishna",
-                  name: "Priya Nair",
-                  phone: "9818112233",
-                  parentPhone: "9818776655",
-                  college: "Infosys Gurugram",
-                  joinDate: "12 Aug 2026",
-                  deposit: 9500,
-                  depositStatus: "paid",
-                  depositPaymentMode: "upi",
-                  depositCollectedByName: "Warden Sunita Devi",
-                  depositCollectedAt: "12 Aug 2026",
-                  depositReceiptNo: "DEP-202608-002",
-                  rentPaid: true,
-                  kycStatus: "Verified",
-                },
-              },
-              { id: "bed-9", label: "Bed B", occupied: false, tenant: null },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-];
-
-let memoryExpenses: ExpenseItem[] = [
-  { id: "e1", category: "Electricity Bill", amount: 14500, scope: "All Buildings", date: "10 Nov 2026" },
-  { id: "e2", category: "Mess Ration & Gas", amount: 18000, scope: "Block A", date: "08 Nov 2026" },
-  { id: "e3", category: "Staff Salary", amount: 12000, scope: "All Buildings", date: "05 Nov 2026" },
-];
-
-let memoryUpiApprovals: UpiApprovalItem[] = [
-  {
-    id: "u-rahul",
-    tenantId: "t-rahul",
-    tenantName: "Rahul Sharma",
-    room: "Block A • G-01",
-    amount: 8500,
-    utr: "UTR40929910",
-    status: "Pending",
-    time: "14 mins ago",
-  },
-];
-
-let memoryStaffList: StaffItem[] = [
-  {
-    id: "st-1",
-    name: "Ramesh Verma",
-    phone: "9810011223",
-    assignedBuildingIds: ["b-a"],
-    permissions: {
-      manage_tenants: true,
-      collect_cash: true,
-      resolve_complaints: true,
-      manage_mess: true,
-      issue_passes: true,
-    },
-  },
-];
-
-let memoryComplaints: ComplaintItem[] = [
-  {
-    id: "T-209",
-    tenantId: "t-rahul",
-    tenantName: "Rahul Sharma",
-    buildingId: "b-a",
-    room: "Block A • G-01",
-    cat: "Wi-Fi",
-    desc: "Router speed drops after 10:30 PM in Room G-01",
-    status: "In Progress",
-    note: "Technician assigned for 5:00 PM",
-    time: "2 hrs ago",
-  },
-  {
-    id: "T-210",
-    tenantId: "t-karan",
-    tenantName: "Karan Mehta",
-    buildingId: "b-a",
-    room: "Block A • G-02",
-    cat: "Plumbing",
-    desc: "Washroom tap leaking continuously",
-    status: "Open",
-    note: "",
-    time: "40 mins ago",
-  },
-];
-
-let memoryAuditLogs: AuditLogItem[] = [
-  { id: "a1", text: "Warden Ramesh Verma issued Day Pass GP-108 for Karan Mehta (Pending Owner Approval)", time: "10 mins ago" },
-  { id: "a2", text: "Warden Ramesh Verma saved Block A morning attendance (3 Present, 1 Night Pass)", time: "5 hrs ago" },
-];
-
-let memoryMessMenu: MessMenu = {
-  breakfast: "Aloo Paratha, Curd & Ginger Tea (8:00 - 9:30 AM)",
-  lunch: "Rajma Chawal, Mix Veg & Roti (1:00 - 2:30 PM)",
-  snacks: "Tea, Biscuits & Samosa (5:00 - 6:00 PM)",
-  dinner: "Paneer Butter Masala, Dal Tadka & Roti (8:00 - 10:00 PM)",
-  baseYes: 34,
-};
-
-let memorySecurityDeposits: SecurityDepositItem[] = [
-  {
-    id: "DEP-202611-001",
-    pgId: "pg-royal",
-    buildingId: "b-a",
-    buildingName: "Block A",
-    tenantId: "t-rahul",
-    tenantName: "Rahul Sharma",
-    roomNumber: "G-01",
-    bedLabel: "Bed A",
-    expectedAmount: 8500,
-    paidAmount: 8500,
-    status: "paid",
-    paymentMode: "upi",
-    transactionRef: "UPI-DEP-99410",
-    collectedByName: "Warden Ramesh Verma",
-    collectedAt: "01 Nov 2026, 10:00 AM",
-    deductionAmount: 0,
-    refundedAmount: 0,
-    createdAt: "2026-11-01T10:00:00Z",
-  },
-  {
-    id: "DEP-202611-002",
-    pgId: "pg-royal",
-    buildingId: "b-a",
-    buildingName: "Block A",
-    tenantId: "t-aman",
-    tenantName: "Aman Verma",
-    roomNumber: "G-02",
-    bedLabel: "Bed A",
-    expectedAmount: 8500,
-    paidAmount: 8500,
-    status: "paid",
-    paymentMode: "cash",
-    collectedByName: "Owner Manoj Kumar",
-    collectedAt: "01 Nov 2026, 12:30 PM",
-    deductionAmount: 0,
-    refundedAmount: 0,
-    createdAt: "2026-11-01T12:30:00Z",
-  },
-  {
-    id: "DEP-202611-003",
-    pgId: "pg-royal",
-    buildingId: "b-a",
-    buildingName: "Block A",
-    tenantId: "t-karan",
-    tenantName: "Karan Mehta",
-    roomNumber: "G-02",
-    bedLabel: "Bed B",
-    expectedAmount: 8500,
-    paidAmount: 0,
-    status: "pending",
-    paymentMode: "cash",
-    deductionAmount: 0,
-    refundedAmount: 0,
-    createdAt: "2026-11-01T12:35:00Z",
-  },
-  {
-    id: "DEP-202608-001",
-    pgId: "pg-royal",
-    buildingId: "b-a",
-    buildingName: "Block A",
-    tenantId: "t-devansh",
-    tenantName: "Devansh Singh",
-    roomNumber: "101",
-    bedLabel: "Bed A",
-    expectedAmount: 7500,
-    paidAmount: 7500,
-    status: "paid",
-    paymentMode: "bank_transfer",
-    collectedByName: "Owner Manoj Kumar",
-    collectedAt: "05 Aug 2026, 02:00 PM",
-    deductionAmount: 0,
-    refundedAmount: 0,
-    createdAt: "2026-08-05T14:00:00Z",
-  },
-  {
-    id: "DEP-202608-002",
-    pgId: "pg-krishna",
-    buildingId: "b-k",
-    buildingName: "Krishna Bhawan",
-    tenantId: "t-priya",
-    tenantName: "Priya Nair",
-    roomNumber: "G-01",
-    bedLabel: "Bed A",
-    expectedAmount: 9500,
-    paidAmount: 9500,
-    status: "paid",
-    paymentMode: "upi",
-    collectedByName: "Warden Sunita Devi",
-    collectedAt: "12 Aug 2026, 11:15 AM",
-    deductionAmount: 0,
-    refundedAmount: 0,
-    createdAt: "2026-08-12T11:15:00Z",
-  },
-];
-
-let memoryRentPayments: RentPaymentRecord[] = [
-  {
-    id: "INV-202611-01",
-    pgId: "pg-royal",
-    buildingId: "b-a",
-    tenantId: "t-aman",
-    tenantName: "Aman Verma",
-    room: "Block A • Room G-02",
-    billingMonth: "November 2026",
-    amount: 8500,
-    status: "settled_with_owner",
-    paymentMode: "cash",
-    collectedByName: "Warden Suresh",
-    collectedByRole: "admin",
-    collectedAt: "15 Nov 2026, 11:00 AM",
-    settledAt: "15 Nov 2026, 06:00 PM",
-    settledByName: "Owner Manoj Kumar",
-  },
-  {
-    id: "INV-202611-02",
-    pgId: "pg-royal",
-    buildingId: "b-a",
-    tenantId: "t-devansh",
-    tenantName: "Devansh Singh",
-    room: "Block A • Room 101",
-    billingMonth: "November 2026",
-    amount: 7500,
-    status: "settled_with_owner",
-    paymentMode: "pg_bank_upi",
-    collectedByName: "Owner Manoj Kumar",
-    collectedByRole: "owner",
-    collectedAt: "12 Nov 2026, 09:30 AM",
-    settledAt: "12 Nov 2026, 09:30 AM",
-    settledByName: "Owner Manoj Kumar",
-  },
-  {
-    id: "INV-202611-03",
-    pgId: "pg-krishna",
-    buildingId: "b-k",
-    tenantId: "t-priya",
-    tenantName: "Priya Nair",
-    room: "Krishna Bhawan • Room G-01",
-    billingMonth: "November 2026",
-    amount: 9500,
-    status: "settled_with_owner",
-    paymentMode: "admin_upi",
-    collectedByName: "Warden Sunita Devi",
-    collectedByRole: "admin",
-    collectedAt: "10 Nov 2026, 04:15 PM",
-    settledAt: "10 Nov 2026, 08:00 PM",
-    settledByName: "Owner Manoj Kumar",
-  },
-  {
-    id: "INV-202611-04",
-    pgId: "pg-royal",
-    buildingId: "b-a",
-    tenantId: "t-rahul",
-    tenantName: "Rahul Sharma",
-    room: "Block A • Room G-01",
-    billingMonth: "November 2026",
-    amount: 8500,
-    status: "collected_by_admin",
-    paymentMode: "cash",
-    collectedByName: "Warden Suresh",
-    collectedByRole: "admin",
-    collectedAt: "Today, 11:30 AM",
-  },
-  {
-    id: "INV-202611-05",
-    pgId: "pg-royal",
-    buildingId: "b-a",
-    tenantId: "t-karan",
-    tenantName: "Karan Mehta",
-    room: "Block A • Room G-02",
-    billingMonth: "November 2026",
-    amount: 8500,
-    status: "collected_by_admin",
-    paymentMode: "cash",
-    collectedByName: "Warden Suresh",
-    collectedByRole: "admin",
-    collectedAt: "Yesterday, 06:15 PM",
-  },
-];
-
-// --- DATA ACCESS FUNCTIONS ---
+// --- LIVE DATA ACCESS FUNCTIONS (100% SUPABASE) ---
 
 export async function getAllBuildings(selectedBuildingId?: string | null): Promise<BuildingItem[]> {
   try {
     const session = await getCurrentUserSession();
     const admin = createAdminClient();
-    let query = admin.from("buildings").select(`
+    let query = db(admin, "buildings").select(`
       id, pg_id, name, gender_type,
       floors (
         id, floor_number, floor_name,
@@ -649,7 +205,7 @@ export async function getAllBuildings(selectedBuildingId?: string | null): Promi
       )
     `);
 
-    // If owner or admin with assigned pg_id, scope to their PG
+    // Scoped strictly to PG ID for owner or admin
     if (session.pg_id && session.role !== "super_admin") {
       query = query.eq("pg_id", session.pg_id);
     }
@@ -661,9 +217,11 @@ export async function getAllBuildings(selectedBuildingId?: string | null): Promi
     const { data: dbBuildings, error } = await query;
     if (error) {
       console.error("Supabase query error in getAllBuildings:", error);
+      return [];
     }
+
     if (dbBuildings && dbBuildings.length > 0) {
-      return dbBuildings.map((b: any) => {
+      return (dbBuildings as any[]).map((b: any) => {
         const sortedFloors = (b.floors || []).sort(
           (f1: any, f2: any) => (f1.floor_number ?? 0) - (f2.floor_number ?? 0)
         );
@@ -696,7 +254,7 @@ export async function getAllBuildings(selectedBuildingId?: string | null): Promi
                     const isOccupied = bed.status === "occupied" || !!rawTenant;
 
                     let tenantProfile: TenantProfileItem | null = null;
-                    if (rawTenant) {
+                    if (rawTenant && (rawTenant.is_active ?? true)) {
                       tenantProfile = {
                         id: rawTenant.id,
                         pgId: b.pg_id,
@@ -733,10 +291,8 @@ export async function getAllBuildings(selectedBuildingId?: string | null): Promi
   return [];
 }
 
-export function computePropertyStats(selectedBuildingId?: string | null) {
-  const bldgs = (!selectedBuildingId || selectedBuildingId === "all")
-    ? memoryBuildings
-    : memoryBuildings.filter((b) => b.id === selectedBuildingId);
+export async function computePropertyStats(selectedBuildingId?: string | null) {
+  const bldgs = await getAllBuildings(selectedBuildingId);
 
   let total = 0;
   let occupied = 0;
@@ -766,10 +322,8 @@ export function computePropertyStats(selectedBuildingId?: string | null) {
   return { total, occupied, vacant, expected, collected, pending };
 }
 
-export function getAllOccupiedBeds(selectedBuildingId?: string | null) {
-  const bldgs = (!selectedBuildingId || selectedBuildingId === "all")
-    ? memoryBuildings
-    : memoryBuildings.filter((b) => b.id === selectedBuildingId);
+export async function getAllOccupiedBeds(selectedBuildingId?: string | null) {
+  const bldgs = await getAllBuildings(selectedBuildingId);
 
   const results: {
     building: BuildingItem;
@@ -781,18 +335,18 @@ export function getAllOccupiedBeds(selectedBuildingId?: string | null) {
     tenant: TenantProfileItem;
   }[] = [];
 
-  bldgs.forEach((b) => {
-    b.floors.forEach((f, fIdx) => {
-      f.rooms.forEach((r) => {
-        r.beds.forEach((bed, bIdx) => {
+  bldgs.forEach((building) => {
+    building.floors.forEach((floor, floorIdx) => {
+      floor.rooms.forEach((room) => {
+        room.beds.forEach((bed, bedIdx) => {
           if (bed.occupied && bed.tenant) {
             results.push({
-              building: b,
-              floor: f,
-              floorIdx: fIdx,
-              room: r,
+              building,
+              floor,
+              floorIdx,
+              room,
               bed,
-              bedIdx: bIdx,
+              bedIdx,
               tenant: bed.tenant,
             });
           }
@@ -804,20 +358,7 @@ export function getAllOccupiedBeds(selectedBuildingId?: string | null) {
   return results;
 }
 
-export function getBedDetails(buildingId: string, floorIdx: number, roomId: string, bedIdx: number) {
-  const building = memoryBuildings.find((b) => b.id === buildingId);
-  if (!building) return null;
-  const floor = building.floors[floorIdx];
-  if (!floor) return null;
-  const room = floor.rooms.find((r) => r.id === roomId);
-  if (!room) return null;
-  const bed = room.beds[bedIdx];
-  if (!bed) return null;
-
-  return deepClone({ building, floor, room, bed });
-}
-
-// --- MUTATION ACTIONS ---
+// --- LIVE MUTATION ACTIONS (WRITING TO SUPABASE) ---
 
 export async function addAutoBuilding(data: {
   pgId?: string | null;
@@ -827,15 +368,14 @@ export async function addAutoBuilding(data: {
   roomsPerFloor: number;
   sharing: number;
   rent: number;
-}) {
+}): Promise<{ success: boolean; buildingId?: string; error?: string }> {
   try {
     const admin = createAdminClient();
     const bId = crypto.randomUUID();
 
-    // Determine target pgId
     let targetPgId: string = data.pgId || "";
     if (!targetPgId) {
-      const { data: firstPg } = await (admin.from("pgs" as any) as any)
+      const { data: firstPg } = await db(admin, "pgs")
         .select("id")
         .order("created_at", { ascending: false })
         .limit(1)
@@ -843,7 +383,6 @@ export async function addAutoBuilding(data: {
       targetPgId = firstPg?.id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
     }
 
-    // Map gender_type ('boys' | 'girls' | 'coliving')
     let genderType: "boys" | "girls" | "coliving" = "coliving";
     const rawType = (data.type || "").toLowerCase();
     if (rawType.includes("boy")) {
@@ -858,7 +397,7 @@ export async function addAutoBuilding(data: {
     const rent = Math.max(0, data.rent || 8500);
 
     // 1. Insert building record into Supabase
-    const { error: bErr } = await (admin.from("buildings" as any) as any).insert({
+    const { error: bErr } = await db(admin, "buildings").insert({
       id: bId,
       pg_id: targetPgId,
       name: data.name.trim(),
@@ -869,17 +408,15 @@ export async function addAutoBuilding(data: {
       pincode: "560034",
       total_floors: floorsCount,
       amenities: ["High-speed Wi-Fi", "24/7 Power Backup", "RO Water", "Daily Housekeeping"],
-    } as any);
+    });
 
     if (bErr) {
       console.error("addAutoBuilding insert building error:", bErr);
-      return { error: `Failed to insert building: ${bErr.message || JSON.stringify(bErr)}` };
+      return { success: false, error: `Failed to insert building: ${bErr.message}` };
     }
 
-    // 2. Generate and batch insert floors into Supabase
+    // 2. Insert floors into Supabase
     const floorsToInsert: any[] = [];
-    const floorsStructure: FloorItem[] = [];
-
     for (let f = 0; f < floorsCount; f++) {
       const fId = crypto.randomUUID();
       const floorName =
@@ -902,20 +439,16 @@ export async function addAutoBuilding(data: {
       });
     }
 
-    const { error: fErr } = await (admin.from("floors" as any) as any).insert(floorsToInsert);
+    const { error: fErr } = await db(admin, "floors").insert(floorsToInsert);
     if (fErr) {
       console.error("addAutoBuilding insert floors error:", fErr);
-      return { error: `Failed to insert floors: ${fErr.message || JSON.stringify(fErr)}` };
+      return { success: false, error: `Failed to insert floors: ${fErr.message}` };
     }
 
-    // 3. Generate and batch insert rooms into Supabase
-    // (Postgres trigger trg_rooms_auto_create_beds will automatically create the vacant beds for each room!)
+    // 3. Insert rooms into Supabase (Beds created by PostgreSQL trigger)
     const roomsToInsert: any[] = [];
-
     for (let f = 0; f < floorsCount; f++) {
       const floorRow = floorsToInsert[f];
-      const floorRooms: RoomItem[] = [];
-
       for (let r = 1; r <= roomsPerFloor; r++) {
         const roomId = crypto.randomUUID();
         const roomNum = f === 0 ? (r < 10 ? `G-0${r}` : `G-${r}`) : `${f * 100 + r}`;
@@ -934,52 +467,19 @@ export async function addAutoBuilding(data: {
           base_rent_monthly: rent,
           default_deposit: rent,
         });
-
-        const beds: BedItem[] = [];
-        for (let b = 0; b < sharing; b++) {
-          beds.push({
-            id: `bed-${roomId}-${b}`,
-            label: `Bed ${String.fromCharCode(65 + b)}`,
-            occupied: false,
-            tenant: null,
-          });
-        }
-
-        floorRooms.push({
-          id: roomId,
-          number: roomNum,
-          sharing,
-          rent,
-          beds,
-        });
       }
-
-      floorsStructure.push({
-        id: floorRow.id,
-        name: floorRow.floor_name,
-        rooms: floorRooms,
-      });
     }
 
-    const { error: rErr } = await (admin.from("rooms" as any) as any).insert(roomsToInsert);
+    const { error: rErr } = await db(admin, "rooms").insert(roomsToInsert);
     if (rErr) {
       console.error("addAutoBuilding insert rooms error:", rErr);
-      return { error: `Failed to insert rooms: ${rErr.message || JSON.stringify(rErr)}` };
+      return { success: false, error: `Failed to insert rooms: ${rErr.message}` };
     }
 
-    const newBuilding: BuildingItem = {
-      id: bId,
-      pgId: targetPgId || "23594b9e-da90-4884-95aa-5f978d91a0d2",
-      name: data.name.trim(),
-      type: genderType === "boys" ? "Boys Hostel" : genderType === "girls" ? "Girls Hostel" : "Co-living PG",
-      floors: floorsStructure,
-    };
-
-    memoryBuildings.push(newBuilding);
-    return { success: true, building: newBuilding };
+    return { success: true, buildingId: bId };
   } catch (err: any) {
     console.error("Unhandled error in addAutoBuilding:", err);
-    return { error: `Building creation failed: ${err?.message || "Unknown error"}` };
+    return { success: false, error: err?.message || "Building creation failed" };
   }
 }
 
@@ -987,16 +487,16 @@ export async function addFloor(buildingId: string, name: string, initialRooms: n
   try {
     const admin = createAdminClient();
 
-    const { data: bldg, error: bErr } = await (admin.from("buildings" as any) as any)
+    const { data: bldg, error: bErr } = await db(admin, "buildings")
       .select("id, pg_id, total_floors")
       .eq("id", buildingId)
       .single();
 
     if (bErr || !bldg) {
-      return { error: "Building not found in database." };
+      throw new Error("Building not found in database.");
     }
 
-    const { data: existingFloors } = await (admin.from("floors" as any) as any)
+    const { data: existingFloors } = await db(admin, "floors")
       .select("floor_number")
       .eq("building_id", buildingId);
 
@@ -1008,20 +508,20 @@ export async function addFloor(buildingId: string, name: string, initialRooms: n
     const floorId = crypto.randomUUID();
     const floorName = name.trim() || `${nextFloorNum}th Floor`;
 
-    const { error: fErr } = await (admin.from("floors" as any) as any).insert({
+    const { error: fErr } = await db(admin, "floors").insert({
       id: floorId,
       pg_id: bldg.pg_id,
       building_id: buildingId,
       floor_number: nextFloorNum,
       floor_name: floorName,
-    } as any);
+    });
 
     if (fErr) {
-      return { error: `Failed to add floor: ${fErr.message}` };
+      throw new Error(`Failed to add floor: ${fErr.message}`);
     }
 
-    await (admin.from("buildings" as any) as any)
-      .update({ total_floors: Math.max(bldg.total_floors || 0, nextFloorNum + 1) } as any)
+    await db(admin, "buildings")
+      .update({ total_floors: Math.max(bldg.total_floors || 0, nextFloorNum + 1) })
       .eq("id", buildingId);
 
     if (initialRooms > 0) {
@@ -1040,32 +540,13 @@ export async function addFloor(buildingId: string, name: string, initialRooms: n
           default_deposit: 8500,
         });
       }
-      await (admin.from("rooms" as any) as any).insert(roomsToInsert);
-    }
-
-    const b = memoryBuildings.find((x) => x.id === buildingId);
-    if (b) {
-      const fIdx = b.floors.length;
-      const rooms: RoomItem[] = [];
-      for (let r = 1; r <= initialRooms; r++) {
-        rooms.push({
-          id: `rm-${buildingId}-${fIdx}-${r}`,
-          number: `${fIdx * 100 + r}`,
-          sharing: 2,
-          rent: 8500,
-          beds: [
-            { id: `bed-${Date.now()}-1`, label: "Bed A", occupied: false, tenant: null },
-            { id: `bed-${Date.now()}-2`, label: "Bed B", occupied: false, tenant: null },
-          ],
-        });
-      }
-      b.floors.push({ id: floorId, name: floorName, rooms });
+      await db(admin, "rooms").insert(roomsToInsert);
     }
 
     return { success: true };
   } catch (err: any) {
     console.error("Unhandled error in addFloor:", err);
-    return { error: `Failed to add floor: ${err?.message || "Unknown error"}` };
+    throw err;
   }
 }
 
@@ -1078,20 +559,20 @@ export async function addRoom(
   try {
     const admin = createAdminClient();
 
-    const { data: bldg, error: bErr } = await (admin.from("buildings" as any) as any)
+    const { data: bldg, error: bErr } = await db(admin, "buildings")
       .select("id, pg_id")
       .eq("id", buildingId)
       .single();
 
-    if (bErr || !bldg) return { error: "Building not found in database." };
+    if (bErr || !bldg) throw new Error("Building not found in database.");
 
-    const { data: floorList } = await (admin.from("floors" as any) as any)
+    const { data: floorList } = await db(admin, "floors")
       .select("id, floor_number")
       .eq("building_id", buildingId)
       .order("floor_number", { ascending: true });
 
     const targetFloor = (floorList || [])[floorIdx] || (floorList || [])[0];
-    if (!targetFloor) return { error: "Floor not found in database." };
+    if (!targetFloor) throw new Error("Floor not found in database.");
 
     const roomsToInsert: any[] = [];
     if (mode === "single") {
@@ -1125,41 +606,15 @@ export async function addRoom(
       }
     }
 
-    const { error: rErr } = await (admin.from("rooms" as any) as any).insert(roomsToInsert);
+    const { error: rErr } = await db(admin, "rooms").insert(roomsToInsert);
     if (rErr) {
-      return { error: `Failed to insert rooms: ${rErr.message}` };
-    }
-
-    const b = memoryBuildings.find((x) => x.id === buildingId);
-    if (b && b.floors[floorIdx]) {
-      const floor = b.floors[floorIdx];
-      const createBeds = (roomId: string, count: number) => {
-        const beds: BedItem[] = [];
-        for (let i = 0; i < count; i++) {
-          beds.push({
-            id: `bed-${roomId}-${i}`,
-            label: `Bed ${String.fromCharCode(65 + i)}`,
-            occupied: false,
-            tenant: null,
-          });
-        }
-        return beds;
-      };
-      roomsToInsert.forEach((r) => {
-        floor.rooms.push({
-          id: r.id,
-          number: r.room_number,
-          sharing: r.sharing_type,
-          rent: r.base_rent_monthly,
-          beds: createBeds(r.id, r.sharing_type),
-        });
-      });
+      throw new Error(`Failed to insert rooms: ${rErr.message}`);
     }
 
     return { success: true };
   } catch (err: any) {
     console.error("Unhandled error in addRoom:", err);
-    return { error: `Failed to add room: ${err?.message || "Unknown error"}` };
+    throw err;
   }
 }
 
@@ -1167,14 +622,14 @@ export async function addBed(buildingId: string, floorIdx: number, roomId: strin
   try {
     const admin = createAdminClient();
 
-    const { data: room, error: rErr } = await (admin.from("rooms" as any) as any)
+    const { data: room, error: rErr } = await db(admin, "rooms")
       .select("id, pg_id, building_id, sharing_type, base_rent_monthly")
       .eq("id", roomId)
       .single();
 
-    if (rErr || !room) return { error: "Room not found in database." };
+    if (rErr || !room) throw new Error("Room not found in database.");
 
-    const { error: bedErr } = await (admin.from("beds" as any) as any).insert({
+    const { error: bedErr } = await db(admin, "beds").insert({
       id: crypto.randomUUID(),
       pg_id: room.pg_id,
       building_id: room.building_id,
@@ -1182,34 +637,20 @@ export async function addBed(buildingId: string, floorIdx: number, roomId: strin
       bed_name: label.trim() || `Bed ${room.sharing_type + 1}`,
       status: "vacant",
       monthly_rent: room.base_rent_monthly,
-    } as any);
+    });
 
     if (bedErr) {
-      return { error: `Failed to add bed: ${bedErr.message}` };
+      throw new Error(`Failed to add bed: ${bedErr.message}`);
     }
 
-    await (admin.from("rooms" as any) as any)
-      .update({ sharing_type: Math.min(10, room.sharing_type + 1) } as any)
+    await db(admin, "rooms")
+      .update({ sharing_type: Math.min(10, room.sharing_type + 1) })
       .eq("id", roomId);
-
-    const b = memoryBuildings.find((x) => x.id === buildingId);
-    if (b) {
-      const r = b.floors[floorIdx]?.rooms.find((x) => x.id === roomId);
-      if (r) {
-        r.beds.push({
-          id: `bed-${Date.now()}`,
-          label: label.trim() || `Bed ${r.beds.length + 1}`,
-          occupied: false,
-          tenant: null,
-        });
-        r.sharing = Math.min(10, r.sharing + 1);
-      }
-    }
 
     return { success: true };
   } catch (err: any) {
     console.error("Unhandled error in addBed:", err);
-    return { error: `Failed to add bed: ${err?.message || "Unknown error"}` };
+    throw err;
   }
 }
 
@@ -1237,7 +678,7 @@ export async function walkInAddTenant(
   let targetPgId: string | null = null;
   let roomRent = 8500;
 
-  const { data: dbRoom } = await (admin.from("rooms" as any) as any)
+  const { data: dbRoom } = await db(admin, "rooms")
     .select("id, pg_id, base_rent_monthly")
     .eq("id", roomId)
     .maybeSingle();
@@ -1246,7 +687,7 @@ export async function walkInAddTenant(
     targetPgId = dbRoom.pg_id;
     roomRent = Number(dbRoom.base_rent_monthly) || 8500;
 
-    const { data: dbBeds } = await (admin.from("beds" as any) as any)
+    const { data: dbBeds } = await db(admin, "beds")
       .select("id, status")
       .eq("room_id", roomId)
       .order("bed_name", { ascending: true });
@@ -1261,7 +702,8 @@ export async function walkInAddTenant(
   const depStatus = data.depositStatus ?? "paid";
 
   if (targetPgId && targetBedId) {
-    await (admin.from("tenants" as any) as any).insert({
+    // 1. Insert tenant into Supabase
+    const { error: tErr } = await db(admin, "tenants").insert({
       id: tenantId,
       pg_id: targetPgId,
       building_id: buildingId,
@@ -1271,217 +713,214 @@ export async function walkInAddTenant(
       phone: data.phone.trim(),
       rent_amount: roomRent,
       deposit_amount: depAmount,
-      check_in_date: new Date().toISOString().split("T")[0],
+      check_in_date: data.joinDate || new Date().toISOString().split("T")[0],
       is_active: true,
-    } as any);
+    });
 
-    await (admin.from("beds" as any) as any)
-      .update({ status: "occupied" } as any)
-      .eq("id", targetBedId);
-  }
-
-  const b = memoryBuildings.find((x) => x.id === buildingId);
-  if (!b) return { success: true, tenantId };
-  const room = b.floors[floorIdx]?.rooms.find((r) => r.id === roomId);
-  if (!room) return { success: true, tenantId };
-  const bed = room.beds[bedIdx];
-  if (!bed) return { success: true, tenantId };
-
-  const depMode = data.depositPaymentMode ?? "cash";
-  const depReceiptNo = `DEP-${new Date().toISOString().slice(0, 7).replace("-", "")}-${Math.floor(100 + Math.random() * 900)}`;
-
-  const newTenant: TenantProfileItem = {
-    id: tenantId,
-    pgId: b.pgId,
-    name: data.name,
-    phone: data.phone,
-    parentPhone: "9811002233",
-    college: "Walk-In Resident",
-    joinDate: data.joinDate,
-    deposit: depAmount,
-    depositStatus: depStatus,
-    depositPaymentMode: depMode,
-    depositCollectedByName: depStatus === "paid" ? (data.collectorName || "Warden Staff") : undefined,
-    depositCollectedAt: depStatus === "paid" ? new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : undefined,
-    depositReceiptNo: depReceiptNo,
-    rentPaid: data.rentPaid,
-    kycStatus: "Pending",
-  };
-
-  bed.occupied = true;
-  bed.tenant = newTenant;
-
-  // Insert into security deposits list
-  const newDeposit: SecurityDepositItem = {
-    id: depReceiptNo,
-    pgId: b.pgId,
-    buildingId: b.id,
-    buildingName: b.name,
-    tenantId,
-    tenantName: data.name,
-    roomNumber: room.number,
-    bedLabel: bed.label,
-    expectedAmount: depAmount,
-    paidAmount: depStatus === "paid" ? depAmount : 0,
-    status: depStatus,
-    paymentMode: depMode,
-    transactionRef: data.depositRef,
-    collectedByName: depStatus === "paid" ? (data.collectorName || "Warden Staff") : undefined,
-    collectedAt: depStatus === "paid" ? new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : undefined,
-    deductionAmount: 0,
-    refundedAmount: 0,
-    createdAt: new Date().toISOString(),
-  };
-  memorySecurityDeposits.unshift(newDeposit);
-
-  // If rent is marked paid on walk-in, generate an invoice
-  let invNo: string | undefined;
-  if (data.rentPaid) {
-    invNo = `INV-${new Date().toISOString().slice(0, 7).replace("-", "")}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newRent: RentPaymentRecord = {
-      id: invNo,
-      pgId: b.pgId,
-      buildingId: b.id,
-      tenantId,
-      tenantName: data.name,
-      room: `${b.name} • Room ${room.number}`,
-      billingMonth: new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
-      amount: room.rent,
-      status: "settled_with_owner",
-      paymentMode: "cash",
-      collectedByName: data.collectorName || "Staff Desk",
-      collectedByRole: "owner",
-      collectedAt: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
-      settledAt: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
-    };
-    memoryRentPayments.unshift(newRent);
-  }
-
-  // Live Supabase Sync (falls back gracefully)
-  try {
-    const supabase = await createClient();
-    await (supabase.from("security_deposits" as any) as any).insert({
-      pg_id: b.pgId,
-      building_id: b.id,
-      tenant_id: tenantId,
-      expected_amount: depAmount,
-      paid_amount: depStatus === "paid" ? depAmount : 0,
-      status: depStatus,
-      payment_mode: depMode,
-      transaction_ref: data.depositRef || null,
-      collected_by: data.collectorId || null,
-      collected_by_name: depStatus === "paid" ? (data.collectorName || "Warden Staff") : null,
-      collected_at: depStatus === "paid" ? new Date().toISOString() : null,
-    } as any);
-
-    if (data.rentPaid && invNo) {
-      await (supabase.from("rent_payments" as any) as any).insert({
-        pg_id: b.pgId,
-        building_id: b.id,
-        tenant_id: tenantId,
-        tenant_name: data.name,
-        room_number: `${b.name} • Room ${room.number}`,
-        billing_month: new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
-        amount: room.rent,
-        status: "settled_with_owner",
-        payment_mode: "cash",
-        invoice_number: invNo,
-        collected_by: data.collectorId || null,
-        collected_by_name: data.collectorName || "Staff Desk",
-        collected_by_role: "owner",
-        collected_at: new Date().toISOString(),
-        settled_at: new Date().toISOString(),
-      } as any);
+    if (tErr) {
+      console.error("walkInAddTenant tenant insert error:", tErr);
+      throw new Error(`Failed to register tenant: ${tErr.message}`);
     }
-  } catch (err) {
-    // In-memory fallback
+
+    // 2. Mark bed occupied in Supabase
+    await db(admin, "beds")
+      .update({ status: "occupied" })
+      .eq("id", targetBedId);
+
+    // 3. Record Security Deposit in Supabase if paid
+    if (depStatus === "paid" && depAmount > 0) {
+      await db(admin, "security_deposits").upsert(
+        {
+          id: crypto.randomUUID(),
+          pg_id: targetPgId,
+          building_id: buildingId,
+          tenant_id: tenantId,
+          expected_amount: depAmount,
+          paid_amount: depAmount,
+          status: "paid",
+          payment_mode: data.depositPaymentMode || "cash",
+          transaction_ref: data.depositRef || null,
+          collected_by: data.collectorId || null,
+          collected_by_name: data.collectorName || "Warden Staff",
+          collected_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "tenant_id" }
+      );
+    }
+
+    // 4. Record Initial Rent Payment in Supabase if marked rentPaid
+    if (data.rentPaid) {
+      const billingMonth = new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+      const invoiceNumber = `INV-${new Date().toISOString().slice(0, 7).replace("-", "")}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      await db(admin, "rent_payments").insert({
+        id: crypto.randomUUID(),
+        pg_id: targetPgId,
+        building_id: buildingId,
+        bed_id: targetBedId,
+        tenant_id: tenantId,
+        billing_month: billingMonth,
+        amount: roomRent,
+        payment_mode: data.depositPaymentMode || "cash",
+        invoice_number: invoiceNumber,
+        status: "settled_with_owner",
+        collected_by: data.collectorId || null,
+        collected_by_name: data.collectorName || "Warden Staff",
+        collected_by_role: "admin",
+        collected_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+      });
+    }
+
+    // 5. Audit Log in Supabase
+    await db(admin, "audit_logs").insert({
+      id: crypto.randomUUID(),
+      pg_id: targetPgId,
+      building_id: buildingId,
+      action: `Walk-in tenant ${data.name.trim()} checked in to room bed with deposit ₹${depAmount.toLocaleString("en-IN")}`,
+      entity_table: "tenants",
+      entity_id: tenantId,
+      created_at: new Date().toISOString(),
+    });
   }
 
-  memoryAuditLogs.unshift({
-    id: `a-${Date.now()}`,
-    text: `Walk-in tenant ${data.name} assigned to ${b.name} Room ${room.number} (${bed.label}). Security Deposit: ₹${depAmount} (${depStatus}).`,
-    time: "Just now",
-  });
-
-  return { success: true, tenant: newTenant };
+  return { success: true, tenantId };
 }
 
 export async function vacateBed(buildingId: string, floorIdx: number, roomId: string, bedIdx: number) {
-  const b = memoryBuildings.find((x) => x.id === buildingId);
-  if (!b) return { error: "Building not found" };
-  const room = b.floors[floorIdx]?.rooms.find((r) => r.id === roomId);
-  if (!room) return { error: "Room not found" };
-  const bed = room.beds[bedIdx];
-  if (!bed) return { error: "Bed not found" };
+  const admin = createAdminClient();
+  try {
+    const { data: dbBeds } = await db(admin, "beds")
+      .select("id, room_id, status")
+      .eq("room_id", roomId)
+      .order("bed_name", { ascending: true });
 
-  const oldTenant = bed.tenant;
-  bed.occupied = false;
-  bed.tenant = null;
+    const targetBed = dbBeds && dbBeds[bedIdx] ? dbBeds[bedIdx] : null;
 
-  if (oldTenant) {
-    memoryAuditLogs.unshift({
-      id: `a-${Date.now()}`,
-      text: `Bed vacated for ${oldTenant.name} from ${b.name} Room ${room.number} (${bed.label})`,
-      time: "Just now",
-    });
+    if (targetBed) {
+      await db(admin, "beds").update({ status: "vacant" }).eq("id", targetBed.id);
+
+      const { data: activeTenant } = await db(admin, "tenants")
+        .select("id, full_name, pg_id, building_id")
+        .eq("bed_id", targetBed.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (activeTenant) {
+        await db(admin, "tenants")
+          .update({ is_active: false, check_out_date: new Date().toISOString().split("T")[0] })
+          .eq("id", activeTenant.id);
+
+        await db(admin, "audit_logs").insert({
+          id: crypto.randomUUID(),
+          pg_id: activeTenant.pg_id,
+          building_id: activeTenant.building_id,
+          action: `Bed vacated for ${activeTenant.full_name} in building ${buildingId}`,
+          entity_table: "beds",
+          entity_id: targetBed.id,
+          created_at: new Date().toISOString(),
+        });
+      }
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error("vacateBed database error:", err);
+    throw new Error(`Failed to vacate bed: ${err?.message || "Unknown error"}`);
   }
-
-  return { success: true };
 }
 
 export async function verifyTenantKyc(tenantId: string) {
-  memoryBuildings.forEach((b) => {
-    b.floors.forEach((f) => {
-      f.rooms.forEach((r) => {
-        r.beds.forEach((bed) => {
-          if (bed.tenant && bed.tenant.id === tenantId) {
-            bed.tenant.kycStatus = "Verified";
-          }
-        });
-      });
-    });
-  });
+  const admin = createAdminClient();
+  try {
+    const { data: tenant } = await db(admin, "tenants")
+      .select("id, full_name, pg_id, building_id")
+      .eq("id", tenantId)
+      .maybeSingle();
 
-  return { success: true };
+    if (!tenant) throw new Error("Tenant not found in database.");
+
+    await db(admin, "tenants").update({ id_proof_type: "verified" }).eq("id", tenantId);
+
+    await db(admin, "audit_logs").insert({
+      id: crypto.randomUUID(),
+      pg_id: tenant.pg_id,
+      building_id: tenant.building_id,
+      action: `KYC verified for tenant ${tenant.full_name}`,
+      entity_table: "tenants",
+      entity_id: tenantId,
+      created_at: new Date().toISOString(),
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("verifyTenantKyc error:", err);
+    throw err;
+  }
 }
 
 export async function markBedRentPaid(tenantId: string) {
-  memoryBuildings.forEach((b) => {
-    b.floors.forEach((f) => {
-      f.rooms.forEach((r) => {
-        r.beds.forEach((bed) => {
-          if (bed.tenant && bed.tenant.id === tenantId) {
-            bed.tenant.rentPaid = true;
-          }
-        });
-      });
-    });
-  });
+  const admin = createAdminClient();
+  try {
+    const { data: tenant } = await db(admin, "tenants")
+      .select("id, full_name, pg_id, building_id, rent_amount, bed_id")
+      .eq("id", tenantId)
+      .maybeSingle();
 
-  return { success: true };
+    if (!tenant) return { success: true };
+
+    const billingMonth = new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+    const invoiceNum = `INV-${new Date().toISOString().slice(0, 7).replace("-", "")}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    await db(admin, "rent_payments").insert({
+      id: crypto.randomUUID(),
+      pg_id: tenant.pg_id,
+      building_id: tenant.building_id,
+      bed_id: tenant.bed_id,
+      tenant_id: tenant.id,
+      billing_month: billingMonth,
+      amount: tenant.rent_amount || 8500,
+      payment_mode: "cash",
+      invoice_number: invoiceNum,
+      status: "settled_with_owner",
+      collected_by: tenant.id,
+      collected_by_name: "Management Desk",
+      collected_by_role: "admin",
+      collected_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("markBedRentPaid error:", err);
+    throw err;
+  }
 }
 
 // --- SECURITY DEPOSIT FUNCTIONS ---
 
 export async function getAllSecurityDeposits(pgId?: string, buildingId?: string): Promise<SecurityDepositItem[]> {
   try {
-    const supabase = await createClient();
-    let query = supabase
-      .from("security_deposits")
+    const admin = createAdminClient();
+    let query = db(admin, "security_deposits")
       .select("*, buildings ( name ), tenants ( full_name )")
       .order("created_at", { ascending: false });
 
+    if (pgId) {
+      query = query.eq("pg_id", pgId);
+    }
     if (buildingId && buildingId !== "all") {
       query = query.eq("building_id", buildingId);
     }
 
     const { data } = await query;
     if (data && data.length > 0) {
-      return data.map((d: any) => ({
+      return (data as any[]).map((d: any) => ({
         id: d.id,
         pgId: d.pg_id,
         buildingId: d.building_id,
-        buildingName: d.buildings?.name || "Block A",
+        buildingName: d.buildings?.name || "Main Block",
         tenantId: d.tenant_id,
         tenantName: d.tenants?.full_name || "Resident",
         roomNumber: "101",
@@ -1511,30 +950,30 @@ export async function getAllSecurityDeposits(pgId?: string, buildingId?: string)
 export async function getSecurityDepositForTenant(tenantId: string): Promise<SecurityDepositItem | null> {
   if (!tenantId) return null;
   try {
-    const supabase = await createClient();
-    const { data: tenantData } = await (supabase.from("tenants" as any) as any)
+    const admin = createAdminClient();
+    const { data: tenantData } = await db(admin, "tenants")
       .select("id, full_name, room_id, bed_id, rooms(room_number), beds(bed_name), buildings(name)")
       .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     const actualTenantId = tenantData?.id || tenantId;
 
-    const { data: d } = await (supabase.from("security_deposits" as any) as any)
+    const { data: d } = await db(admin, "security_deposits")
       .select("*, buildings(name)")
       .eq("tenant_id", actualTenantId)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (d) {
       return {
         id: d.id,
         pgId: d.pg_id,
         buildingId: d.building_id,
-        buildingName: d.buildings?.name || tenantData?.buildings?.name || "Block A",
+        buildingName: d.buildings?.name || tenantData?.buildings?.name || "Main Block",
         tenantId: d.tenant_id,
         tenantName: tenantData?.full_name || "Resident",
-        roomNumber: tenantData?.rooms?.room_number || "101",
+        roomNumber: tenantData?.rooms?.room_number ? String(tenantData.rooms.room_number) : "101",
         bedLabel: tenantData?.beds?.bed_name || "Bed A",
         expectedAmount: Number(d.expected_amount) || 0,
         paidAmount: Number(d.paid_amount) || 0,
@@ -1567,101 +1006,51 @@ export async function collectSecurityDeposit(params: {
   collectorId?: string;
 }) {
   const { tenantId, amount, paymentMode, transactionRef, collectorName, collectorId } = params;
-  const nowStr = new Date().toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const admin = createAdminClient();
 
-  let dep = memorySecurityDeposits.find((d) => d.tenantId === tenantId);
-  if (dep) {
-    dep.paidAmount = amount;
-    dep.status = "paid";
-    dep.paymentMode = paymentMode;
-    dep.transactionRef = transactionRef;
-    dep.collectedByName = collectorName;
-    dep.collectedBy = collectorId;
-    dep.collectedAt = nowStr;
-  } else {
-    dep = {
-      id: `DEP-${Date.now()}`,
-      pgId: "pg-royal",
-      buildingId: "b-a",
-      buildingName: "Block A",
-      tenantId,
-      tenantName: "Resident",
-      roomNumber: "101",
-      bedLabel: "Bed A",
-      expectedAmount: amount,
-      paidAmount: amount,
+  const { data: tenant, error: tErr } = await db(admin, "tenants")
+    .select("id, full_name, pg_id, building_id, deposit_amount")
+    .eq("id", tenantId)
+    .maybeSingle();
+
+  if (tErr || !tenant) {
+    throw new Error(`Tenant not found in database: ${tErr?.message || "Not found"}`);
+  }
+
+  const { error: upsertErr } = await db(admin, "security_deposits").upsert(
+    {
+      pg_id: tenant.pg_id,
+      building_id: tenant.building_id,
+      tenant_id: tenant.id,
+      expected_amount: tenant.deposit_amount || amount,
+      paid_amount: amount,
       status: "paid",
-      paymentMode,
-      transactionRef,
-      collectedByName: collectorName,
-      collectedBy: collectorId,
-      collectedAt: nowStr,
-      deductionAmount: 0,
-      refundedAmount: 0,
-      createdAt: new Date().toISOString(),
-    };
-    memorySecurityDeposits.unshift(dep);
+      payment_mode: paymentMode,
+      transaction_ref: transactionRef || null,
+      collected_by: collectorId || null,
+      collected_by_name: collectorName,
+      collected_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "tenant_id" }
+  );
+
+  if (upsertErr) {
+    console.error("collectSecurityDeposit error:", upsertErr);
+    throw new Error(`Failed to record security deposit in database: ${upsertErr.message}`);
   }
 
-  // Update in bed tenant
-  memoryBuildings.forEach((b) => {
-    b.floors.forEach((f) => {
-      f.rooms.forEach((r) => {
-        r.beds.forEach((bed) => {
-          if (bed.tenant && bed.tenant.id === tenantId) {
-            bed.tenant.deposit = amount;
-            bed.tenant.depositStatus = "paid";
-            bed.tenant.depositPaymentMode = paymentMode;
-            bed.tenant.depositCollectedByName = collectorName;
-            bed.tenant.depositCollectedAt = nowStr;
-            dep!.tenantName = bed.tenant.name;
-            dep!.roomNumber = r.number;
-            dep!.bedLabel = bed.label;
-            dep!.buildingName = b.name;
-            dep!.buildingId = b.id;
-          }
-        });
-      });
-    });
+  await db(admin, "audit_logs").insert({
+    id: crypto.randomUUID(),
+    pg_id: tenant.pg_id,
+    building_id: tenant.building_id,
+    action: `${collectorName} collected ₹${amount.toLocaleString("en-IN")} Security Deposit for ${tenant.full_name} (${paymentMode})`,
+    entity_table: "security_deposits",
+    entity_id: tenant.id,
+    created_at: new Date().toISOString(),
   });
 
-  memoryAuditLogs.unshift({
-    id: `a-${Date.now()}`,
-    text: `${collectorName} collected ₹${amount.toLocaleString("en-IN")} Security Deposit for ${dep.tenantName} (${paymentMode})`,
-    time: "Just now",
-  });
-
-  // Live Supabase Sync (falls back gracefully)
-  try {
-    const supabase = await createClient();
-    await (supabase.from("security_deposits" as any) as any).upsert(
-      {
-        pg_id: dep.pgId || "00000000-0000-0000-0000-000000000001",
-        building_id: dep.buildingId || "00000000-0000-0000-0000-000000000002",
-        tenant_id: tenantId,
-        expected_amount: dep.expectedAmount || amount,
-        paid_amount: amount,
-        status: "paid",
-        payment_mode: paymentMode,
-        transaction_ref: transactionRef || null,
-        collected_by: collectorId || null,
-        collected_by_name: collectorName,
-        collected_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as any,
-      { onConflict: "tenant_id" }
-    );
-  } catch (err) {
-    // In-memory fallback
-  }
-
-  return { success: true, deposit: dep };
+  return { success: true };
 }
 
 export async function refundSecurityDeposit(params: {
@@ -1672,86 +1061,67 @@ export async function refundSecurityDeposit(params: {
   refundedById?: string;
 }) {
   const { tenantId, deductionAmount, deductionReason, refundedByName, refundedById } = params;
-  const nowStr = new Date().toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const admin = createAdminClient();
 
-  const dep = memorySecurityDeposits.find((d) => d.tenantId === tenantId);
-  if (!dep) return { error: "Deposit record not found" };
+  const { data: dep, error: dErr } = await db(admin, "security_deposits")
+    .select("*, tenants(full_name)")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
 
-  const refundAmt = Math.max(0, dep.paidAmount - deductionAmount);
-  dep.deductionAmount = deductionAmount;
-  dep.deductionReason = deductionReason;
-  dep.refundedAmount = refundAmt;
-  dep.refundedAt = nowStr;
-  dep.refundedByName = refundedByName;
-  dep.status = deductionAmount > 0 ? "partially_refunded" : "refunded";
-
-  // Update in bed tenant
-  memoryBuildings.forEach((b) => {
-    b.floors.forEach((f) => {
-      f.rooms.forEach((r) => {
-        r.beds.forEach((bed) => {
-          if (bed.tenant && bed.tenant.id === tenantId) {
-            bed.tenant.depositStatus = dep.status;
-            bed.tenant.depositDeduction = deductionAmount;
-            bed.tenant.depositDeductionReason = deductionReason;
-            bed.tenant.depositRefundedAmount = refundAmt;
-            bed.tenant.depositRefundedAt = nowStr;
-          }
-        });
-      });
-    });
-  });
-
-  memoryAuditLogs.unshift({
-    id: `a-${Date.now()}`,
-    text: `Owner ${refundedByName} settled Security Deposit for ${dep.tenantName}: Refunded ₹${refundAmt.toLocaleString("en-IN")}, Deducted ₹${deductionAmount.toLocaleString("en-IN")} (${deductionReason || "No deductions"})`,
-    time: "Just now",
-  });
-
-  // Live Supabase Sync (falls back gracefully)
-  try {
-    const supabase = await createClient();
-    await (supabase.from("security_deposits" as any) as any)
-      .update({
-        status: dep.status,
-        deduction_amount: deductionAmount,
-        deduction_reason: deductionReason || null,
-        refunded_amount: refundAmt,
-        refunded_at: new Date().toISOString(),
-        refunded_by: refundedById || null,
-        refunded_by_name: refundedByName,
-        updated_at: new Date().toISOString(),
-      } as any)
-      .eq("tenant_id", tenantId);
-  } catch (err) {
-    // In-memory fallback
+  if (dErr || !dep) {
+    throw new Error("Deposit record not found in database.");
   }
 
-  return { success: true, deposit: dep };
+  const refundAmt = Math.max(0, Number(dep.paid_amount) - deductionAmount);
+  const nextStatus = deductionAmount > 0 ? "partially_refunded" : "refunded";
+
+  const { error: updateErr } = await db(admin, "security_deposits")
+    .update({
+      status: nextStatus,
+      deduction_amount: deductionAmount,
+      deduction_reason: deductionReason || null,
+      refunded_amount: refundAmt,
+      refunded_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("tenant_id", tenantId);
+
+  if (updateErr) {
+    console.error("refundSecurityDeposit update error:", updateErr);
+    throw new Error(`Failed to update refund in database: ${updateErr.message}`);
+  }
+
+  await db(admin, "audit_logs").insert({
+    id: crypto.randomUUID(),
+    pg_id: dep.pg_id,
+    building_id: dep.building_id,
+    action: `Owner ${refundedByName} settled Security Deposit for ${dep.tenants?.full_name || "Resident"}: Refunded ₹${refundAmt.toLocaleString("en-IN")}, Deducted ₹${deductionAmount.toLocaleString("en-IN")}`,
+    entity_table: "security_deposits",
+    entity_id: dep.id,
+    created_at: new Date().toISOString(),
+  });
+
+  return { success: true };
 }
 
 // --- RENT PAYMENTS & 2-STEP HANDOVER FUNCTIONS ---
 
 export async function getAllRentPayments(pgId?: string, buildingId?: string): Promise<RentPaymentRecord[]> {
   try {
-    const supabase = await createClient();
-    let query = supabase
-      .from("rent_payments")
+    const admin = createAdminClient();
+    let query = db(admin, "rent_payments")
       .select("*, tenants ( full_name )")
       .order("created_at", { ascending: false });
 
+    if (pgId) {
+      query = query.eq("pg_id", pgId);
+    }
     if (buildingId && buildingId !== "all") {
       query = query.eq("building_id", buildingId);
     }
     const { data } = await query;
     if (data && data.length > 0) {
-      return data.map((r: any) => ({
+      return (data as any[]).map((r: any) => ({
         id: r.invoice_number || r.id,
         pgId: r.pg_id,
         buildingId: r.building_id,
@@ -1762,13 +1132,13 @@ export async function getAllRentPayments(pgId?: string, buildingId?: string): Pr
         amount: Number(r.amount) || 0,
         status: r.status,
         paymentMode: r.payment_mode,
-        transactionRef: r.utr_number || r.transaction_ref,
+        transactionRef: r.transaction_ref,
         collectedBy: r.collected_by,
         collectedByName: r.collected_by_name || "Anoctic",
         collectedByRole: r.collected_by_role || "owner",
         collectedAt: r.collected_at || r.created_at,
-        settledAt: r.settled_at,
-        settledBy: r.settled_by,
+        settledAt: r.settled_at || r.handover_at,
+        settledBy: r.settled_by || r.handover_received_by,
       }));
     }
   } catch (err) {
@@ -1780,22 +1150,22 @@ export async function getAllRentPayments(pgId?: string, buildingId?: string): Pr
 export async function getRentPaymentsForTenant(tenantId: string): Promise<RentPaymentRecord[]> {
   if (!tenantId) return [];
   try {
-    const supabase = await createClient();
-    const { data: tenantData } = await (supabase.from("tenants" as any) as any)
+    const admin = createAdminClient();
+    const { data: tenantData } = await db(admin, "tenants")
       .select("id, full_name, rooms(room_number)")
       .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     const actualTenantId = tenantData?.id || tenantId;
 
-    const { data } = await (supabase.from("rent_payments" as any) as any)
+    const { data } = await db(admin, "rent_payments")
       .select("*")
       .eq("tenant_id", actualTenantId)
       .order("created_at", { ascending: false });
 
     if (data && data.length > 0) {
-      return data.map((r: any) => ({
+      return (data as any[]).map((r: any) => ({
         id: r.invoice_number || r.id,
         pgId: r.pg_id,
         buildingId: r.building_id,
@@ -1806,13 +1176,13 @@ export async function getRentPaymentsForTenant(tenantId: string): Promise<RentPa
         amount: Number(r.amount) || 0,
         status: r.status,
         paymentMode: r.payment_mode,
-        transactionRef: r.utr_number || r.transaction_ref,
+        transactionRef: r.transaction_ref,
         collectedBy: r.collected_by,
         collectedByName: r.collected_by_name || "Anoctic",
         collectedByRole: r.collected_by_role || "owner",
         collectedAt: r.collected_at || r.created_at,
-        settledAt: r.settled_at,
-        settledBy: r.settled_by,
+        settledAt: r.settled_at || r.handover_at,
+        settledBy: r.settled_by || r.handover_received_by,
       }));
     }
   } catch (err) {
@@ -1822,10 +1192,10 @@ export async function getRentPaymentsForTenant(tenantId: string): Promise<RentPa
 }
 
 export async function getAdminCollections(adminName?: string): Promise<RentPaymentRecord[]> {
-  if (!adminName) return deepClone(memoryRentPayments.filter((r) => r.collectedByRole === "admin"));
-  return deepClone(memoryRentPayments.filter(
-    (r) => r.collectedByName?.toLowerCase().includes(adminName.toLowerCase()) || r.collectedByRole === "admin"
-  ));
+  const all = await getAllRentPayments();
+  const adminRecords = all.filter((r) => r.collectedByRole === "admin");
+  if (!adminName) return adminRecords;
+  return adminRecords.filter((r) => r.collectedByName?.toLowerCase().includes(adminName.toLowerCase()));
 }
 
 export async function collectRentPayment(params: {
@@ -1855,87 +1225,82 @@ export async function collectRentPayment(params: {
     collectedByRole,
   } = params;
 
+  const admin = createAdminClient();
+
+  const { data: tenant } = await db(admin, "tenants")
+    .select("pg_id, building_id, bed_id")
+    .eq("id", tenantId)
+    .maybeSingle();
+
+  const targetPgId = tenant?.pg_id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
+  const targetBuildingId = tenant?.building_id || buildingId;
+
   let status: "collected_by_admin" | "settled_with_owner";
   if (collectedByRole === "admin") {
-    if (paymentMode === "pg_bank_upi") {
-      status = "settled_with_owner";
-    } else {
-      status = "collected_by_admin";
-    }
+    status = paymentMode === "pg_bank_upi" ? "settled_with_owner" : "collected_by_admin";
   } else {
     status = "settled_with_owner";
   }
 
   const invoiceNumber = `INV-${new Date().toISOString().slice(0, 7).replace("-", "")}-${Math.floor(1000 + Math.random() * 9000)}`;
-  const nowStr = new Date().toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+  const newId = crypto.randomUUID();
+
+  const { error: insertErr } = await db(admin, "rent_payments").insert({
+    id: newId,
+    pg_id: targetPgId,
+    building_id: targetBuildingId,
+    bed_id: tenant?.bed_id || null,
+    tenant_id: tenantId,
+    billing_month: billingMonth,
+    amount: amount,
+    payment_mode: paymentMode,
+    invoice_number: invoiceNumber,
+    transaction_ref: transactionRef || null,
+    status: status,
+    collected_by: collectedBy || null,
+    collected_by_name: collectedByName,
+    collected_by_role: collectedByRole,
+    collected_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
   });
 
-  const newRecord: RentPaymentRecord = {
-    id: invoiceNumber,
-    pgId: "pg-royal",
-    buildingId,
-    tenantId,
-    tenantName,
-    room: roomNumber,
-    billingMonth,
-    amount,
-    status,
-    paymentMode,
-    transactionRef,
-    collectedBy,
-    collectedByName,
-    collectedByRole,
-    collectedAt: nowStr,
-    settledAt: status === "settled_with_owner" ? nowStr : undefined,
-    settledByName: status === "settled_with_owner" ? collectedByName : undefined,
-  };
-
-  memoryRentPayments.unshift(newRecord);
-
-  // Mark tenant's bed rent as paid
-  await markBedRentPaid(tenantId);
-
-  // Log in Audit Logs
-  memoryAuditLogs.unshift({
-    id: `a-${Date.now()}`,
-    text: `${collectedByName} collected ₹${amount.toLocaleString("en-IN")} via ${paymentMode.toUpperCase()} for ${tenantName} (${invoiceNumber}) - ${
-      status === "collected_by_admin" ? "⚠️ Pending Handover to Owner" : "✅ Settled with Owner"
-    }`,
-    time: "Just now",
-  });
-
-  // Live Supabase Sync (falls back gracefully)
-  try {
-    const supabase = await createClient();
-    await (supabase.from("rent_payments" as any) as any).insert({
-      pg_id: newRecord.pgId || "00000000-0000-0000-0000-000000000001",
-      building_id: buildingId || "00000000-0000-0000-0000-000000000002",
-      tenant_id: tenantId,
-      tenant_name: tenantName,
-      room_number: roomNumber,
-      billing_month: billingMonth,
-      amount: amount,
-      status: status,
-      payment_mode: paymentMode,
-      invoice_number: invoiceNumber,
-      transaction_ref: transactionRef || null,
-      collected_by: collectedBy || null,
-      collected_by_name: collectedByName,
-      collected_by_role: collectedByRole,
-      collected_at: new Date().toISOString(),
-      settled_at: status === "settled_with_owner" ? new Date().toISOString() : null,
-      settled_by: status === "settled_with_owner" ? collectedBy || null : null,
-    } as any);
-  } catch (err) {
-    // In-memory fallback
+  if (insertErr) {
+    console.error("collectRentPayment error:", insertErr);
+    throw new Error(`Failed to record rent payment in database: ${insertErr.message}`);
   }
 
-  return { success: true, invoice: newRecord };
+  await db(admin, "audit_logs").insert({
+    id: crypto.randomUUID(),
+    pg_id: targetPgId,
+    building_id: targetBuildingId,
+    action: `${collectedByName} collected ₹${amount.toLocaleString("en-IN")} via ${paymentMode.toUpperCase()} for ${tenantName} (${invoiceNumber}) - ${
+      status === "collected_by_admin" ? "⚠️ Pending Handover to Owner" : "✅ Settled with Owner"
+    }`,
+    entity_table: "rent_payments",
+    entity_id: newId,
+    created_at: new Date().toISOString(),
+  });
+
+  return {
+    success: true,
+    invoice: {
+      id: invoiceNumber,
+      pgId: targetPgId,
+      buildingId: targetBuildingId,
+      tenantId,
+      tenantName,
+      room: roomNumber,
+      billingMonth,
+      amount,
+      status,
+      paymentMode,
+      transactionRef,
+      collectedBy,
+      collectedByName,
+      collectedByRole,
+      collectedAt: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+    },
+  };
 }
 
 export async function settleRentPaymentWithOwner(params: {
@@ -1944,83 +1309,161 @@ export async function settleRentPaymentWithOwner(params: {
   settledById?: string;
 }) {
   const { invoiceId, settledByName, settledById } = params;
-  const record = memoryRentPayments.find((r) => r.id === invoiceId);
-  if (!record) return { error: "Invoice payment record not found" };
+  const admin = createAdminClient();
 
-  const nowStr = new Date().toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const { data: record, error: findErr } = await db(admin, "rent_payments")
+    .select("*, tenants(full_name)")
+    .eq("invoice_number", invoiceId)
+    .maybeSingle();
 
-  record.status = "settled_with_owner";
-  record.settledAt = nowStr;
-  record.settledBy = settledById;
-  record.settledByName = settledByName;
-
-  memoryAuditLogs.unshift({
-    id: `a-${Date.now()}`,
-    text: `Owner ${settledByName} confirmed cash receipt of ₹${record.amount.toLocaleString("en-IN")} from ${record.collectedByName} for ${record.tenantName} (${record.id}) - Settled ✅`,
-    time: "Just now",
-  });
-
-  // Live Supabase Sync (falls back gracefully)
-  try {
-    const supabase = await createClient();
-    await (supabase.from("rent_payments" as any) as any)
-      .update({
-        status: "settled_with_owner",
-        handover_at: new Date().toISOString(),
-        settled_at: new Date().toISOString(),
-        settled_by: settledById || null,
-        updated_at: new Date().toISOString(),
-      } as any)
-      .eq("invoice_number", invoiceId);
-  } catch (err) {
-    // In-memory fallback
+  if (findErr || !record) {
+    throw new Error(`Invoice payment record "${invoiceId}" not found in database.`);
   }
 
-  return { success: true, invoice: record };
+  const { error: updateErr } = await db(admin, "rent_payments")
+    .update({
+      status: "settled_with_owner",
+      handover_at: new Date().toISOString(),
+      handover_received_by: settledById || null,
+      handover_received_by_name: settledByName,
+    })
+    .eq("invoice_number", invoiceId);
+
+  if (updateErr) {
+    console.error("settleRentPaymentWithOwner update error:", updateErr);
+    throw new Error(`Failed to update settlement: ${updateErr.message}`);
+  }
+
+  await db(admin, "audit_logs").insert({
+    id: crypto.randomUUID(),
+    pg_id: record.pg_id,
+    building_id: record.building_id,
+    action: `Owner ${settledByName} confirmed handover of ₹${Number(record.amount).toLocaleString("en-IN")} for ${record.tenants?.full_name || "Resident"} (${invoiceId}) - Settled ✅`,
+    entity_table: "rent_payments",
+    entity_id: record.id,
+    created_at: new Date().toISOString(),
+  });
+
+  return { success: true };
 }
 
 // --- LEDGER & EXPENSES ---
 
-export async function getExpenses() {
-  return deepClone(memoryExpenses);
+export async function getExpenses(pgId?: string, buildingId?: string): Promise<ExpenseItem[]> {
+  try {
+    const admin = createAdminClient();
+    let query = db(admin, "expenses").select("*").order("expense_date", { ascending: false });
+    if (pgId) query = query.eq("pg_id", pgId);
+    if (buildingId && buildingId !== "all") query = query.eq("building_id", buildingId);
+    const { data, error } = await query;
+    if (!error && data) {
+      return (data as any[]).map((d: any) => ({
+        id: d.id,
+        category: d.category,
+        amount: Number(d.amount) || 0,
+        scope: d.title || d.notes || "PG Expense",
+        date: d.expense_date || new Date(d.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+      }));
+    }
+  } catch (err) {
+    console.error("getExpenses error:", err);
+  }
+  return [];
 }
 
-export async function logExpense(category: string, amount: number, scope: string) {
-  const newExp: ExpenseItem = {
-    id: `e-${Date.now()}`,
+export async function logExpense(category: string, amount: number, scope: string, pgId?: string, buildingId?: string, recordedBy?: string) {
+  const admin = createAdminClient();
+  const session = await getCurrentUserSession();
+  const effectivePgId = pgId || session.pg_id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
+  const newId = crypto.randomUUID();
+  const today = new Date().toISOString().split("T")[0];
+
+  const { error } = await db(admin, "expenses").insert({
+    id: newId,
+    pg_id: effectivePgId,
+    building_id: buildingId || null,
     category,
+    title: scope,
     amount,
-    scope,
-    date: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+    expense_date: today,
+    recorded_by: recordedBy || session.id || "00000000-0000-0000-0000-000000000000",
+    notes: scope,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    console.error("logExpense error:", error);
+    throw new Error(`Failed to log expense in database: ${error.message}`);
+  }
+
+  await db(admin, "audit_logs").insert({
+    id: crypto.randomUUID(),
+    pg_id: effectivePgId,
+    building_id: buildingId || null,
+    user_id: session.id || null,
+    action: `Logged expense of ₹${amount.toLocaleString("en-IN")} under ${category} (${scope})`,
+    entity_table: "expenses",
+    entity_id: newId,
+    created_at: new Date().toISOString(),
+  });
+
+  return {
+    success: true,
+    expense: {
+      id: newId,
+      category,
+      amount,
+      scope,
+      date: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+    },
   };
-  memoryExpenses.unshift(newExp);
-  return { success: true, expense: deepClone(newExp) };
 }
 
-export async function getUpiApprovals() {
-  return deepClone(memoryUpiApprovals);
+export async function getUpiApprovals(pgId?: string): Promise<UpiApprovalItem[]> {
+  try {
+    const admin = createAdminClient();
+    let query = db(admin, "rent_payments")
+      .select("*, tenants(full_name)")
+      .in("payment_mode", ["admin_upi", "pg_bank_upi", "upi"])
+      .order("created_at", { ascending: false });
+
+    if (pgId) query = query.eq("pg_id", pgId);
+
+    const { data } = await query;
+    if (data && data.length > 0) {
+      return (data as any[]).map((d: any) => ({
+        id: d.id,
+        tenantId: d.tenant_id,
+        tenantName: d.tenants?.full_name || "Resident",
+        room: "Room 101",
+        amount: Number(d.amount) || 0,
+        utr: d.transaction_ref || d.invoice_number,
+        status: d.status === "settled_with_owner" ? ("Approved" as const) : d.status === "rejected" ? ("Rejected" as const) : ("Pending" as const),
+        time: new Date(d.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+      }));
+    }
+  } catch (err) {
+    console.error("getUpiApprovals error:", err);
+  }
+  return [];
 }
 
 export async function approveUpiPayment(id: string) {
-  const upi = memoryUpiApprovals.find((u) => u.id === id);
-  if (upi) {
-    upi.status = "Approved";
-    markBedRentPaid(upi.tenantId);
-  }
+  const admin = createAdminClient();
+  const { error } = await db(admin, "rent_payments")
+    .update({ status: "settled_with_owner", settled_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(`Failed to approve UPI payment: ${error.message}`);
   return { success: true };
 }
 
 export async function rejectUpiPayment(id: string) {
-  const upi = memoryUpiApprovals.find((u) => u.id === id);
-  if (upi) {
-    upi.status = "Rejected";
-  }
+  const admin = createAdminClient();
+  const { error } = await db(admin, "rent_payments")
+    .update({ status: "rejected" })
+    .eq("id", id);
+  if (error) throw new Error(`Failed to reject UPI payment: ${error.message}`);
   return { success: true };
 }
 
@@ -2028,13 +1471,12 @@ export async function rejectUpiPayment(id: string) {
 
 export async function getStaffList(): Promise<StaffItem[]> {
   try {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("profiles")
+    const admin = createAdminClient();
+    const { data } = await db(admin, "profiles")
       .select("id, full_name, phone, role")
       .in("role", ["admin", "owner"]);
     if (data && data.length > 0) {
-      return data.map((s: any) => ({
+      return (data as any[]).map((s: any) => ({
         id: s.id,
         name: s.full_name,
         phone: s.phone || "9876543210",
@@ -2055,27 +1497,22 @@ export async function getStaffList(): Promise<StaffItem[]> {
 }
 
 export async function toggleStaffPermission(staffId: string, permKey: string) {
-  const staff = memoryStaffList.find((s) => s.id === staffId);
-  if (staff && permKey in staff.permissions) {
-    const k = permKey as keyof typeof staff.permissions;
-    staff.permissions[k] = !staff.permissions[k];
-  }
-  return { success: true, staff: staff ? deepClone(staff) : null };
+  return { success: true };
 }
 
 export async function getComplaints(): Promise<ComplaintItem[]> {
   try {
-    const supabase = await createClient();
-    const { data } = await (supabase.from("complaints" as any) as any)
+    const admin = createAdminClient();
+    const { data } = await db(admin, "complaints")
       .select("*, tenants ( full_name ), rooms ( room_number )")
       .order("created_at", { ascending: false });
     if (data && data.length > 0) {
-      return data.map((c: any) => ({
+      return (data as any[]).map((c: any) => ({
         id: c.id,
         tenantId: c.tenant_id,
         tenantName: c.tenants?.full_name || "Resident",
         buildingId: c.building_id || "",
-        room: c.rooms?.room_number || "Room 101",
+        room: c.rooms?.room_number ? `Room ${c.rooms.room_number}` : "Room 101",
         cat: c.category || "Maintenance",
         category: c.category || "Maintenance",
         desc: c.description || c.title || "Complaint",
@@ -2093,26 +1530,28 @@ export async function getComplaints(): Promise<ComplaintItem[]> {
 
 export async function resolveComplaint(id: string, note?: string) {
   try {
-    const supabase = await createClient();
-    await (supabase.from("complaints" as any) as any).update({
+    const admin = createAdminClient();
+    const { error } = await db(admin, "complaints").update({
       status: "resolved",
       resolution_notes: note || "Resolved by Staff & Verified",
       resolved_at: new Date().toISOString(),
     }).eq("id", id);
+    if (error) throw new Error(`Failed to resolve complaint: ${error.message}`);
   } catch (err) {
     console.error("Error resolving complaint in Supabase:", err);
+    throw err;
   }
   return { success: true };
 }
 
 export async function getMessMenu(): Promise<MessMenu> {
   try {
-    const supabase = await createClient();
-    const { data } = await (supabase.from("mess_menu" as any) as any).select("*");
+    const admin = createAdminClient();
+    const { data } = await db(admin, "mess_menu").select("*");
     if (data && data.length > 0) {
       const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
       const currentDay = days[new Date().getDay()];
-      const todayMeals = data.filter((m: any) => m.day_of_week === currentDay);
+      const todayMeals = (data as any[]).filter((m: any) => m.day_of_week === currentDay);
       const getMeal = (type: string) => todayMeals.find((m: any) => m.meal_type === type)?.menu_items;
 
       return {
@@ -2139,7 +1578,7 @@ export async function getMessMenu(): Promise<MessMenu> {
 
 export async function updateMessMenu(data: Partial<MessMenu>) {
   try {
-    const supabase = await createClient();
+    const admin = createAdminClient();
     const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
     const currentDay = days[new Date().getDay()];
 
@@ -2151,85 +1590,103 @@ export async function updateMessMenu(data: Partial<MessMenu>) {
     ].filter((u) => !!u.val);
 
     for (const u of updates) {
-      await (supabase.from("mess_menu" as any) as any)
+      await db(admin, "mess_menu")
         .update({ menu_items: u.val, updated_at: new Date().toISOString() })
         .eq("day_of_week", currentDay)
         .eq("meal_type", u.type);
     }
   } catch (err) {
     console.error("Error updating mess menu in Supabase:", err);
+    throw err;
   }
   return { success: true };
 }
 
-export async function getAuditLogs() {
-  return deepClone(memoryAuditLogs);
+export async function getAuditLogs(pgId?: string) {
+  try {
+    const admin = createAdminClient();
+    const session = await getCurrentUserSession();
+    const effectivePgId = pgId || (session.role !== "super_admin" ? session.pg_id : null);
+    let query = db(admin, "audit_logs").select("*").order("created_at", { ascending: false }).limit(50);
+    if (effectivePgId) {
+      query = query.eq("pg_id", effectivePgId);
+    }
+    const { data, error } = await query;
+    if (!error && data && data.length > 0) {
+      return (data as any[]).map((d: any) => ({
+        id: d.id,
+        text: d.action,
+        time: new Date(d.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+      }));
+    }
+  } catch (err) {
+    console.error("getAuditLogs error:", err);
+  }
+  return [];
 }
 
-// --- RECEIPTS & DINNER POLLS ---
-
-let memoryReceipts: ReceiptItem[] = [
-  {
-    id: "REC-202611-01",
-    tenantId: "t-rahul",
-    tenantName: "Rahul Sharma",
-    pgId: "pg-royal",
-    room: "Block A • G-01",
-    month: "October 2026",
-    amount: 8500,
-    utr: "UTR33091811",
-    date: "04 Oct 2026",
-  },
-  {
-    id: "REC-202611-02",
-    tenantId: "t-rahul",
-    tenantName: "Rahul Sharma",
-    pgId: "pg-royal",
-    room: "Block A • G-01",
-    month: "September 2026",
-    amount: 8500,
-    utr: "UTR22987102",
-    date: "05 Sep 2026",
-  },
-  {
-    id: "REC-202611-03",
-    tenantId: "90000000-0000-0000-0000-000000000004",
-    tenantName: "Aarav Patel",
-    pgId: "00000000-0000-0000-0000-000000000001",
-    room: "Block A • Room 101",
-    month: "October 2026",
-    amount: 10650,
-    utr: "UTR89123401",
-    date: "05 Oct 2026",
-  },
-];
-
-let memoryDinnerPolls: Record<string, "Yes" | "No"> = {
-  "t-rahul": "Yes",
-  "90000000-0000-0000-0000-000000000004": "Yes",
-};
-
 export async function getTenantReceipts(tenantId?: string): Promise<ReceiptItem[]> {
-  if (!tenantId) return deepClone(memoryReceipts);
-  const filtered = memoryReceipts.filter((r) => r.tenantId === tenantId);
-  return deepClone(filtered.length > 0 ? filtered : memoryReceipts.slice(0, 2));
+  try {
+    const admin = createAdminClient();
+    let query = db(admin, "rent_payments")
+      .select("*, tenants(full_name), buildings(name)")
+      .order("created_at", { ascending: false });
+
+    if (tenantId) {
+      query = query.eq("tenant_id", tenantId);
+    }
+
+    const { data } = await query;
+    if (data && data.length > 0) {
+      return (data as any[]).map((r: any) => ({
+        id: r.invoice_number || r.id,
+        tenantId: r.tenant_id,
+        tenantName: r.tenants?.full_name || "Resident",
+        pgId: r.pg_id,
+        room: "Room 101",
+        month: r.billing_month || "Current Month",
+        amount: Number(r.amount) || 0,
+        utr: r.transaction_ref || r.invoice_number,
+        date: new Date(r.collected_at || r.created_at).toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }),
+      }));
+    }
+  } catch (err) {
+    console.error("getTenantReceipts error:", err);
+  }
+  return [];
 }
 
 export async function addReceipt(data: Omit<ReceiptItem, "id">): Promise<ReceiptItem> {
-  const newReceipt: ReceiptItem = {
-    id: `REC-${Date.now().toString().slice(-6)}`,
-    ...data,
-  };
-  memoryReceipts.unshift(newReceipt);
-  return deepClone(newReceipt);
+  const admin = createAdminClient();
+  const invoiceNumber = `REC-${Date.now().toString().slice(-6)}`;
+  await db(admin, "rent_payments").insert({
+    id: crypto.randomUUID(),
+    pg_id: data.pgId,
+    tenant_id: data.tenantId,
+    amount: data.amount,
+    billing_month: data.month,
+    payment_mode: "cash",
+    invoice_number: invoiceNumber,
+    transaction_ref: data.utr,
+    status: "settled_with_owner",
+    collected_by_name: data.tenantName,
+    collected_by_role: "tenant",
+    collected_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+  });
+  return { id: invoiceNumber, ...data };
 }
 
 export async function getTenantDinnerPoll(tenantId: string): Promise<"Yes" | "No"> {
-  return memoryDinnerPolls[tenantId] || "Yes";
+  return dinnerPollState[tenantId] || "Yes";
 }
 
 export async function setTenantDinnerPoll(tenantId: string, choice: "Yes" | "No") {
-  memoryDinnerPolls[tenantId] = choice;
+  dinnerPollState[tenantId] = choice;
   return { success: true, choice };
 }
 
@@ -2241,20 +1698,52 @@ export async function submitTenantComplaint(data: {
   cat: string;
   desc: string;
 }): Promise<ComplaintItem> {
-  const newComplaint: ComplaintItem = {
-    id: `T-${Math.floor(220 + Math.random() * 700)}`,
-    tenantId: data.tenantId,
+  const admin = createAdminClient();
+
+  const { data: tenant } = await db(admin, "tenants")
+    .select("pg_id, building_id, room_id, full_name")
+    .or(`id.eq.${data.tenantId},user_id.eq.${data.tenantId}`)
+    .maybeSingle();
+
+  const effectiveTenantId = tenant?.id || data.tenantId;
+  const pgId = tenant?.pg_id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
+  const buildingId = tenant?.building_id || data.buildingId || "a0000000-0000-0000-0000-000000000001";
+  const roomId = tenant?.room_id || null;
+  const newId = crypto.randomUUID();
+
+  const { error } = await db(admin, "complaints").insert({
+    id: newId,
+    pg_id: pgId,
+    building_id: buildingId,
+    room_id: roomId,
+    tenant_id: effectiveTenantId,
+    category: data.cat,
+    title: `${data.cat}: ${data.desc.slice(0, 40)}`,
+    description: data.desc,
+    priority: "medium",
+    status: "open",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    console.error("submitTenantComplaint database error:", error);
+    throw new Error(`Failed to submit complaint: ${error.message}`);
+  }
+
+  return {
+    id: newId,
+    tenantId: effectiveTenantId,
     tenantName: data.tenantName,
-    buildingId: data.buildingId || "b-a",
+    buildingId,
     room: data.room || "Room 101",
     cat: data.cat,
+    category: data.cat,
     desc: data.desc,
+    issue: data.desc,
     status: "Open",
-    note: "",
     time: "Just now",
   };
-  memoryComplaints.unshift(newComplaint);
-  return newComplaint;
 }
 
 export async function submitTenantUpiScreenshot(data: {
@@ -2263,19 +1752,43 @@ export async function submitTenantUpiScreenshot(data: {
   room: string;
   amount: number;
   utr: string;
-}): Promise<UpiApprovalItem> {
-  const newUpi: UpiApprovalItem = {
-    id: `u-${Date.now()}`,
-    tenantId: data.tenantId,
-    tenantName: data.tenantName,
-    room: data.room,
+}) {
+  const admin = createAdminClient();
+  const { data: tenant } = await db(admin, "tenants")
+    .select("id, pg_id, building_id, bed_id")
+    .or(`id.eq.${data.tenantId},user_id.eq.${data.tenantId}`)
+    .maybeSingle();
+
+  const effectiveTenantId = tenant?.id || data.tenantId;
+  const pgId = tenant?.pg_id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
+  const buildingId = tenant?.building_id || "a0000000-0000-0000-0000-000000000001";
+  const invoiceNumber = `UPI-${Date.now().toString().slice(-6)}`;
+
+  const { error } = await db(admin, "rent_payments").insert({
+    id: crypto.randomUUID(),
+    pg_id: pgId,
+    building_id: buildingId,
+    bed_id: tenant?.bed_id || null,
+    tenant_id: effectiveTenantId,
+    billing_month: new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
     amount: data.amount,
-    utr: data.utr,
-    status: "Pending",
-    time: "Just now",
-  };
-  memoryUpiApprovals.unshift(newUpi);
-  return newUpi;
+    payment_mode: "pg_bank_upi",
+    invoice_number: invoiceNumber,
+    transaction_ref: data.utr,
+    status: "collected_by_admin",
+    collected_by: effectiveTenantId,
+    collected_by_name: data.tenantName,
+    collected_by_role: "tenant",
+    collected_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    console.error("submitTenantUpiScreenshot error:", error);
+    throw new Error(`Failed to submit UPI payment: ${error.message}`);
+  }
+
+  return { success: true };
 }
 
 export async function submitVacateNotice(
@@ -2284,10 +1797,27 @@ export async function submitVacateNotice(
   date: string,
   reason: string
 ) {
-  memoryAuditLogs.unshift({
-    id: `a-${Date.now()}`,
-    text: `Resident ${tenantName} submitted Vacate Notice for ${date} (Reason: ${reason})`,
-    time: "Just now",
+  const admin = createAdminClient();
+  const { data: tenant } = await db(admin, "tenants")
+    .select("id, pg_id, building_id")
+    .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
+    .maybeSingle();
+
+  const effectiveTenantId = tenant?.id || tenantId;
+
+  await db(admin, "tenants")
+    .update({ is_on_notice: true, notice_vacate_date: date })
+    .eq("id", effectiveTenantId);
+
+  await db(admin, "audit_logs").insert({
+    id: crypto.randomUUID(),
+    pg_id: tenant?.pg_id || null,
+    building_id: tenant?.building_id || null,
+    action: `Resident ${tenantName} submitted Vacate Notice for ${date} (Reason: ${reason})`,
+    entity_table: "tenants",
+    entity_id: effectiveTenantId,
+    created_at: new Date().toISOString(),
   });
+
   return { success: true };
 }

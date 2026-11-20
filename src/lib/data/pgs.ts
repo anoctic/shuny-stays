@@ -1,6 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Pg, UserRole } from "@/types/schema.types";
+import { UserRole } from "@/types/schema.types";
 
 export interface PgDetailItem {
   id: string;
@@ -23,77 +22,8 @@ export interface PgDetailItem {
   upi_id?: string | null;
 }
 
-// Safe deep-clone helper to prevent shared isolate memory mutations
-function deepClone<T>(obj: T): T {
-  if (typeof structuredClone === "function") {
-    return structuredClone(obj);
-  }
-  return JSON.parse(JSON.stringify(obj));
-}
-
-// In-memory persistent registry for PGs across sessions
-let memoryPgs: PgDetailItem[] = [
-  {
-    id: "00000000-0000-0000-0000-000000000001",
-    name: "Royal Stay PG",
-    slug: "royal-stay",
-    logo_url: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=200&h=200&q=80",
-    primary_color: "#4F46E5", // Indigo
-    contact_email: "contact@royalstay.com",
-    contact_phone: "+91 98222 33441",
-    owner_id: "10000000-0000-0000-0000-000000000001",
-    owner_name: "Vikram Malhotra",
-    status: "active",
-    subscription_tier: "Pro",
-    subscription_valid_until: "2027-12-31T23:59:59Z",
-    buildings_count: 2,
-    beds_count: 24,
-    residents_count: 18,
-    city: "Bengaluru",
-    created_at: "2026-01-10T10:00:00Z",
-  },
-  {
-    id: "00000000-0000-0000-0000-000000000002",
-    name: "Zenith Luxury PG & Hostels",
-    slug: "zenith-pg",
-    logo_url: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=200&h=200&q=80",
-    primary_color: "#059669", // Emerald
-    contact_email: "admin@zenithpg.com",
-    contact_phone: "+91 98111 22334",
-    owner_id: "10000000-0000-0000-0000-000000000002",
-    owner_name: "Amitabh Sen",
-    status: "active",
-    subscription_tier: "Enterprise",
-    subscription_valid_until: "2027-08-01T23:59:59Z",
-    buildings_count: 3,
-    beds_count: 36,
-    residents_count: 29,
-    city: "Gurugram",
-    created_at: "2026-02-15T12:00:00Z",
-  },
-  {
-    id: "00000000-0000-0000-0000-000000000003",
-    name: "GreenVilla Executive Stays",
-    slug: "greenvilla-pg",
-    logo_url: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=200&h=200&q=80",
-    primary_color: "#0284C7", // Sky
-    contact_email: "ops@greenvillapg.com",
-    contact_phone: "+91 98444 55667",
-    owner_id: "10000000-0000-0000-0000-000000000003",
-    owner_name: "Sneha Reddy",
-    status: "active",
-    subscription_tier: "Starter",
-    subscription_valid_until: "2026-12-15T23:59:59Z",
-    buildings_count: 1,
-    beds_count: 12,
-    residents_count: 9,
-    city: "Hyderabad",
-    created_at: "2026-03-01T09:30:00Z",
-  },
-];
-
 /**
- * Fetch all registered PGs
+ * Fetch all registered PGs directly from Supabase with live counts
  */
 export async function getAllPgs(): Promise<PgDetailItem[]> {
   try {
@@ -112,71 +42,92 @@ export async function getAllPgs(): Promise<PgDetailItem[]> {
         subscription_tier,
         subscription_valid_until,
         created_at
-      `);
+      `)
+      .order("created_at", { ascending: false });
 
-    if (!error && data && data.length > 0) {
-      // Fetch owners from profiles to get real names if available
-      const ownerIds = (data as any[]).map((d) => d.owner_id).filter(Boolean);
-      const ownerMap: Record<string, string> = {};
-      if (ownerIds.length > 0) {
-        try {
-          const { data: owners } = await (admin.from("profiles" as any) as any)
-            .select("id, full_name")
-            .in("id", ownerIds);
-          if (owners) {
-            (owners as any[]).forEach((o) => {
-              if (o.full_name) ownerMap[o.id] = o.full_name;
-            });
-          }
-        } catch {
-          // Ignore profile lookup error
-        }
-      }
-
-      // Merge database records with memory records
-      const dbPgs: PgDetailItem[] = (data as any[]).map((d) => {
-        const mem = memoryPgs.find((m) => m.id === d.id);
-        return {
-          id: d.id,
-          name: d.name,
-          slug: d.slug,
-          logo_url: d.logo_url || mem?.logo_url || null,
-          primary_color: d.primary_color || mem?.primary_color || "#4F46E5",
-          contact_email: d.contact_email,
-          contact_phone: d.contact_phone,
-          owner_id: d.owner_id,
-          owner_name: ownerMap[d.owner_id] || mem?.owner_name || "PG Owner",
-          status: d.status || "active",
-          subscription_tier: (d.subscription_tier || "Starter") as any,
-          subscription_valid_until: d.subscription_valid_until,
-          buildings_count: mem?.buildings_count || 1,
-          beds_count: mem?.beds_count || 12,
-          residents_count: mem?.residents_count || 8,
-          city: mem?.city || "Bengaluru",
-          created_at: d.created_at,
-        };
-      });
-
-      // Update memory cache with database state
-      dbPgs.forEach((dbItem) => {
-        const mIdx = memoryPgs.findIndex((m) => m.id === dbItem.id);
-        if (mIdx !== -1) {
-          memoryPgs[mIdx] = { ...memoryPgs[mIdx], ...dbItem };
-        } else {
-          memoryPgs.push(dbItem);
-        }
-      });
-
-      // Include memory-only PGs (newly onboarded in demo)
-      const existingIds = new Set(dbPgs.map((p) => p.id));
-      const unmergedMemory = memoryPgs.filter((m) => !existingIds.has(m.id));
-      return deepClone([...dbPgs, ...unmergedMemory]);
+    if (error) {
+      console.error("getAllPgs Supabase query error:", error);
+      return [];
     }
-  } catch {
-    // Fallback to memory
-  }
 
-  return deepClone(memoryPgs);
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    // 1. Fetch owners from profiles to get real names if available
+    const ownerIds = (data as any[]).map((d) => d.owner_id).filter(Boolean);
+    const ownerMap: Record<string, string> = {};
+    if (ownerIds.length > 0) {
+      try {
+        const { data: owners } = await (admin.from("profiles" as any) as any)
+          .select("id, full_name")
+          .in("id", ownerIds);
+        if (owners) {
+          (owners as any[]).forEach((o) => {
+            if (o.full_name) ownerMap[o.id] = o.full_name;
+          });
+        }
+      } catch {
+        // Ignore profile lookup error
+      }
+    }
+
+    // 2. Fetch live counts per PG (buildings, beds, active tenants)
+    const [bldgRes, bedRes, tenantRes] = await Promise.all([
+      admin.from("buildings").select("id, pg_id"),
+      admin.from("beds").select("id, pg_id"),
+      admin.from("tenants").select("id, pg_id").eq("is_active", true),
+    ]);
+
+    const bldgCounts: Record<string, number> = {};
+    (bldgRes.data || []).forEach((b: any) => {
+      bldgCounts[b.pg_id] = (bldgCounts[b.pg_id] || 0) + 1;
+    });
+
+    const bedCounts: Record<string, number> = {};
+    (bedRes.data || []).forEach((b: any) => {
+      bedCounts[b.pg_id] = (bedCounts[b.pg_id] || 0) + 1;
+    });
+
+    const residentCounts: Record<string, number> = {};
+    (tenantRes.data || []).forEach((t: any) => {
+      residentCounts[t.pg_id] = (residentCounts[t.pg_id] || 0) + 1;
+    });
+
+    const dbPgs: PgDetailItem[] = (data as any[]).map((d) => {
+      // Map subscription tier to human-readable format
+      let tier: "Free Trial" | "Starter" | "Pro" | "Enterprise" = "Starter";
+      const rawTier = (d.subscription_tier || "").toLowerCase();
+      if (rawTier.includes("pro")) tier = "Pro";
+      else if (rawTier.includes("enterprise")) tier = "Enterprise";
+      else if (rawTier.includes("free") || rawTier.includes("trial")) tier = "Free Trial";
+
+      return {
+        id: d.id,
+        name: d.name,
+        slug: d.slug,
+        logo_url: d.logo_url || null,
+        primary_color: d.primary_color || "#4F46E5",
+        contact_email: d.contact_email,
+        contact_phone: d.contact_phone,
+        owner_id: d.owner_id,
+        owner_name: ownerMap[d.owner_id] || "PG Owner",
+        status: (d.status || "active") as any,
+        subscription_tier: tier,
+        subscription_valid_until: d.subscription_valid_until,
+        buildings_count: bldgCounts[d.id] || 1,
+        beds_count: bedCounts[d.id] || 12,
+        residents_count: residentCounts[d.id] || 0,
+        city: "Bengaluru",
+        created_at: d.created_at,
+      };
+    });
+
+    return dbPgs;
+  } catch (err) {
+    console.error("getAllPgs database critical error:", err);
+    return [];
+  }
 }
 
 /**
@@ -186,7 +137,7 @@ export async function getPgBySlug(slug: string): Promise<PgDetailItem | null> {
   const normalized = slug.trim().toLowerCase();
   const all = await getAllPgs();
   const match = all.find((p) => p.slug.toLowerCase() === normalized) || null;
-  return match ? deepClone(match) : null;
+  return match;
 }
 
 /**
@@ -195,7 +146,7 @@ export async function getPgBySlug(slug: string): Promise<PgDetailItem | null> {
 export async function getPgById(id: string): Promise<PgDetailItem | null> {
   const all = await getAllPgs();
   const match = all.find((p) => p.id === id) || null;
-  return match ? deepClone(match) : null;
+  return match;
 }
 
 /**
@@ -226,7 +177,6 @@ export async function uploadPgLogoToStorage(
       .from("pg-logos")
       .getPublicUrl(filePath);
 
-    // Return the public URL with cache-buster timestamp
     const publicUrl = `${publicData.publicUrl}?t=${Date.now()}`;
     return { url: publicUrl };
   } catch (err: any) {
@@ -273,98 +223,88 @@ export async function onboardNewPg(data: {
     created_at: now,
   };
 
-  // Push to memory registry immediately
-  memoryPgs.unshift(newPg);
+  const admin = createAdminClient();
 
-  // Attempt database persistence
-  try {
-    const admin = createAdminClient();
-
-    // 1. Ensure owner profile exists with pg_id = null first
-    // (profiles_id_fkey requires auth.users(id); pg_id is set to null to avoid circular FK error 23503 before pgs row exists)
-    const { error: profErr1 } = await admin.from("profiles").upsert(
-      {
-        id: ownerId,
-        full_name: data.owner_name,
-        role: "owner" as UserRole,
-        phone: data.owner_phone,
-        email: data.owner_email,
-        pg_id: null,
-      } as any,
-      { onConflict: "id" }
-    );
-    if (profErr1) {
-      console.error("onboardNewPg profiles step 1 error:", profErr1.message);
-      throw new Error(`Database profile initialization error: ${profErr1.message}`);
-    }
-
-    // 2. Insert pgs record (pgs_owner_id_fkey requires profiles(id), which now exists)
-    const { error: pgErr } = await (admin.from("pgs" as any) as any).insert({
-      id: pgId,
-      owner_id: ownerId,
-      name: newPg.name,
-      slug: newPg.slug,
-      logo_url: newPg.logo_url,
-      primary_color: newPg.primary_color,
-      contact_email: newPg.contact_email,
-      contact_phone: newPg.contact_phone,
-      status: "active",
-      subscription_tier: newPg.subscription_tier.toLowerCase().replace(" ", "_"),
-    } as any);
-    if (pgErr) {
-      console.error("onboardNewPg pgs step 2 error:", pgErr.message);
-      throw new Error(`Database PG registration error: ${pgErr.message}`);
-    }
-
-    // 3. Link owner profile to the newly created pg_id
-    const { error: profErr2 } = await (admin.from("profiles" as any) as any)
-      .update({ pg_id: pgId } as any)
-      .eq("id", ownerId);
-    if (profErr2) {
-      console.error("onboardNewPg profiles step 3 error:", profErr2.message);
-    }
-
-    // 4. Link owner in pg_staff with ALL permissions
-    const { error: staffErr } = await admin.from("pg_staff").upsert(
-      {
-        pg_id: pgId,
-        user_id: ownerId,
-        designation: "Owner",
-        permissions: ["ALL"],
-        is_active: true,
-      } as any,
-      { onConflict: "pg_id,user_id" }
-    );
-    if (staffErr) {
-      console.error("onboardNewPg pg_staff step 4 error:", staffErr.message);
-    }
-
-    // 5. Create default building for the new PG so owner dashboard has an operational property
-    const defaultBuildingId = crypto.randomUUID();
-    await (admin.from("buildings" as any) as any).insert({
-      id: defaultBuildingId,
-      pg_id: pgId,
-      name: "Tower 1 - Main Wing",
-      gender_type: "coliving",
-      address: `${data.city || "Bengaluru"} Central`,
-      city: data.city || "Bengaluru",
-      state: "Karnataka",
-      pincode: "560001",
-      warden_name: data.owner_name,
-      warden_phone: data.owner_phone,
-      total_floors: 3,
-      amenities: ["High-speed Wi-Fi", "24/7 Power Backup", "RO Water", "Daily Housekeeping"],
-    } as any);
-  } catch (err: any) {
-    console.error("DB Onboarding critical error:", err?.message || err);
-    throw err;
+  // 1. Ensure owner profile exists with pg_id = null first
+  const { error: profErr1 } = await admin.from("profiles").upsert(
+    {
+      id: ownerId,
+      full_name: data.owner_name,
+      role: "owner" as UserRole,
+      phone: data.owner_phone,
+      email: data.owner_email,
+      pg_id: null,
+    } as any,
+    { onConflict: "id" }
+  );
+  if (profErr1) {
+    console.error("onboardNewPg profiles step 1 error:", profErr1.message);
+    throw new Error(`Database profile initialization error: ${profErr1.message}`);
   }
+
+  // 2. Insert pgs record
+  const { error: pgErr } = await (admin.from("pgs" as any) as any).insert({
+    id: pgId,
+    owner_id: ownerId,
+    name: newPg.name,
+    slug: newPg.slug,
+    logo_url: newPg.logo_url,
+    primary_color: newPg.primary_color,
+    contact_email: newPg.contact_email,
+    contact_phone: newPg.contact_phone,
+    status: "active",
+    subscription_tier: newPg.subscription_tier.toLowerCase().replace(" ", "_"),
+  } as any);
+  if (pgErr) {
+    console.error("onboardNewPg pgs step 2 error:", pgErr.message);
+    throw new Error(`Database PG registration error: ${pgErr.message}`);
+  }
+
+  // 3. Link owner profile to the newly created pg_id
+  const { error: profErr2 } = await (admin.from("profiles" as any) as any)
+    .update({ pg_id: pgId } as any)
+    .eq("id", ownerId);
+  if (profErr2) {
+    console.error("onboardNewPg profiles step 3 error:", profErr2.message);
+  }
+
+  // 4. Link owner in pg_staff with ALL permissions
+  const { error: staffErr } = await admin.from("pg_staff").upsert(
+    {
+      pg_id: pgId,
+      user_id: ownerId,
+      designation: "Owner",
+      permissions: ["ALL"],
+      is_active: true,
+    } as any,
+    { onConflict: "pg_id,user_id" }
+  );
+  if (staffErr) {
+    console.error("onboardNewPg pg_staff step 4 error:", staffErr.message);
+  }
+
+  // 5. Create default building for the new PG so owner dashboard has an operational property
+  const defaultBuildingId = crypto.randomUUID();
+  await (admin.from("buildings" as any) as any).insert({
+    id: defaultBuildingId,
+    pg_id: pgId,
+    name: "Tower 1 - Main Wing",
+    gender_type: "coliving",
+    address: `${data.city || "Bengaluru"} Central`,
+    city: data.city || "Bengaluru",
+    state: "Karnataka",
+    pincode: "560001",
+    warden_name: data.owner_name,
+    warden_phone: data.owner_phone,
+    total_floors: 3,
+    amenities: ["High-speed Wi-Fi", "24/7 Power Backup", "RO Water", "Daily Housekeeping"],
+  } as any);
 
   return newPg;
 }
 
 /**
- * Super Admin: Update Branding & Subscription for existing PG
+ * Super Admin: Update Branding & Subscription for existing PG in Supabase
  */
 export async function updatePgBranding(
   pgId: string,
@@ -376,72 +316,71 @@ export async function updatePgBranding(
     subscription_tier?: "Free Trial" | "Starter" | "Pro" | "Enterprise";
   }
 ): Promise<PgDetailItem | null> {
-  const index = memoryPgs.findIndex((p) => p.id === pgId);
-  if (index === -1) return null;
+  const admin = createAdminClient();
 
-  const current = memoryPgs[index];
-  const updated: PgDetailItem = {
-    ...current,
-    name: data.name !== undefined ? data.name.trim() : current.name,
-    slug: data.slug !== undefined ? data.slug.trim().toLowerCase() : current.slug,
-    logo_url: data.logo_url !== undefined ? data.logo_url : current.logo_url,
-    primary_color: data.primary_color !== undefined ? data.primary_color : current.primary_color,
-    subscription_tier: data.subscription_tier !== undefined ? data.subscription_tier : current.subscription_tier,
+  const updateFields: any = {
+    updated_at: new Date().toISOString(),
   };
-
-  memoryPgs[index] = updated;
-
-  // Persist to Supabase if reachable
-  try {
-    const admin = createAdminClient();
-    await (admin.from("pgs" as any) as any)
-      .update({
-        name: updated.name,
-        slug: updated.slug,
-        logo_url: updated.logo_url,
-        primary_color: updated.primary_color,
-        subscription_tier: updated.subscription_tier.toLowerCase().replace(" ", "_"),
-      } as any)
-      .eq("id", pgId);
-  } catch {
-    // Keep memory updated
+  if (data.name !== undefined) updateFields.name = data.name.trim();
+  if (data.slug !== undefined) updateFields.slug = data.slug.trim().toLowerCase();
+  if (data.logo_url !== undefined) updateFields.logo_url = data.logo_url;
+  if (data.primary_color !== undefined) updateFields.primary_color = data.primary_color;
+  if (data.subscription_tier !== undefined) {
+    updateFields.subscription_tier = data.subscription_tier.toLowerCase().replace(" ", "_");
   }
 
-  return updated;
+  const { data: updatedDb, error } = await (admin.from("pgs" as any) as any)
+    .update(updateFields)
+    .eq("id", pgId)
+    .select()
+    .single();
+
+  if (error || !updatedDb) {
+    console.error("updatePgBranding error:", error);
+    throw new Error(`Failed to update PG branding: ${error?.message || "Not found"}`);
+  }
+
+  return {
+    id: updatedDb.id,
+    name: updatedDb.name,
+    slug: updatedDb.slug,
+    logo_url: updatedDb.logo_url,
+    primary_color: updatedDb.primary_color || "#4F46E5",
+    contact_email: updatedDb.contact_email,
+    contact_phone: updatedDb.contact_phone,
+    owner_id: updatedDb.owner_id,
+    owner_name: "PG Owner",
+    status: updatedDb.status,
+    subscription_tier: (updatedDb.subscription_tier || "Starter") as any,
+    subscription_valid_until: updatedDb.subscription_valid_until,
+    buildings_count: 1,
+    beds_count: 12,
+    residents_count: 8,
+    city: "Bengaluru",
+    created_at: updatedDb.created_at,
+  };
 }
 
 /**
- * Super Admin: Toggle PG Status (Active / Suspended / Pending)
+ * Super Admin: Toggle PG Status (Active / Suspended / Pending) in Supabase
  */
 export async function togglePgStatus(
   pgId: string,
   targetStatus?: "active" | "pending" | "suspended"
 ): Promise<PgDetailItem> {
-  let currentStatus: "active" | "pending" | "suspended" = "active";
-
   const admin = createAdminClient();
 
   // 1. Fetch current status from Supabase
-  try {
-    const { data: dbData, error: fetchErr } = await (admin.from("pgs" as any) as any)
-      .select("id, status")
-      .eq("id", pgId)
-      .maybeSingle();
+  const { data: dbData, error: fetchErr } = await (admin.from("pgs" as any) as any)
+    .select("id, status")
+    .eq("id", pgId)
+    .maybeSingle();
 
-    if (fetchErr) {
-      console.warn("togglePgStatus current status query notice:", fetchErr.message);
-    }
-    if (dbData && dbData.status) {
-      currentStatus = dbData.status;
-    } else {
-      const mem = memoryPgs.find((p) => p.id === pgId);
-      if (mem) currentStatus = mem.status;
-    }
-  } catch {
-    const mem = memoryPgs.find((p) => p.id === pgId);
-    if (mem) currentStatus = mem.status;
+  if (fetchErr) {
+    console.error("togglePgStatus current status query error:", fetchErr.message);
   }
 
+  const currentStatus = dbData?.status || "active";
   let newStatus: "active" | "pending" | "suspended";
   if (targetStatus) {
     newStatus = targetStatus;
@@ -453,7 +392,7 @@ export async function togglePgStatus(
 
   let updatedDb: any = null;
 
-  // 2. Try Atomic Stored Procedure RPC first (bypasses RLS, guarantees atomic transaction)
+  // 2. Try Atomic Stored Procedure RPC first
   try {
     const { data: rpcData, error: rpcErr } = await (admin.rpc as any)("toggle_pg_status", {
       target_pg_id: pgId,
@@ -489,7 +428,7 @@ export async function togglePgStatus(
     updatedDb = data;
   }
 
-  const updated: PgDetailItem = {
+  return {
     id: updatedDb.id,
     name: updatedDb.name,
     slug: updatedDb.slug,
@@ -508,24 +447,10 @@ export async function togglePgStatus(
     city: "Bengaluru",
     created_at: updatedDb.created_at,
   };
-
-  // 3. Keep memory in sync
-  const index = memoryPgs.findIndex((p) => p.id === pgId);
-  if (index !== -1) {
-    memoryPgs[index] = {
-      ...memoryPgs[index],
-      ...updated,
-      status: newStatus,
-    };
-  } else {
-    memoryPgs.push(updated);
-  }
-
-  return updated;
 }
 
 /**
- * Super Admin: Permanently Delete PG and wipe all its associated records
+ * Super Admin: Permanently Delete PG and wipe all its associated records in Supabase
  */
 export async function deletePg(pgId: string): Promise<boolean> {
   const admin = createAdminClient();
@@ -558,10 +483,8 @@ export async function deletePg(pgId: string): Promise<boolean> {
     }
   } catch (err) {
     console.error("deletePg error:", err);
+    throw err;
   }
-
-  // 2. Always prune from in-memory store
-  memoryPgs = memoryPgs.filter((p) => p.id !== pgId);
 
   return true;
 }

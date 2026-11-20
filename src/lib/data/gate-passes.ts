@@ -1,115 +1,77 @@
 import { GatePass, GatePassType, GatePassApprovalStatus, UserRole } from "@/types/schema.types";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-// In-memory store for gate passes with realistic initial samples
-let memoryPasses: GatePass[] = [
-  {
-    id: "pass-001",
-    pg_id: "10000000-0000-0000-0000-000000000001",
-    building_id: "20000000-0000-0000-0000-000000000001",
-    building_name: "Block A - Krishna Bhawan (Boys)",
-    tenant_id: "90000000-0000-0000-0000-000000000004",
-    tenant_name: "Aarav Patel",
-    tenant_phone: "+91 91234 56789",
-    room_number: "Room 101 • Bed A",
-    pass_type: "day_pass",
-    pass_number: "DP-2026-104",
-    outing_date: new Date().toISOString().split("T")[0],
-    expected_return_date: new Date().toISOString().split("T")[0],
-    departure_time: "14:30",
-    expected_return_time: "20:30",
-    reason: "University library study & group project discussion",
-    destination: "Knowledge Park Sector 62",
-    emergency_phone: "+91 98765 00112",
-    approval_status: "pending_owner", // YELLOW CARD! Issued by Warden, Pending Owner Approval
-    warden_approved_by: "90000000-0000-0000-0000-000000000003",
-    warden_approved_at: new Date(Date.now() - 1800000).toISOString(),
-    created_by_role: "admin",
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-    updated_at: new Date(Date.now() - 1800000).toISOString(),
-  },
-  {
-    id: "pass-002",
-    pg_id: "10000000-0000-0000-0000-000000000001",
-    building_id: "20000000-0000-0000-0000-000000000001",
-    building_name: "Block A - Krishna Bhawan (Boys)",
-    tenant_id: "90000000-0000-0000-0000-000000000004",
-    tenant_name: "Aarav Patel",
-    tenant_phone: "+91 91234 56789",
-    room_number: "Room 101 • Bed A",
-    pass_type: "night_pass",
-    pass_number: "NP-2026-089",
-    outing_date: new Date(Date.now() + 86400000).toISOString().split("T")[0],
-    expected_return_date: new Date(Date.now() + 259200000).toISOString().split("T")[0],
-    departure_time: "17:00",
-    expected_return_time: "21:00",
-    reason: "Going home for brother's wedding celebrations",
-    destination: "Jaipur, Rajasthan",
-    emergency_phone: "+91 98765 44321",
-    approval_status: "approved", // GREEN CARD! Fully approved with active QR & WhatsApp
-    warden_approved_by: "90000000-0000-0000-0000-000000000003",
-    warden_approved_at: new Date(Date.now() - 86400000).toISOString(),
-    owner_approved_by: "90000000-0000-0000-0000-000000000002",
-    owner_approved_at: new Date(Date.now() - 72000000).toISOString(),
-    created_by_role: "tenant",
-    created_at: new Date(Date.now() - 90000000).toISOString(),
-    updated_at: new Date(Date.now() - 72000000).toISOString(),
-  },
-  {
-    id: "pass-003",
-    pg_id: "10000000-0000-0000-0000-000000000001",
-    building_id: "20000000-0000-0000-0000-000000000002",
-    building_name: "Block B - Saraswati Bhawan (Girls)",
-    tenant_id: "00000000-0000-0000-0000-000000000004",
-    tenant_name: "Sneha Verma",
-    tenant_phone: "+91 91234 56780",
-    room_number: "Room 102 • Bed B",
-    pass_type: "night_pass",
-    pass_number: "NP-2026-077",
-    outing_date: new Date(Date.now() - 172800000).toISOString().split("T")[0],
-    expected_return_date: new Date(Date.now() - 86400000).toISOString().split("T")[0],
-    departure_time: "22:30",
-    expected_return_time: "06:00",
-    reason: "Overnight outing with friends",
-    destination: "Sector 18 Cyber Hub",
-    emergency_phone: "+91 98111 22334",
-    approval_status: "rejected", // RED CARD!
-    rejection_reason: "Exceeds permissible curfew hours without verbal parental confirmation.",
-    owner_approved_by: "90000000-0000-0000-0000-000000000002",
-    owner_approved_at: new Date(Date.now() - 150000000).toISOString(),
-    created_by_role: "tenant",
-    created_at: new Date(Date.now() - 172800000).toISOString(),
-    updated_at: new Date(Date.now() - 150000000).toISOString(),
-  },
-];
+// Helper for loose typing against custom Supabase schemas
+const db = (admin: any, table: string) => admin.from(table) as any;
 
 /**
- * Get all passes for a specific tenant
+ * Get all passes for a specific tenant from Supabase
  */
 export async function getPassesForTenant(tenantId: string): Promise<GatePass[]> {
   if (!tenantId) return [];
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("gate_passes" as any)
-      .select("*")
-      .eq("tenant_id", tenantId)
+    const admin = createAdminClient();
+
+    // Support lookup by either tenant record ID or auth user ID
+    let effectiveTenantId = tenantId;
+    const { data: tenant } = await db(admin, "tenants")
+      .select("id, full_name, phone, room_id, buildings(name), rooms(room_number)")
+      .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
+      .maybeSingle();
+
+    if (tenant) {
+      effectiveTenantId = tenant.id;
+    }
+
+    const { data, error } = await db(admin, "gate_passes")
+      .select("*, buildings(name), tenants(full_name, phone, rooms(room_number))")
+      .eq("tenant_id", effectiveTenantId)
       .order("created_at", { ascending: false });
 
-    if (!error && data && data.length > 0) {
-      return data as GatePass[];
+    if (error) {
+      console.error("getPassesForTenant error:", error);
+      return [];
     }
-  } catch {
-    // Fallback to memory
+
+    if (data && data.length > 0) {
+      return (data as any[]).map((d) => ({
+        id: d.id,
+        pg_id: d.pg_id,
+        building_id: d.building_id,
+        building_name: d.buildings?.name || (tenant as any)?.buildings?.name || "Main Block",
+        tenant_id: d.tenant_id,
+        tenant_name: d.tenants?.full_name || (tenant as any)?.full_name || "Resident",
+        tenant_phone: d.tenants?.phone || (tenant as any)?.phone || "+91 98765 00000",
+        room_number: d.tenants?.rooms?.room_number ? `Room ${d.tenants.rooms.room_number}` : "Room 101",
+        pass_type: d.pass_type as GatePassType,
+        pass_number: d.pass_number || `GP-${d.id.slice(0, 6)}`,
+        outing_date: d.outing_date || (d.from_datetime ? new Date(d.from_datetime).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]),
+        expected_return_date: d.expected_return_date || (d.to_datetime ? new Date(d.to_datetime).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]),
+        departure_time: d.departure_time || "10:00",
+        expected_return_time: d.expected_return_time || "20:00",
+        reason: d.reason || "Outing",
+        destination: d.destination || "City Outing",
+        emergency_phone: d.emergency_phone || null,
+        approval_status: (d.approval_status || "pending_owner") as GatePassApprovalStatus,
+        warden_approved_by: d.warden_approved_by || d.issued_by_staff_id,
+        warden_approved_at: d.warden_approved_at,
+        owner_approved_by: d.owner_approved_by || d.approved_by_owner_id,
+        owner_approved_at: d.owner_approved_at,
+        rejection_reason: d.rejection_reason || null,
+        created_by_role: (d.created_by_role || "tenant") as UserRole,
+        created_at: d.created_at || new Date().toISOString(),
+        updated_at: d.updated_at || d.created_at || new Date().toISOString(),
+      }));
+    }
+  } catch (err) {
+    console.error("getPassesForTenant database error:", err);
   }
 
-  return memoryPasses.filter(
-    (p) => p.tenant_id === tenantId || tenantId === "90000000-0000-0000-0000-000000000004"
-  );
+  return [];
 }
 
 /**
- * Get all passes for Owner or Admin
+ * Get all passes for Owner or Admin from Supabase
  */
 export async function getPassesForManagement(options?: {
   pgId?: string;
@@ -117,30 +79,66 @@ export async function getPassesForManagement(options?: {
   status?: GatePassApprovalStatus;
 }): Promise<GatePass[]> {
   try {
-    const supabase = await createClient();
-    let query = supabase.from("gate_passes" as any).select("*").order("created_at", { ascending: false });
+    const admin = createAdminClient();
+    let query = db(admin, "gate_passes")
+      .select("*, buildings(name), tenants(full_name, phone, rooms(room_number))")
+      .order("created_at", { ascending: false });
 
-    if (options?.buildingId) {
+    if (options?.pgId) {
+      query = query.eq("pg_id", options.pgId);
+    }
+    if (options?.buildingId && options.buildingId !== "all") {
       query = query.eq("building_id", options.buildingId);
+    }
+    if (options?.status) {
+      query = query.eq("approval_status", options.status);
     }
 
     const { data, error } = await query;
-    if (!error && data && data.length > 0) {
-      return data as GatePass[];
+    if (error) {
+      console.error("getPassesForManagement error:", error);
+      return [];
     }
-  } catch {
-    // Fallback to memory
+
+    if (data && data.length > 0) {
+      return (data as any[]).map((d) => ({
+        id: d.id,
+        pg_id: d.pg_id,
+        building_id: d.building_id,
+        building_name: d.buildings?.name || "Main Block",
+        tenant_id: d.tenant_id,
+        tenant_name: d.tenants?.full_name || "Resident",
+        tenant_phone: d.tenants?.phone || "+91 98765 00000",
+        room_number: d.tenants?.rooms?.room_number ? `Room ${d.tenants.rooms.room_number}` : "Room 101",
+        pass_type: d.pass_type as GatePassType,
+        pass_number: d.pass_number || `GP-${d.id.slice(0, 6)}`,
+        outing_date: d.outing_date || (d.from_datetime ? new Date(d.from_datetime).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]),
+        expected_return_date: d.expected_return_date || (d.to_datetime ? new Date(d.to_datetime).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]),
+        departure_time: d.departure_time || "10:00",
+        expected_return_time: d.expected_return_time || "20:00",
+        reason: d.reason || "Outing",
+        destination: d.destination || "City Outing",
+        emergency_phone: d.emergency_phone || null,
+        approval_status: (d.approval_status || "pending_owner") as GatePassApprovalStatus,
+        warden_approved_by: d.warden_approved_by || d.issued_by_staff_id,
+        warden_approved_at: d.warden_approved_at,
+        owner_approved_by: d.owner_approved_by || d.approved_by_owner_id,
+        owner_approved_at: d.owner_approved_at,
+        rejection_reason: d.rejection_reason || null,
+        created_by_role: (d.created_by_role || "tenant") as UserRole,
+        created_at: d.created_at || new Date().toISOString(),
+        updated_at: d.updated_at || d.created_at || new Date().toISOString(),
+      }));
+    }
+  } catch (err) {
+    console.error("getPassesForManagement error:", err);
   }
 
-  let list = [...memoryPasses];
-  if (options?.buildingId) {
-    list = list.filter((p) => p.building_id === options.buildingId);
-  }
-  return list;
+  return [];
 }
 
 /**
- * Request a new pass (Tenant or Warden/Owner)
+ * Request a new pass (Tenant or Warden/Owner) - persists strictly in Supabase
  */
 export async function requestGatePass(params: {
   tenantId: string;
@@ -164,11 +162,8 @@ export async function requestGatePass(params: {
   const prefix = params.passType === "day_pass" ? "DP" : "NP";
   const randomNum = Math.floor(100 + Math.random() * 900);
   const passNumber = `${prefix}-${new Date().getFullYear()}-${randomNum}`;
+  const passId = crypto.randomUUID();
 
-  // Initial status logic:
-  // If created by OWNER directly -> 'approved' immediately!
-  // If created by ADMIN/WARDEN -> 'pending_owner' (YELLOW CARD)!
-  // If created by TENANT -> 'pending_warden' (or 'pending_owner' if fast-tracked)
   let initialStatus: GatePassApprovalStatus = "pending_owner";
   let wardenApprovedBy: string | null = null;
   let wardenApprovedAt: string | null = null;
@@ -176,27 +171,24 @@ export async function requestGatePass(params: {
   let ownerApprovedAt: string | null = null;
 
   if (params.createdByRole === "owner") {
-    initialStatus = "approved"; // PG Owner direct issue
+    initialStatus = "approved";
     ownerApprovedBy = params.approverId || "Owner";
     ownerApprovedAt = new Date().toISOString();
   } else if (params.createdByRole === "admin") {
-    initialStatus = "pending_owner"; // Warden issued -> Needs Owner Approval
+    initialStatus = "pending_owner";
     wardenApprovedBy = params.approverId || "Warden";
     wardenApprovedAt = new Date().toISOString();
   } else {
-    // Tenant request
-    initialStatus = "pending_owner"; // Submitted by tenant -> queued for approval
+    initialStatus = "pending_owner";
   }
 
-  const newPass: GatePass = {
-    id: "pass-" + Math.random().toString(36).substr(2, 9),
+  const admin = createAdminClient();
+
+  const { error } = await db(admin, "gate_passes").insert({
+    id: passId,
     pg_id: params.pgId,
     building_id: params.buildingId,
-    building_name: params.buildingName || "Block A - Krishna Bhawan",
     tenant_id: params.tenantId,
-    tenant_name: params.tenantName,
-    tenant_phone: params.tenantPhone || "+91 91234 56789",
-    room_number: params.roomNumber || "Room 101 • Bed A",
     pass_type: params.passType,
     pass_number: passNumber,
     outing_date: params.outingDate,
@@ -205,7 +197,40 @@ export async function requestGatePass(params: {
     expected_return_time: params.expectedReturnTime || (params.passType === "day_pass" ? "20:00" : "21:00"),
     reason: params.reason,
     destination: params.destination || "City Outing",
-    emergency_phone: params.emergencyPhone || "+91 98765 00000",
+    emergency_phone: params.emergencyPhone || null,
+    approval_status: initialStatus,
+    warden_approved_by: wardenApprovedBy,
+    warden_approved_at: wardenApprovedAt,
+    owner_approved_by: ownerApprovedBy,
+    owner_approved_at: ownerApprovedAt,
+    created_by_role: params.createdByRole,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    console.error("requestGatePass Supabase insert error:", error);
+    throw new Error(`Failed to create gate pass in database: ${error.message}`);
+  }
+
+  const createdPass: GatePass = {
+    id: passId,
+    pg_id: params.pgId,
+    building_id: params.buildingId,
+    building_name: params.buildingName || "Main Building",
+    tenant_id: params.tenantId,
+    tenant_name: params.tenantName,
+    tenant_phone: params.tenantPhone || "+91 98765 00000",
+    room_number: params.roomNumber || "Room 101",
+    pass_type: params.passType,
+    pass_number: passNumber,
+    outing_date: params.outingDate,
+    expected_return_date: params.expectedReturnDate,
+    departure_time: params.departureTime || (params.passType === "day_pass" ? "10:00" : "17:00"),
+    expected_return_time: params.expectedReturnTime || (params.passType === "day_pass" ? "20:00" : "21:00"),
+    reason: params.reason,
+    destination: params.destination || "City Outing",
+    emergency_phone: params.emergencyPhone || null,
     approval_status: initialStatus,
     warden_approved_by: wardenApprovedBy,
     warden_approved_at: wardenApprovedAt,
@@ -216,91 +241,117 @@ export async function requestGatePass(params: {
     updated_at: new Date().toISOString(),
   };
 
-  try {
-    const supabase = await createClient();
-    await (supabase.from("gate_passes" as any) as any).insert({
-      id: newPass.id,
-      pg_id: newPass.pg_id,
-      building_id: newPass.building_id,
-      tenant_id: newPass.tenant_id,
-      pass_type: newPass.pass_type,
-      pass_number: newPass.pass_number,
-      outing_date: newPass.outing_date,
-      expected_return_date: newPass.expected_return_date,
-      departure_time: newPass.departure_time,
-      expected_return_time: newPass.expected_return_time,
-      reason: newPass.reason,
-      destination: newPass.destination,
-      emergency_phone: newPass.emergency_phone,
-      approval_status: newPass.approval_status,
-      created_by_role: newPass.created_by_role,
-    } as any);
-  } catch {
-    // Fallback memory
-  }
-
-  memoryPasses.unshift(newPass);
-  return newPass;
+  return createdPass;
 }
 
 /**
- * Approve a pass (Owner gives final approval -> turns GREEN!)
+ * Approve a pass in Supabase (Owner approves -> turns GREEN / Warden approves -> moves to pending_owner)
  */
 export async function approveGatePass(passId: string, approverRole: UserRole, approverId?: string): Promise<GatePass | null> {
-  const pass = memoryPasses.find((p) => p.id === passId);
-  if (!pass) return null;
+  const admin = createAdminClient();
+
+  const updateData: any = {
+    updated_at: new Date().toISOString(),
+  };
 
   if (approverRole === "owner") {
-    pass.approval_status = "approved"; // Turns GREEN!
-    pass.owner_approved_by = approverId || "Owner";
-    pass.owner_approved_at = new Date().toISOString();
+    updateData.approval_status = "approved";
+    updateData.owner_approved_by = approverId || "Owner";
+    updateData.owner_approved_at = new Date().toISOString();
   } else if (approverRole === "admin") {
-    // Warden approves -> moves to pending_owner (YELLOW)
-    pass.approval_status = "pending_owner";
-    pass.warden_approved_by = approverId || "Warden";
-    pass.warden_approved_at = new Date().toISOString();
+    updateData.approval_status = "pending_owner";
+    updateData.warden_approved_by = approverId || "Warden";
+    updateData.warden_approved_at = new Date().toISOString();
   }
 
-  pass.updated_at = new Date().toISOString();
+  const { data, error } = await db(admin, "gate_passes")
+    .update(updateData)
+    .eq("id", passId)
+    .select("*, buildings(name), tenants(full_name, phone, rooms(room_number))")
+    .single();
 
-  try {
-    const supabase = await createClient();
-    await (supabase.from("gate_passes" as any) as any).update({
-      approval_status: pass.approval_status,
-      owner_approved_by: pass.owner_approved_by,
-      owner_approved_at: pass.owner_approved_at,
-      warden_approved_by: pass.warden_approved_by,
-      warden_approved_at: pass.warden_approved_at,
-      updated_at: pass.updated_at,
-    } as any).eq("id", passId);
-  } catch {
-    // Fallback memory
+  if (error || !data) {
+    console.error("approveGatePass error:", error);
+    throw new Error(`Failed to approve gate pass in database: ${error?.message || "Not found"}`);
   }
 
-  return pass;
+  return {
+    id: data.id,
+    pg_id: data.pg_id,
+    building_id: data.building_id,
+    building_name: data.buildings?.name || "Main Block",
+    tenant_id: data.tenant_id,
+    tenant_name: data.tenants?.full_name || "Resident",
+    tenant_phone: data.tenants?.phone || "+91 98765 00000",
+    room_number: data.tenants?.rooms?.room_number ? `Room ${data.tenants.rooms.room_number}` : "Room 101",
+    pass_type: data.pass_type as GatePassType,
+    pass_number: data.pass_number,
+    outing_date: data.outing_date,
+    expected_return_date: data.expected_return_date,
+    departure_time: data.departure_time,
+    expected_return_time: data.expected_return_time,
+    reason: data.reason,
+    destination: data.destination,
+    emergency_phone: data.emergency_phone,
+    approval_status: data.approval_status as GatePassApprovalStatus,
+    warden_approved_by: data.warden_approved_by,
+    warden_approved_at: data.warden_approved_at,
+    owner_approved_by: data.owner_approved_by,
+    owner_approved_at: data.owner_approved_at,
+    rejection_reason: data.rejection_reason,
+    created_by_role: data.created_by_role as UserRole,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+  };
 }
 
 /**
- * Reject a pass (Turns RED!)
+ * Reject a pass in Supabase (Turns RED!)
  */
 export async function rejectGatePass(passId: string, reason: string): Promise<GatePass | null> {
-  const pass = memoryPasses.find((p) => p.id === passId);
-  if (!pass) return null;
+  const admin = createAdminClient();
 
-  pass.approval_status = "rejected"; // Turns RED!
-  pass.rejection_reason = reason;
-  pass.updated_at = new Date().toISOString();
-
-  try {
-    const supabase = await createClient();
-    await (supabase.from("gate_passes" as any) as any).update({
+  const { data, error } = await db(admin, "gate_passes")
+    .update({
       approval_status: "rejected",
-      rejection_reason: reason,
-      updated_at: pass.updated_at,
-    } as any).eq("id", passId);
-  } catch {
-    // Fallback memory
+      rejection_reason: reason.trim(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", passId)
+    .select("*, buildings(name), tenants(full_name, phone, rooms(room_number))")
+    .single();
+
+  if (error || !data) {
+    console.error("rejectGatePass error:", error);
+    throw new Error(`Failed to reject gate pass in database: ${error?.message || "Not found"}`);
   }
 
-  return pass;
+  return {
+    id: data.id,
+    pg_id: data.pg_id,
+    building_id: data.building_id,
+    building_name: data.buildings?.name || "Main Block",
+    tenant_id: data.tenant_id,
+    tenant_name: data.tenants?.full_name || "Resident",
+    tenant_phone: data.tenants?.phone || "+91 98765 00000",
+    room_number: data.tenants?.rooms?.room_number ? `Room ${data.tenants.rooms.room_number}` : "Room 101",
+    pass_type: data.pass_type as GatePassType,
+    pass_number: data.pass_number,
+    outing_date: data.outing_date,
+    expected_return_date: data.expected_return_date,
+    departure_time: data.departure_time,
+    expected_return_time: data.expected_return_time,
+    reason: data.reason,
+    destination: data.destination,
+    emergency_phone: data.emergency_phone,
+    approval_status: data.approval_status as GatePassApprovalStatus,
+    warden_approved_by: data.warden_approved_by,
+    warden_approved_at: data.warden_approved_at,
+    owner_approved_by: data.owner_approved_by,
+    owner_approved_at: data.owner_approved_at,
+    rejection_reason: data.rejection_reason,
+    created_by_role: data.created_by_role as UserRole,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+  };
 }

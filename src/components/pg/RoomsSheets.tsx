@@ -298,7 +298,7 @@ export function AutoBuildingSheet({
       const formData = new FormData(e.currentTarget);
       const res = await addAutoBuildingAction(formData);
       if (res && "error" in res && res.error) {
-        setError(res.error);
+        setError(typeof res.error === "string" ? res.error : "Failed to create building");
         setIsSubmitting(false);
         return;
       }

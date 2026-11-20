@@ -35,7 +35,7 @@ export default async function SuperAdminLayout({
   return (
     <div className="flex-1 flex flex-col min-h-screen">
       <RealtimeSyncSubscriber
-        tables={["pgs", "profiles", "buildings", "platform_broadcasts"]}
+        tables={["pgs", "profiles", "buildings", "platform_broadcasts", "subscription_plans"]}
       />
       <MobileTopHeader
         fullName={session.full_name}
