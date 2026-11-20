@@ -140,7 +140,7 @@ Run the SQL migration scripts in your Supabase SQL Editor in sequence:
 5. `supabase/seed.sql` (Seed organizations, rooms, beds, demo residents, and memberships)
 
 ### 4. Run Development Server & Production URL
-- **Production URL (Cloudflare Pages):** **[https://shunystays.pages.dev](https://shunystays.pages.dev)**
+- **Production URL:** **[https://shunystays.com](https://shunystays.com)** (Cloudflare Pages fallback: `https://shunystays.pages.dev`)
 - **Local Dev Server:**
 ```bash
 npm run dev
