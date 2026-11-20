@@ -86,7 +86,15 @@ export default async function SuperAdminOrganizationsPage() {
                   <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">
                     {pg.subscription_tier}
                   </span>
-                  <span className="text-[9px] font-bold text-emerald-600 uppercase">
+                  <span
+                    className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                      pg.status === "active"
+                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                        : pg.status === "pending"
+                        ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                        : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                    }`}
+                  >
                     {pg.status}
                   </span>
                 </div>

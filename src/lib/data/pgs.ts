@@ -116,6 +116,24 @@ export async function getAllPgs(): Promise<PgDetailItem[]> {
       `);
 
     if (!error && data && data.length > 0) {
+      // Fetch owners from profiles to get real names if available
+      const ownerIds = (data as any[]).map((d) => d.owner_id).filter(Boolean);
+      const ownerMap: Record<string, string> = {};
+      if (ownerIds.length > 0) {
+        try {
+          const { data: owners } = await (supabase.from("profiles" as any) as any)
+            .select("id, full_name")
+            .in("id", ownerIds);
+          if (owners) {
+            (owners as any[]).forEach((o) => {
+              if (o.full_name) ownerMap[o.id] = o.full_name;
+            });
+          }
+        } catch {
+          // Ignore profile lookup error
+        }
+      }
+
       // Merge database records with memory records
       const dbPgs: PgDetailItem[] = (data as any[]).map((d) => {
         const mem = memoryPgs.find((m) => m.id === d.id);
@@ -128,7 +146,7 @@ export async function getAllPgs(): Promise<PgDetailItem[]> {
           contact_email: d.contact_email,
           contact_phone: d.contact_phone,
           owner_id: d.owner_id,
-          owner_name: mem?.owner_name || "PG Owner",
+          owner_name: ownerMap[d.owner_id] || mem?.owner_name || "PG Owner",
           status: d.status || "active",
           subscription_tier: (d.subscription_tier || "Starter") as any,
           subscription_valid_until: d.subscription_valid_until,
@@ -138,6 +156,16 @@ export async function getAllPgs(): Promise<PgDetailItem[]> {
           city: mem?.city || "Bengaluru",
           created_at: d.created_at,
         };
+      });
+
+      // Update memory cache with database state
+      dbPgs.forEach((dbItem) => {
+        const mIdx = memoryPgs.findIndex((m) => m.id === dbItem.id);
+        if (mIdx !== -1) {
+          memoryPgs[mIdx] = { ...memoryPgs[mIdx], ...dbItem };
+        } else {
+          memoryPgs.push(dbItem);
+        }
       });
 
       // Include memory-only PGs (newly onboarded in demo)
@@ -390,35 +418,125 @@ export async function togglePgStatus(
   pgId: string,
   targetStatus?: "active" | "pending" | "suspended"
 ): Promise<PgDetailItem | null> {
-  const index = memoryPgs.findIndex((p) => p.id === pgId);
-  if (index === -1) return null;
+  let currentStatus: "active" | "pending" | "suspended" = "active";
 
-  const current = memoryPgs[index];
+  const admin = createAdminClient();
+
+  // 1. Fetch current status from Supabase
+  try {
+    const { data: dbData } = await (admin.from("pgs" as any) as any)
+      .select("id, status")
+      .eq("id", pgId)
+      .maybeSingle();
+
+    if (dbData && dbData.status) {
+      currentStatus = dbData.status;
+    } else {
+      const mem = memoryPgs.find((p) => p.id === pgId);
+      if (mem) currentStatus = mem.status;
+    }
+  } catch {
+    const mem = memoryPgs.find((p) => p.id === pgId);
+    if (mem) currentStatus = mem.status;
+  }
+
   let newStatus: "active" | "pending" | "suspended";
-
   if (targetStatus) {
     newStatus = targetStatus;
-  } else if (current.status === "active") {
+  } else if (currentStatus === "active") {
     newStatus = "suspended";
   } else {
     newStatus = "active";
   }
 
-  const updated: PgDetailItem = {
-    ...current,
-    status: newStatus,
-  };
+  let updated: PgDetailItem | null = null;
 
-  memoryPgs[index] = updated;
-
+  // 2. Persist directly to Supabase
   try {
-    const admin = createAdminClient();
-    await (admin.from("pgs" as any) as any)
-      .update({ status: newStatus } as any)
-      .eq("id", pgId);
-  } catch {
-    // Keep memory updated
+    const { data: updatedDb, error } = await (admin.from("pgs" as any) as any)
+      .update({ status: newStatus, updated_at: new Date().toISOString() } as any)
+      .eq("id", pgId)
+      .select()
+      .maybeSingle();
+
+    if (!error && updatedDb) {
+      updated = {
+        id: updatedDb.id,
+        name: updatedDb.name,
+        slug: updatedDb.slug,
+        logo_url: updatedDb.logo_url,
+        primary_color: updatedDb.primary_color || "#4F46E5",
+        contact_email: updatedDb.contact_email,
+        contact_phone: updatedDb.contact_phone,
+        owner_id: updatedDb.owner_id,
+        owner_name: "PG Owner",
+        status: updatedDb.status,
+        subscription_tier: (updatedDb.subscription_tier || "Starter") as any,
+        subscription_valid_until: updatedDb.subscription_valid_until,
+        buildings_count: 1,
+        beds_count: 12,
+        residents_count: 8,
+        city: "Bengaluru",
+        created_at: updatedDb.created_at,
+      };
+    }
+  } catch (err) {
+    console.error("togglePgStatus database update error:", err);
+  }
+
+  // 3. Keep memory in sync
+  const index = memoryPgs.findIndex((p) => p.id === pgId);
+  if (index !== -1) {
+    memoryPgs[index] = {
+      ...memoryPgs[index],
+      status: newStatus,
+    };
+    if (!updated) updated = memoryPgs[index];
+  } else if (updated) {
+    memoryPgs.push(updated);
   }
 
   return updated;
+}
+
+/**
+ * Super Admin: Permanently Delete PG and wipe all its associated records
+ */
+export async function deletePg(pgId: string): Promise<boolean> {
+  const admin = createAdminClient();
+
+  try {
+    // 1. Try atomic PostgreSQL stored procedure first
+    const { error: rpcError } = await (admin.rpc as any)("delete_pg_cascade", {
+      target_pg_id: pgId,
+    });
+
+    if (rpcError) {
+      console.warn("delete_pg_cascade RPC error, executing manual table cleanup:", rpcError.message);
+      // Fallback manual table cleanup in child-first foreign key order
+      await (admin.from("profiles" as any) as any).update({ pg_id: null } as any).eq("pg_id", pgId);
+      await (admin.from("audit_logs" as any) as any).delete().eq("pg_id", pgId);
+      await (admin.from("gate_passes" as any) as any).delete().eq("pg_id", pgId);
+      await (admin.from("attendance_logs" as any) as any).delete().eq("pg_id", pgId);
+      await (admin.from("complaints" as any) as any).delete().eq("pg_id", pgId);
+      await (admin.from("mess_menu" as any) as any).delete().eq("pg_id", pgId);
+      await (admin.from("expenses" as any) as any).delete().eq("pg_id", pgId);
+      await (admin.from("security_deposits" as any) as any).delete().eq("pg_id", pgId);
+      await (admin.from("rent_payments" as any) as any).delete().eq("pg_id", pgId);
+      await (admin.from("tenants" as any) as any).delete().eq("pg_id", pgId);
+      await (admin.from("pg_staff" as any) as any).delete().eq("pg_id", pgId);
+      await (admin.from("beds" as any) as any).delete().eq("pg_id", pgId);
+      await (admin.from("rooms" as any) as any).delete().eq("pg_id", pgId);
+      await (admin.from("floors" as any) as any).delete().eq("pg_id", pgId);
+      await (admin.from("buildings" as any) as any).delete().eq("pg_id", pgId);
+      await (admin.from("pgs" as any) as any).delete().eq("id", pgId);
+    }
+  } catch (err) {
+    console.error("deletePg error:", err);
+  }
+
+  // 2. Always prune from in-memory store
+  memoryPgs = memoryPgs.filter((p) => p.id !== pgId);
+
+  return true;
 }

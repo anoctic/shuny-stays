@@ -1,67 +1,70 @@
-import { CreditCard, CheckCircle2, AlertCircle, ArrowUpRight } from "lucide-react";
+import { CreditCard, CheckCircle2, AlertCircle, ArrowUpRight, Sparkles } from "lucide-react";
 import { DEMO_TENANTS } from "@/lib/tenant/constants";
+import { getAllSubscriptionPlans } from "@/lib/data/subscriptions";
+import { PlanManagementModal } from "@/components/super-admin/PlanManagementModal";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default function SuperAdminSubscriptionsPage() {
-  const tiers = [
-    {
-      name: "Starter Growth",
-      price: "₹4,999 / mo",
-      features: ["Up to 2 Properties", "50 Beds maximum", "Basic SMS & WhatsApp receipts", "Standard Support"],
-      activeOrgs: 1,
-    },
-    {
-      name: "Enterprise Pro",
-      price: "₹14,999 / mo",
-      features: ["Unlimited Properties", "Unlimited Beds", "Direct UPI zero-fee collection", "Postgres Studio & RLS Isolation", "Dedicated Account Manager"],
-      activeOrgs: 1,
-      popular: true,
-    },
-  ];
+export default async function SuperAdminSubscriptionsPage() {
+  const plans = await getAllSubscriptionPlans();
 
   return (
     <div className="space-y-8">
-      <div className="pb-6 border-b border-zinc-200 dark:border-zinc-800">
-        <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-          Platform Subscriptions & Plans
-        </h1>
-        <p className="text-xs text-zinc-500 mt-1">
-          SaaS monetization, customer plan assignments, and renewal schedules.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-zinc-200 dark:border-zinc-800">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+            <CreditCard className="w-6 h-6 text-indigo-600" />
+            Platform Subscriptions & Plans
+          </h1>
+          <p className="text-xs text-zinc-500 mt-1">
+            SaaS monetization, custom pricing models, and tier perks.
+          </p>
+        </div>
+
+        <PlanManagementModal mode="create" />
       </div>
 
       {/* Plan Tiers Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {tiers.map((tier) => (
+        {plans.map((tier) => (
           <div
-            key={tier.name}
+            key={tier.id}
             className={`rounded-3xl border p-6 bg-white dark:bg-zinc-900 shadow-xs relative ${
-              tier.popular
+              tier.badge
                 ? "border-purple-300 dark:border-purple-800 ring-2 ring-purple-500/20"
                 : "border-zinc-200 dark:border-zinc-800"
             }`}
           >
-            {tier.popular && (
+            {tier.badge && (
               <span className="absolute -top-3 right-6 bg-purple-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-xs">
-                Most Popular
+                {tier.badge}
               </span>
             )}
-            <h3 className="font-extrabold text-lg text-zinc-900 dark:text-zinc-100">
-              {tier.name}
-            </h3>
-            <p className="text-2xl font-extrabold text-purple-700 dark:text-purple-400 mt-2">
-              {tier.price}
-            </p>
-            <p className="text-xs text-zinc-500 mt-1">
-              Currently active on {tier.activeOrgs} {tier.activeOrgs === 1 ? "organization" : "organizations"}
-            </p>
+
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-extrabold text-lg text-zinc-900 dark:text-zinc-100">
+                  {tier.name}
+                </h3>
+                <p className="text-2xl font-extrabold text-purple-700 dark:text-purple-400 mt-2">
+                  {tier.price === 0 ? "₹0 (Free)" : `₹${tier.price.toLocaleString("en-IN")}`}
+                  <span className="text-xs text-zinc-500 font-normal ml-1">
+                    /{tier.billing_cycle === "14-days" ? "14 days" : tier.billing_cycle}
+                  </span>
+                </p>
+                <p className="text-xs text-zinc-500 mt-1 font-semibold">
+                  Capacity: Up to {tier.max_beds} Beds
+                </p>
+              </div>
+
+              <PlanManagementModal plan={tier} mode="edit" />
+            </div>
 
             <ul className="mt-5 space-y-2.5 text-xs text-zinc-600 dark:text-zinc-400">
-              {tier.features.map((f) => (
-                <li key={f} className="flex items-center gap-2">
+              {tier.features.map((f, i) => (
+                <li key={i} className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
                   <span>{f}</span>
                 </li>

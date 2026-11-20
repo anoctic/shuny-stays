@@ -249,3 +249,23 @@ export async function togglePgStatusAction(
 
   return { success: true, pg: updated };
 }
+
+/**
+ * Super Admin Server Action: Permanently Delete PG and all its records
+ */
+export async function deletePgAction(pgId: string) {
+  const session = await getCurrentUserSession();
+
+  if (session.role !== "super_admin") {
+    return { error: "Unauthorized: Super Admin access required." };
+  }
+
+  const { deletePg } = await import("@/lib/data/pgs");
+  await deletePg(pgId);
+
+  revalidatePath("/super-admin");
+  revalidatePath("/super-admin/organizations");
+  revalidatePath("/dashboard");
+
+  return { success: true, pgId };
+}

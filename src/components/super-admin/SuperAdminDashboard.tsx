@@ -23,15 +23,27 @@ import {
   Copy,
   Check,
   Plus,
+  Trash2,
+  Edit2,
+  AlertCircle,
 } from "lucide-react";
 import { PgDetailItem } from "@/lib/data/pgs";
 import { PlatformBroadcast, UserRole } from "@/types/schema.types";
+import {
+  SubscriptionPlanItem,
+  DEFAULT_SUBSCRIPTION_PLANS,
+} from "@/types/subscription.types";
+import { PlanManagementModal } from "@/components/super-admin/PlanManagementModal";
 import { OnboardPgModal } from "@/components/super-admin/OnboardPgModal";
 import { EditBrandingModal } from "@/components/super-admin/EditBrandingModal";
 import { CredentialsGeneratedCard } from "@/components/auth/CredentialsGeneratedCard";
 import { AccountSecurityCard } from "@/components/settings/AccountSecurityCard";
 import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
-import { togglePgStatusAction } from "@/app/actions/branding";
+import {
+  togglePgStatusAction,
+  deletePgAction,
+} from "@/app/actions/branding";
+import { deleteSubscriptionPlanAction } from "@/app/actions/subscriptions";
 import {
   createBroadcastAction,
   toggleBroadcastAction,
@@ -41,17 +53,19 @@ import { switchDemoPersonaAction } from "@/app/actions/auth";
 interface SuperAdminDashboardProps {
   pgs: PgDetailItem[];
   broadcasts: PlatformBroadcast[];
+  plans?: SubscriptionPlanItem[];
   initialTab?: "overview" | "pgs" | "broadcast" | "billing" | "settings";
 }
 
 export function SuperAdminDashboard({
   pgs: initialPgs,
   broadcasts: initialBroadcasts,
+  plans: initialPlans,
   initialTab = "overview",
 }: SuperAdminDashboardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  useRealtimeSync(["pgs", "profiles"]);
+  useRealtimeSync(["pgs", "profiles", "subscription_plans"]);
 
   const tabFromQuery = searchParams?.get("tab") as
     | "overview"
@@ -67,7 +81,14 @@ export function SuperAdminDashboard({
   >(currentTab);
   const [pgsList, setPgsList] = useState<PgDetailItem[]>(initialPgs);
   const [broadcastsList, setBroadcastsList] = useState<PlatformBroadcast[]>(initialBroadcasts);
+  const [plansList, setPlansList] = useState<SubscriptionPlanItem[]>(
+    initialPlans && initialPlans.length > 0 ? initialPlans : DEFAULT_SUBSCRIPTION_PLANS
+  );
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // PG deletion modal state
+  const [pgToDelete, setPgToDelete] = useState<PgDetailItem | null>(null);
+  const [isDeletingPg, setIsDeletingPg] = useState(false);
 
   // Sync with searchParams / bottom navigation
   useEffect(() => {
@@ -90,6 +111,12 @@ export function SuperAdminDashboard({
   useEffect(() => {
     setBroadcastsList(initialBroadcasts);
   }, [initialBroadcasts]);
+
+  useEffect(() => {
+    if (initialPlans && initialPlans.length > 0) {
+      setPlansList(initialPlans);
+    }
+  }, [initialPlans]);
 
   // New Onboarded Owner Credentials Banner state (null by default; populated on real PG onboarding)
   const [newOwnerCredentials, setNewOwnerCredentials] = useState<{
@@ -119,8 +146,11 @@ export function SuperAdminDashboard({
     showToast(`${label} copied!`);
   };
 
-  // Status toggle handler
-  const handleToggleStatus = async (pgId: string, currentStatus: "active" | "pending" | "suspended") => {
+  // Status toggle handler: sets PG membership status to suspended or active
+  const handleToggleStatus = async (
+    pgId: string,
+    currentStatus: "active" | "pending" | "suspended"
+  ) => {
     let nextStatus: "active" | "pending" | "suspended" = "active";
     if (currentStatus === "pending") {
       nextStatus = "active";
@@ -130,22 +160,61 @@ export function SuperAdminDashboard({
       nextStatus = "active";
     }
 
+    // Optimistic UI update so status changes instantly
+    setPgsList((prev) =>
+      prev.map((p) => (p.id === pgId ? { ...p, status: nextStatus } : p))
+    );
+
     try {
-      await togglePgStatusAction(pgId, nextStatus);
-      router.refresh();
-      setPgsList((prev) =>
-        prev.map((p) => (p.id === pgId ? { ...p, status: nextStatus } : p))
-      );
+      const res = await togglePgStatusAction(pgId, nextStatus);
+      if (res?.error) {
+        // Rollback on server error
+        setPgsList((prev) =>
+          prev.map((p) => (p.id === pgId ? { ...p, status: currentStatus } : p))
+        );
+        showToast(`Failed: ${res.error}`);
+        return;
+      }
+
       showToast(
         nextStatus === "active"
           ? "PG Approved & Activated!"
-          : "PG Suspended via Kill-Switch"
+          : "PG Membership Suspended"
       );
+      router.refresh();
     } catch {
-      setPgsList((prev) =>
-        prev.map((p) => (p.id === pgId ? { ...p, status: nextStatus } : p))
-      );
       showToast("Updated PG status.");
+      router.refresh();
+    }
+  };
+
+  // Permanent Delete PG handler
+  const handleConfirmDeletePg = async () => {
+    if (!pgToDelete) return;
+    setIsDeletingPg(true);
+    const targetId = pgToDelete.id;
+    const targetName = pgToDelete.name;
+
+    // Optimistically remove from view
+    setPgsList((prev) => prev.filter((p) => p.id !== targetId));
+
+    try {
+      const res = await deletePgAction(targetId);
+      if (res?.error) {
+        showToast(`Delete failed: ${res.error}`);
+        setPgsList((prev) => [...prev, pgToDelete]);
+        setIsDeletingPg(false);
+        setPgToDelete(null);
+        return;
+      }
+
+      showToast(`PG "${targetName}" and all associated data permanently deleted.`);
+      router.refresh();
+    } catch (err: any) {
+      showToast(`Error: ${err?.message || "Failed to delete PG"}`);
+    } finally {
+      setIsDeletingPg(false);
+      setPgToDelete(null);
     }
   };
 
@@ -429,17 +498,28 @@ export function SuperAdminDashboard({
                     </div>
                   </div>
 
-                  <EditBrandingModal
-                    pg={pg}
-                    triggerButton={
-                      <button
-                        type="button"
-                        className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-extrabold shrink-0 border border-slate-200"
-                      >
-                        Branding
-                      </button>
-                    }
-                  />
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <EditBrandingModal
+                      pg={pg}
+                      triggerButton={
+                        <button
+                          type="button"
+                          className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-extrabold border border-slate-200 transition"
+                        >
+                          Branding
+                        </button>
+                      }
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => setPgToDelete(pg)}
+                      className="p-1 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition"
+                      title="Permanently Delete PG"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 pt-0.5">
@@ -455,27 +535,89 @@ export function SuperAdminDashboard({
                     <button
                       type="button"
                       onClick={() => handleToggleStatus(pg.id, pg.status)}
-                      className={`py-2 rounded-xl text-[11px] font-extrabold transition border ${
+                      className={`py-2 rounded-xl text-[11px] font-extrabold transition border flex items-center justify-center gap-1.5 ${
                         isActive
                           ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
                           : "bg-emerald-600 text-white border-transparent hover:bg-emerald-500 shadow-xs"
                       }`}
                     >
-                      {isActive ? "Suspend Kill-Switch" : "Re-Activate PG"}
+                      {isActive ? (
+                        <>
+                          <Pause className="w-3 h-3 text-rose-600" />
+                          <span>Suspend Membership</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-3 h-3 text-white" />
+                          <span>Re-Activate PG</span>
+                        </>
+                      )}
                     </button>
                   )}
 
                   <button
                     type="button"
                     onClick={() => handleViewAsOwner(pg.name)}
-                    className="py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-extrabold transition"
+                    className="py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-extrabold transition flex items-center justify-center gap-1"
                   >
-                    View as Owner →
+                    <span>View as Owner</span>
+                    <ArrowRight className="w-3 h-3 text-indigo-500" />
                   </button>
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Delete PG Confirmation Modal */}
+      {pgToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl border border-rose-200 dark:border-rose-900/60 shadow-2xl p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 flex items-center justify-center font-bold shrink-0">
+                <Trash2 className="w-5 h-5 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                  Permanently Delete PG?
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  {pgToDelete.name} • /pg/{pgToDelete.slug}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-xs text-rose-800 dark:text-rose-300 space-y-1">
+              <p className="font-bold flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+                This action is destructive and CANNOT be undone.
+              </p>
+              <p className="text-[11px] leading-relaxed">
+                Deleting this PG will permanently erase all associated buildings, rooms, beds, tenant leases, staff credentials, rent payments, security deposits, and complaints from PostgreSQL.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                disabled={isDeletingPg}
+                onClick={() => setPgToDelete(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingPg}
+                onClick={handleConfirmDeletePg}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-500/25 flex items-center gap-1.5 disabled:opacity-50 transition active:scale-95"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isDeletingPg ? "Deleting PG & All Data..." : "Yes, Delete PG Permanently"}</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -597,35 +739,117 @@ export function SuperAdminDashboard({
         </div>
       )}
 
-      {/* TAB 4: BILLING */}
+      {/* TAB 4: BILLING & MEMBERSHIP PLANS */}
       {activeTab === "billing" && (
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-sm">
-          <h3 className="text-xs font-extrabold text-slate-900">
-            Shuny Stays SaaS Subscription Tiers
-          </h3>
+        <div className="space-y-3.5 animate-in fade-in">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+              <div>
+                <h3 className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4 text-indigo-600" />
+                  SaaS Membership Plans & Pricing
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Super Admin can customize plan prices, update bed capacities, and add new tiers.
+                </p>
+              </div>
 
-          <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
-            <div>
-              <strong className="block text-slate-900">Free Trial</strong>
-              <span className="text-[10px] text-slate-400">Up to 30 Beds • 14 Days</span>
+              <PlanManagementModal
+                mode="create"
+                onSuccess={(newPlan) => {
+                  setPlansList((prev) => {
+                    const idx = prev.findIndex((p) => p.id === newPlan.id);
+                    if (idx !== -1) {
+                      const updated = [...prev];
+                      updated[idx] = newPlan;
+                      return updated;
+                    }
+                    return [...prev, newPlan];
+                  });
+                  showToast(`Plan "${newPlan.name}" saved successfully!`);
+                  router.refresh();
+                }}
+              />
             </div>
-            <span className="font-extrabold text-slate-900">₹0</span>
-          </div>
 
-          <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
-            <div>
-              <strong className="block text-slate-900">Starter White-Label</strong>
-              <span className="text-[10px] text-slate-400">Up to 100 Beds • Custom Slug</span>
-            </div>
-            <span className="font-extrabold text-indigo-600">₹999 / mo</span>
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              {plansList.map((plan) => (
+                <div
+                  key={plan.id}
+                  className={`p-3.5 rounded-2xl border transition-all relative ${
+                    plan.badge
+                      ? "border-indigo-200 bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/30 shadow-xs"
+                      : "border-slate-200 bg-slate-50/70"
+                  }`}
+                >
+                  {plan.badge && (
+                    <span className="absolute -top-2 right-3 px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-[9px] font-black uppercase tracking-wider shadow-xs">
+                      {plan.badge}
+                    </span>
+                  )}
 
-          <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
-            <div>
-              <strong className="block text-slate-900">Pro Unlimited</strong>
-              <span className="text-[10px] text-slate-400">Unlimited Beds + Cloud WhatsApp</span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900">{plan.name}</h4>
+                      <div className="flex items-baseline gap-1 mt-1">
+                        <span className="text-base font-black text-indigo-600">
+                          {plan.price === 0 ? "₹0 (Free)" : `₹${plan.price.toLocaleString("en-IN")}`}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-bold">
+                          /{plan.billing_cycle === "14-days" ? "14 days" : plan.billing_cycle}
+                        </span>
+                      </div>
+                      <span className="inline-block mt-0.5 text-[10px] font-bold text-slate-500">
+                        Up to {plan.max_beds} Beds
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <PlanManagementModal
+                        plan={plan}
+                        mode="edit"
+                        onSuccess={(updatedPlan) => {
+                          setPlansList((prev) =>
+                            prev.map((p) => (p.id === updatedPlan.id ? updatedPlan : p))
+                          );
+                          showToast(`Plan "${updatedPlan.name}" updated!`);
+                          router.refresh();
+                        }}
+                      />
+
+                      {plan.id !== "free_trial" && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (confirm(`Are you sure you want to delete plan "${plan.name}"?`)) {
+                              setPlansList((prev) => prev.filter((p) => p.id !== plan.id));
+                              await deleteSubscriptionPlanAction(plan.id);
+                              showToast(`Plan "${plan.name}" deleted.`);
+                              router.refresh();
+                            }
+                          }}
+                          className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                          title="Delete Plan"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {plan.features && plan.features.length > 0 && (
+                    <ul className="mt-2.5 pt-2 border-t border-slate-200/80 space-y-1">
+                      {plan.features.map((feat, idx) => (
+                        <li key={idx} className="flex items-center gap-1.5 text-[10px] text-slate-600 font-medium">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+                          <span>{feat}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
             </div>
-            <span className="font-extrabold text-emerald-600">₹2,499 / mo</span>
           </div>
         </div>
       )}

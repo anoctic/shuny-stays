@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { getAllBroadcasts } from "@/lib/data/broadcasts";
 import { getAllPgs } from "@/lib/data/pgs";
+import { getAllSubscriptionPlans } from "@/lib/data/subscriptions";
 import { SuperAdminDashboard } from "@/components/super-admin/SuperAdminDashboard";
 
 export const runtime = "edge";
@@ -19,12 +20,14 @@ export default async function SuperAdminPage({
 
   const broadcasts = await getAllBroadcasts();
   const pgs = await getAllPgs();
+  const plans = await getAllSubscriptionPlans();
 
   return (
     <Suspense fallback={null}>
       <SuperAdminDashboard
         pgs={pgs}
         broadcasts={broadcasts}
+        plans={plans}
         initialTab={tab}
       />
     </Suspense>
