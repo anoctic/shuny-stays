@@ -13,9 +13,11 @@ export interface TenantProfileItem {
   name: string;
   phone: string;
   parentPhone: string;
+  emergencyContact?: string;
   college: string;
   joinDate: string;
   deposit: number;
+  rent?: number;
   depositStatus: "paid" | "pending" | "refunded" | "partially_refunded";
   depositPaymentMode?: "cash" | "upi" | "bank_transfer";
   depositCollectedByName?: string;
@@ -902,13 +904,16 @@ export async function markBedRentPaid(tenantId: string) {
 
 export async function getAllSecurityDeposits(pgId?: string, buildingId?: string): Promise<SecurityDepositItem[]> {
   try {
+    const session = await getCurrentUserSession();
+    const effectivePgId = pgId || (session.role !== "super_admin" ? session.pg_id : undefined);
+
     const admin = createAdminClient();
     let query = db(admin, "security_deposits")
       .select("*, buildings ( name ), tenants ( full_name )")
       .order("created_at", { ascending: false });
 
-    if (pgId) {
-      query = query.eq("pg_id", pgId);
+    if (effectivePgId) {
+      query = query.eq("pg_id", effectivePgId);
     }
     if (buildingId && buildingId !== "all") {
       query = query.eq("building_id", buildingId);
@@ -1108,13 +1113,16 @@ export async function refundSecurityDeposit(params: {
 
 export async function getAllRentPayments(pgId?: string, buildingId?: string): Promise<RentPaymentRecord[]> {
   try {
+    const session = await getCurrentUserSession();
+    const effectivePgId = pgId || (session.role !== "super_admin" ? session.pg_id : undefined);
+
     const admin = createAdminClient();
     let query = db(admin, "rent_payments")
       .select("*, tenants ( full_name )")
       .order("created_at", { ascending: false });
 
-    if (pgId) {
-      query = query.eq("pg_id", pgId);
+    if (effectivePgId) {
+      query = query.eq("pg_id", effectivePgId);
     }
     if (buildingId && buildingId !== "all") {
       query = query.eq("building_id", buildingId);
@@ -1351,9 +1359,12 @@ export async function settleRentPaymentWithOwner(params: {
 
 export async function getExpenses(pgId?: string, buildingId?: string): Promise<ExpenseItem[]> {
   try {
+    const session = await getCurrentUserSession();
+    const effectivePgId = pgId || (session.role !== "super_admin" ? session.pg_id : undefined);
+
     const admin = createAdminClient();
     let query = db(admin, "expenses").select("*").order("expense_date", { ascending: false });
-    if (pgId) query = query.eq("pg_id", pgId);
+    if (effectivePgId) query = query.eq("pg_id", effectivePgId);
     if (buildingId && buildingId !== "all") query = query.eq("building_id", buildingId);
     const { data, error } = await query;
     if (!error && data) {
@@ -1422,13 +1433,16 @@ export async function logExpense(category: string, amount: number, scope: string
 
 export async function getUpiApprovals(pgId?: string): Promise<UpiApprovalItem[]> {
   try {
+    const session = await getCurrentUserSession();
+    const effectivePgId = pgId || (session.role !== "super_admin" ? session.pg_id : undefined);
+
     const admin = createAdminClient();
     let query = db(admin, "rent_payments")
       .select("*, tenants(full_name)")
       .in("payment_mode", ["admin_upi", "pg_bank_upi", "upi"])
       .order("created_at", { ascending: false });
 
-    if (pgId) query = query.eq("pg_id", pgId);
+    if (effectivePgId) query = query.eq("pg_id", effectivePgId);
 
     const { data } = await query;
     if (data && data.length > 0) {
@@ -1500,12 +1514,19 @@ export async function toggleStaffPermission(staffId: string, permKey: string) {
   return { success: true };
 }
 
-export async function getComplaints(): Promise<ComplaintItem[]> {
+export async function getComplaints(pgId?: string): Promise<ComplaintItem[]> {
   try {
+    const session = await getCurrentUserSession();
+    const effectivePgId = pgId || (session.role !== "super_admin" ? session.pg_id : undefined);
+
     const admin = createAdminClient();
-    const { data } = await db(admin, "complaints")
+    let query = db(admin, "complaints")
       .select("*, tenants ( full_name ), rooms ( room_number )")
       .order("created_at", { ascending: false });
+
+    if (effectivePgId) query = query.eq("pg_id", effectivePgId);
+
+    const { data } = await query;
     if (data && data.length > 0) {
       return (data as any[]).map((c: any) => ({
         id: c.id,
@@ -1818,6 +1839,219 @@ export async function submitVacateNotice(
     entity_id: effectiveTenantId,
     created_at: new Date().toISOString(),
   });
+
+  return { success: true };
+}
+
+// --- DELETE & REASSIGN PROPERTY FUNCTIONS (OWNER & SUPER ADMIN ONLY) ---
+
+export async function deleteBuilding(buildingId: string) {
+  const admin = createAdminClient();
+  const session = await getCurrentUserSession();
+
+  const { data: bldg } = await db(admin, "buildings")
+    .select("id, pg_id, name")
+    .eq("id", buildingId)
+    .maybeSingle();
+
+  if (!bldg) throw new Error("Building not found.");
+
+  if (session.role !== "super_admin" && session.pg_id && bldg.pg_id !== session.pg_id) {
+    throw new Error("Unauthorized to delete this building.");
+  }
+
+  // Check for active occupied beds
+  const { data: occupiedBeds } = await db(admin, "beds")
+    .select("id, status")
+    .eq("building_id", buildingId)
+    .eq("status", "occupied");
+
+  if (occupiedBeds && occupiedBeds.length > 0) {
+    throw new Error(
+      `Cannot delete building "${bldg.name}". There are ${occupiedBeds.length} active resident(s) staying in this building. Please vacate or shift them first.`
+    );
+  }
+
+  const { error } = await db(admin, "buildings").delete().eq("id", buildingId);
+  if (error) {
+    console.error("deleteBuilding error:", error);
+    throw new Error(`Failed to delete building: ${error.message}`);
+  }
+
+  return { success: true };
+}
+
+export async function deleteFloor(floorId: string) {
+  const admin = createAdminClient();
+
+  const { data: floor } = await db(admin, "floors")
+    .select("id, building_id, floor_name")
+    .eq("id", floorId)
+    .maybeSingle();
+
+  if (!floor) throw new Error("Floor not found.");
+
+  const { data: rooms } = await db(admin, "rooms")
+    .select("id")
+    .eq("floor_id", floorId);
+
+  const roomIds = (rooms || []).map((r: any) => r.id);
+  if (roomIds.length > 0) {
+    const { data: occupiedBeds } = await db(admin, "beds")
+      .select("id")
+      .in("room_id", roomIds)
+      .eq("status", "occupied");
+
+    if (occupiedBeds && occupiedBeds.length > 0) {
+      throw new Error(
+        `Cannot delete floor "${floor.floor_name}". There are ${occupiedBeds.length} active resident(s) on this floor. Please vacate or shift them first.`
+      );
+    }
+  }
+
+  const { error } = await db(admin, "floors").delete().eq("id", floorId);
+  if (error) {
+    console.error("deleteFloor error:", error);
+    throw new Error(`Failed to delete floor: ${error.message}`);
+  }
+
+  return { success: true };
+}
+
+export async function deleteRoom(roomId: string) {
+  const admin = createAdminClient();
+
+  const { data: room } = await db(admin, "rooms")
+    .select("id, room_number")
+    .eq("id", roomId)
+    .maybeSingle();
+
+  if (!room) throw new Error("Room not found.");
+
+  const { data: occupiedBeds } = await db(admin, "beds")
+    .select("id")
+    .eq("room_id", roomId)
+    .eq("status", "occupied");
+
+  if (occupiedBeds && occupiedBeds.length > 0) {
+    throw new Error(
+      `Cannot delete Room ${room.room_number}. There are ${occupiedBeds.length} active resident(s) in this room. Please vacate or shift them first.`
+    );
+  }
+
+  const { error } = await db(admin, "rooms").delete().eq("id", roomId);
+  if (error) {
+    console.error("deleteRoom error:", error);
+    throw new Error(`Failed to delete room: ${error.message}`);
+  }
+
+  return { success: true };
+}
+
+export async function deleteBed(bedId: string) {
+  const admin = createAdminClient();
+
+  const { data: bed } = await db(admin, "beds")
+    .select("id, bed_name, status")
+    .eq("id", bedId)
+    .maybeSingle();
+
+  if (!bed) throw new Error("Bed not found.");
+
+  if (bed.status === "occupied") {
+    throw new Error("Cannot delete an occupied bed. Please vacate or shift the resident first.");
+  }
+
+  const { error } = await db(admin, "beds").delete().eq("id", bedId);
+  if (error) {
+    console.error("deleteBed error:", error);
+    throw new Error(`Failed to delete bed: ${error.message}`);
+  }
+
+  return { success: true };
+}
+
+export async function updateTenantAndBed(
+  tenantId: string,
+  params: {
+    fullName: string;
+    phone: string;
+    emergencyPhone?: string;
+    rentAmount: number;
+    depositAmount: number;
+    newBedId?: string;
+  }
+) {
+  const admin = createAdminClient();
+
+  const { data: tenant } = await db(admin, "tenants")
+    .select("id, user_id, bed_id, room_id, building_id, full_name")
+    .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
+    .maybeSingle();
+
+  if (!tenant) throw new Error("Resident record not found.");
+
+  const effectiveTenantId = tenant.id;
+  const currentBedId = tenant.bed_id;
+  const targetBedId = params.newBedId;
+
+  // Handle Bed Transfer if targetBedId is provided and different
+  if (targetBedId && targetBedId !== currentBedId) {
+    const { data: targetBed } = await db(admin, "beds")
+      .select("id, room_id, building_id, status")
+      .eq("id", targetBedId)
+      .maybeSingle();
+
+    if (!targetBed) throw new Error("Target bed does not exist.");
+    if (targetBed.status === "occupied") {
+      throw new Error("Target bed is already occupied. Please select a vacant bed.");
+    }
+
+    if (currentBedId) {
+      await db(admin, "beds").update({ status: "vacant" }).eq("id", currentBedId);
+    }
+
+    await db(admin, "beds").update({ status: "occupied" }).eq("id", targetBedId);
+
+    await db(admin, "tenants")
+      .update({
+        bed_id: targetBed.id,
+        room_id: targetBed.room_id,
+        building_id: targetBed.building_id,
+      })
+      .eq("id", effectiveTenantId);
+  }
+
+  const cleanPhone = params.phone.replace(/[^0-9]/g, "");
+  const updatePayload: any = {
+    full_name: params.fullName.trim(),
+    phone: cleanPhone,
+    rent_amount: params.rentAmount,
+    deposit_amount: params.depositAmount,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (params.emergencyPhone !== undefined) {
+    updatePayload.emergency_contact_phone = params.emergencyPhone.replace(/[^0-9]/g, "");
+  }
+
+  const { error: tenantErr } = await db(admin, "tenants")
+    .update(updatePayload)
+    .eq("id", effectiveTenantId);
+
+  if (tenantErr) {
+    throw new Error(`Failed to update resident details: ${tenantErr.message}`);
+  }
+
+  if (tenant.user_id) {
+    await db(admin, "profiles")
+      .update({
+        full_name: params.fullName.trim(),
+        phone: cleanPhone,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", tenant.user_id);
+  }
 
   return { success: true };
 }

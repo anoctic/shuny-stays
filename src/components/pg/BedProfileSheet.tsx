@@ -22,6 +22,7 @@ import {
   ArrowRight,
   Send,
   AlertTriangle,
+  Edit3,
 } from "lucide-react";
 import { TenantProfileItem, BuildingItem, FloorItem, RoomItem, BedItem, RentPaymentRecord } from "@/lib/data/rooms";
 import {
@@ -31,6 +32,7 @@ import {
   settleRentPaymentAction,
   collectSecurityDepositAction,
   refundSecurityDepositAction,
+  updateTenantAndBedAction,
 } from "@/app/actions/rooms-and-ops";
 import { RentReceiptModal } from "@/components/tenant/RentReceiptModal";
 import { DepositReceiptModal } from "@/components/tenant/DepositReceiptModal";
@@ -46,6 +48,7 @@ interface BedProfileSheetProps {
   bedIdx: number;
   userRole: "owner" | "admin" | "super_admin" | "tenant";
   initialTemplate?: "rent_reminder" | "welcome_info" | "custom";
+  allBuildings?: BuildingItem[];
 }
 
 export function BedProfileSheet({
@@ -59,6 +62,7 @@ export function BedProfileSheet({
   bedIdx,
   userRole,
   initialTemplate = "rent_reminder",
+  allBuildings = [],
 }: BedProfileSheetProps) {
   const router = useRouter();
   const [whatsappTemplate, setWhatsappTemplate] = useState<"rent_reminder" | "welcome_info" | "custom">(initialTemplate);
@@ -67,6 +71,16 @@ export function BedProfileSheet({
   const [vacateConfirmStep, setVacateConfirmStep] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // Edit Resident & Bed Transfer State (Owner Only)
+  const [isEditingResident, setIsEditingResident] = useState(false);
+  const [editFullName, setEditFullName] = useState(bed.tenant?.name || "");
+  const [editPhone, setEditPhone] = useState(bed.tenant?.phone || "");
+  const [editEmergencyPhone, setEditEmergencyPhone] = useState(bed.tenant?.parentPhone || "");
+  const [editRent, setEditRent] = useState<number>(bed.tenant?.rent || room.rent || 8500);
+  const [editDeposit, setEditDeposit] = useState<number>(bed.tenant?.deposit || 8500);
+  const [selectedTargetBedId, setSelectedTargetBedId] = useState<string>(bed.id);
+  const [isSavingResident, setIsSavingResident] = useState(false);
 
   // Collect Rent State
   const [isCollectingRent, setIsCollectingRent] = useState(false);
@@ -86,16 +100,64 @@ export function BedProfileSheet({
   const [deductionReason, setDeductionReason] = useState("");
 
   // Pending Handover state on this bed
-  const [isHandoverPending, setIsHandoverPending] = useState(
-    bed.tenant?.id === "t-rahul" || bed.tenant?.id === "t-karan"
-  );
+  const [isHandoverPending, setIsHandoverPending] = useState(false);
 
   if (!isOpen || !bed.tenant) return null;
 
   const t = bed.tenant;
-  const isOwner = userRole === "owner";
+  const isOwner = userRole === "owner" || userRole === "super_admin";
   const isAdmin = userRole === "admin";
   const nowTime = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+
+  // List of available beds for transfer
+  const availableBeds = (allBuildings.length > 0 ? allBuildings : [building]).flatMap((b) =>
+    b.floors.flatMap((f) =>
+      f.rooms.flatMap((r) =>
+        r.beds
+          .filter((ob) => !ob.occupied || ob.id === bed.id)
+          .map((ob) => ({
+            id: ob.id,
+            label: `${b.name} • Room ${r.number} - Bed ${ob.label}`,
+            roomId: r.id,
+            buildingId: b.id,
+            rent: r.rent,
+            isCurrent: ob.id === bed.id,
+          }))
+      )
+    )
+  );
+
+  const handleSaveResidentEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingResident(true);
+    try {
+      const res = await updateTenantAndBedAction(t.id, {
+        fullName: editFullName,
+        phone: editPhone,
+        emergencyPhone: editEmergencyPhone,
+        rentAmount: editRent,
+        depositAmount: editDeposit,
+        newBedId: selectedTargetBedId !== bed.id ? selectedTargetBedId : undefined,
+      });
+
+      if ("error" in res && res.error) {
+        setToastMsg(`Error: ${res.error}`);
+      } else {
+        t.name = editFullName;
+        t.phone = editPhone;
+        t.emergencyContact = editEmergencyPhone;
+        t.rent = editRent;
+        t.deposit = editDeposit;
+        setToastMsg("Resident details & bed allocation saved live!");
+        setIsEditingResident(false);
+        router.refresh();
+      }
+    } catch (err: any) {
+      setToastMsg(`Error: ${err?.message || "Failed to update resident."}`);
+    } finally {
+      setIsSavingResident(false);
+    }
+  };
 
   // Build WhatsApp Message
   const getWhatsappMessage = () => {
@@ -305,6 +367,133 @@ export function BedProfileSheet({
               <span>Gate Pass</span>
             </button>
           </div>
+
+          {/* Owner Only: Edit Resident Details & Bed Transfer Trigger */}
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => setIsEditingResident(!isEditingResident)}
+              className="w-full py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-black flex items-center justify-center gap-1.5 transition active:scale-98"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-indigo-600" />
+              <span>{isEditingResident ? "Close Resident Editor" : "Edit Resident Details & Transfer Bed"}</span>
+            </button>
+          )}
+
+          {/* Owner Only: Edit Resident Details & Bed Transfer Form */}
+          {isOwner && isEditingResident && (
+            <form onSubmit={handleSaveResidentEdit} className="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-200 space-y-3 animate-in fade-in">
+              <div className="flex items-center justify-between pb-1 border-b border-indigo-100">
+                <span className="text-xs font-black text-indigo-950 flex items-center gap-1.5">
+                  <Edit3 className="w-3.5 h-3.5 text-indigo-600" />
+                  Edit Resident Profile & Bed Transfer
+                </span>
+                <span className="text-[9.5px] font-bold text-indigo-600 uppercase">PG Owner Control</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                    Resident Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editFullName}
+                    onChange={(e) => setEditFullName(e.target.value)}
+                    required
+                    className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    required
+                    className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                    Parent / Emergency Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={editEmergencyPhone}
+                    onChange={(e) => setEditEmergencyPhone(e.target.value)}
+                    placeholder="Parent / Emergency Contact"
+                    className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                    Monthly Rent (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={editRent}
+                    onChange={(e) => setEditRent(Number(e.target.value))}
+                    required
+                    className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                    Security Deposit (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={editDeposit}
+                    onChange={(e) => setEditDeposit(Number(e.target.value))}
+                    required
+                    className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                    Bed Allocation (Shift Resident)
+                  </label>
+                  <select
+                    value={selectedTargetBedId}
+                    onChange={(e) => setSelectedTargetBedId(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white"
+                  >
+                    {availableBeds.map((ob) => (
+                      <option key={ob.id} value={ob.id}>
+                        {ob.isCurrent ? `[Current Bed] ${ob.label}` : `→ Shift to: ${ob.label} (₹${ob.rent})`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingResident(false)}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingResident}
+                  className="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black flex items-center gap-1.5 shadow-xs transition disabled:opacity-50"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{isSavingResident ? "Saving..." : "Save & Update Allocation"}</span>
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* AMBER ALERT BANNER: PENDING CASH HANDOVER TO OWNER */}
           {isHandoverPending && (

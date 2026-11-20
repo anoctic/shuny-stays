@@ -2,11 +2,14 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentUserSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { Building } from "@/types/schema.types";
 import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
+import { getPlatformBillingSettings } from "@/lib/data/billing-settings";
 import { RealtimeSyncSubscriber } from "@/components/common/RealtimeSyncSubscriber";
+import { SubscriptionStatusGuard } from "@/components/dashboard/SubscriptionStatusGuard";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -63,6 +66,44 @@ export default async function DashboardLayout({
   }
 
   const broadcasts = await getActiveBroadcastsForRole(session.role);
+  const platformSettings = await getPlatformBillingSettings();
+
+  // Fetch PG subscription status & expiry for lock/expiry guard
+  let pgDetails = {
+    id: session.pg_id || "default",
+    name: session.pg_name || "My PG Property",
+    status: "active" as "active" | "pending" | "suspended",
+    plan_expires_at: null as string | null,
+    plan_price: 1999,
+    plan_benefits: [] as string[],
+  };
+
+  if (session.pg_id) {
+    try {
+      const admin = createAdminClient();
+      const { data: dbPg } = await (admin.from("pgs" as any) as any)
+        .select("id, name, status, plan_expires_at, plan_price, plan_benefits")
+        .eq("id", session.pg_id)
+        .maybeSingle();
+
+      if (dbPg) {
+        pgDetails = {
+          id: dbPg.id,
+          name: dbPg.name || session.pg_name || "My PG Property",
+          status: dbPg.status || "active",
+          plan_expires_at: dbPg.plan_expires_at || null,
+          plan_price: Number(dbPg.plan_price) || 1999,
+          plan_benefits: Array.isArray(dbPg.plan_benefits)
+            ? dbPg.plan_benefits
+            : typeof dbPg.plan_benefits === "string"
+            ? JSON.parse(dbPg.plan_benefits || "[]")
+            : [],
+        };
+      }
+    } catch (err) {
+      console.warn("Could not fetch PG subscription details in layout:", err);
+    }
+  }
 
   return (
     <div className="flex-1 flex flex-col min-h-screen">
@@ -79,7 +120,15 @@ export default async function DashboardLayout({
           "mess_menu",
           "gate_passes",
           "platform_broadcasts",
+          "pgs",
+          "platform_billing_settings",
+          "pg_subscription_requests",
         ]}
+      />
+      <SubscriptionStatusGuard
+        pg={pgDetails}
+        platformSettings={platformSettings}
+        userRole={session.role as "owner" | "admin"}
       />
       <MobileTopHeader
         fullName={session.full_name}

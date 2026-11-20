@@ -14,11 +14,13 @@ export const revalidate = 0;
 
 export default async function LedgerPage() {
   const session = await getCurrentUserSession();
+  const effectivePgId = session.role === "super_admin" ? undefined : (session.pg_id || undefined);
+
   const buildings = await getAllBuildings();
-  const expenses = await getExpenses();
-  const upiApprovals = await getUpiApprovals();
-  const deposits = await getAllSecurityDeposits();
-  const rentPayments = await getAllRentPayments();
+  const expenses = await getExpenses(effectivePgId);
+  const upiApprovals = await getUpiApprovals(effectivePgId);
+  const deposits = await getAllSecurityDeposits(effectivePgId);
+  const rentPayments = await getAllRentPayments(effectivePgId);
 
   return (
     <LedgerExplorer

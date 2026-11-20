@@ -41,8 +41,12 @@ function resolveAnonKey(): string {
 }
 
 function cleanFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  if (init && init.headers) {
-    const rawHeaders = init.headers as any;
+  const mergedInit: RequestInit = {
+    ...init,
+    cache: "no-store",
+  };
+  if (mergedInit.headers) {
+    const rawHeaders = mergedInit.headers as any;
     const cleanHeaders: Record<string, string> = {};
     if (typeof rawHeaders.forEach === "function") {
       rawHeaders.forEach((val: string, key: string) => {
@@ -59,9 +63,9 @@ function cleanFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Respo
         }
       }
     }
-    init.headers = cleanHeaders;
+    mergedInit.headers = cleanHeaders;
   }
-  return fetch(input, init);
+  return fetch(input, mergedInit);
 }
 
 export async function createClient() {

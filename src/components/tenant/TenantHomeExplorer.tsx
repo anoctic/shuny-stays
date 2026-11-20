@@ -100,7 +100,7 @@ export function TenantHomeExplorer({
   broadcasts = [],
 }: TenantHomeExplorerProps) {
   const router = useRouter();
-  useRealtimeSync(["tenants", "payments", "complaints", "rooms"]);
+  useRealtimeSync(["tenants", "payments", "complaints", "rooms", "attendance_logs"]);
 
   const [showHistory, setShowHistory] = useState(false);
   const [kycStatus, setKycStatus] = useState<"Verified" | "Pending">(initialKycStatus);

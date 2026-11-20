@@ -33,6 +33,13 @@ import {
   SubscriptionPlanItem,
   DEFAULT_SUBSCRIPTION_PLANS,
 } from "@/types/subscription.types";
+import {
+  PlatformBillingSettings,
+  PgSubscriptionRequest,
+  DEFAULT_PLATFORM_BILLING_SETTINGS,
+} from "@/lib/data/billing-settings";
+import { PlatformBillingCard } from "@/components/super-admin/PlatformBillingCard";
+import { EditPgPlanModal } from "@/components/super-admin/EditPgPlanModal";
 import { PlanManagementModal } from "@/components/super-admin/PlanManagementModal";
 import { OnboardPgModal } from "@/components/super-admin/OnboardPgModal";
 import { EditBrandingModal } from "@/components/super-admin/EditBrandingModal";
@@ -55,6 +62,8 @@ interface SuperAdminDashboardProps {
   pgs: PgDetailItem[];
   broadcasts: PlatformBroadcast[];
   plans?: SubscriptionPlanItem[];
+  billingSettings?: PlatformBillingSettings;
+  subscriptionRequests?: PgSubscriptionRequest[];
   initialTab?: "overview" | "pgs" | "broadcast" | "billing" | "settings";
 }
 
@@ -62,11 +71,19 @@ export function SuperAdminDashboard({
   pgs: initialPgs,
   broadcasts: initialBroadcasts,
   plans: initialPlans,
+  billingSettings,
+  subscriptionRequests,
   initialTab = "overview",
 }: SuperAdminDashboardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  useRealtimeSync(["pgs", "profiles", "subscription_plans"]);
+  useRealtimeSync([
+    "pgs",
+    "profiles",
+    "subscription_plans",
+    "platform_billing_settings",
+    "pg_subscription_requests",
+  ]);
 
   const tabFromQuery = searchParams?.get("tab") as
     | "overview"
@@ -519,10 +536,29 @@ export function SuperAdminDashboard({
                       <div className="text-[10px] text-slate-400 truncate mt-0.5">
                         /pg/{pg.slug} • {pg.owner_name} • {pg.subscription_tier}
                       </div>
+                      <div className="flex items-center gap-2 mt-1 text-[10px]">
+                        <span className="font-bold text-slate-600">
+                          Expires:{" "}
+                          <strong className={pg.plan_expires_at && new Date(pg.plan_expires_at) < new Date() ? "text-rose-600" : "text-slate-800"}>
+                            {pg.plan_expires_at
+                              ? new Date(pg.plan_expires_at).toLocaleDateString("en-IN", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                })
+                              : "30 Days"}
+                          </strong>
+                        </span>
+                        <span>•</span>
+                        <span className="font-bold text-indigo-600">
+                          ₹{pg.plan_price || 1999}/mo
+                        </span>
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
+                    <EditPgPlanModal pg={pg} />
                     <EditBrandingModal
                       pg={pg}
                       triggerButton={
@@ -776,6 +812,11 @@ export function SuperAdminDashboard({
       {/* TAB 4: BILLING & MEMBERSHIP PLANS */}
       {activeTab === "billing" && (
         <div className="space-y-3.5 animate-in fade-in">
+          <PlatformBillingCard
+            initialSettings={billingSettings || DEFAULT_PLATFORM_BILLING_SETTINGS}
+            initialRequests={subscriptionRequests || []}
+          />
+
           <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-3">
             <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
               <div>

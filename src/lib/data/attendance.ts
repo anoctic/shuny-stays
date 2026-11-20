@@ -237,9 +237,28 @@ export async function getTenantAttendanceStatus(tenantId: string) {
   const supabase = await createClient();
   const todayStr = new Date().toISOString().split("T")[0];
 
+  // Resolve matching tenant records (tenantId might be tenants.id OR profiles.id/user_id)
+  const targetIds: string[] = [tenantId];
+  try {
+    const { data: tenantRec } = await (supabase.from("tenants" as any) as any)
+      .select("id, user_id")
+      .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (tenantRec?.id && !targetIds.includes(tenantRec.id)) {
+      targetIds.push(tenantRec.id);
+    }
+    if (tenantRec?.user_id && !targetIds.includes(tenantRec.user_id)) {
+      targetIds.push(tenantRec.user_id);
+    }
+  } catch (err) {
+    console.warn("Tenant lookup in getTenantAttendanceStatus:", err);
+  }
+
   const { data: logs } = await (supabase.from("attendance_logs" as any) as any)
     .select("attendance_date, status, updated_at, marked_by")
-    .eq("tenant_id", tenantId)
+    .in("tenant_id", targetIds)
     .order("attendance_date", { ascending: false })
     .limit(30);
 

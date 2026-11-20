@@ -463,3 +463,117 @@ export async function submitVacateNoticeAction(formData: FormData) {
   revalidatePath("/dashboard/ops");
   return res;
 }
+
+
+/**
+ * PG Owner Action: Delete Building Block (Vacant only)
+ */
+export async function deleteBuildingAction(buildingId: string) {
+  const session = await getCurrentUserSession();
+  if (session.role !== "owner" && session.role !== "super_admin") {
+    return { error: "Unauthorized: Only PG Owner or Super Admin can delete buildings." };
+  }
+  try {
+    const { deleteBuilding } = await import("@/lib/data/rooms");
+    const res = await deleteBuilding(buildingId);
+    revalidatePath("/dashboard/rooms");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/attendance");
+    revalidatePath("/dashboard/ledger");
+    return res;
+  } catch (err: any) {
+    return { error: err?.message || "Failed to delete building." };
+  }
+}
+
+/**
+ * PG Owner Action: Delete Floor (Vacant only)
+ */
+export async function deleteFloorAction(floorId: string) {
+  const session = await getCurrentUserSession();
+  if (session.role !== "owner" && session.role !== "super_admin") {
+    return { error: "Unauthorized: Only PG Owner or Super Admin can delete floors." };
+  }
+  try {
+    const { deleteFloor } = await import("@/lib/data/rooms");
+    const res = await deleteFloor(floorId);
+    revalidatePath("/dashboard/rooms");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/attendance");
+    return res;
+  } catch (err: any) {
+    return { error: err?.message || "Failed to delete floor." };
+  }
+}
+
+/**
+ * PG Owner Action: Delete Room (Vacant only)
+ */
+export async function deleteRoomAction(roomId: string) {
+  const session = await getCurrentUserSession();
+  if (session.role !== "owner" && session.role !== "super_admin") {
+    return { error: "Unauthorized: Only PG Owner or Super Admin can delete rooms." };
+  }
+  try {
+    const { deleteRoom } = await import("@/lib/data/rooms");
+    const res = await deleteRoom(roomId);
+    revalidatePath("/dashboard/rooms");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/attendance");
+    return res;
+  } catch (err: any) {
+    return { error: err?.message || "Failed to delete room." };
+  }
+}
+
+/**
+ * PG Owner Action: Delete Bed (Vacant only)
+ */
+export async function deleteBedAction(bedId: string) {
+  const session = await getCurrentUserSession();
+  if (session.role !== "owner" && session.role !== "super_admin") {
+    return { error: "Unauthorized: Only PG Owner or Super Admin can delete beds." };
+  }
+  try {
+    const { deleteBed } = await import("@/lib/data/rooms");
+    const res = await deleteBed(bedId);
+    revalidatePath("/dashboard/rooms");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/attendance");
+    return res;
+  } catch (err: any) {
+    return { error: err?.message || "Failed to delete bed." };
+  }
+}
+
+/**
+ * PG Owner Action: Edit Resident Details and Reassign / Transfer Bed
+ */
+export async function updateTenantAndBedAction(
+  tenantId: string,
+  data: {
+    fullName: string;
+    phone: string;
+    emergencyPhone?: string;
+    rentAmount: number;
+    depositAmount: number;
+    newBedId?: string;
+  }
+) {
+  const session = await getCurrentUserSession();
+  if (session.role !== "owner" && session.role !== "super_admin") {
+    return { error: "Unauthorized: Only PG Owner or Super Admin can edit resident details or reassign beds." };
+  }
+  try {
+    const { updateTenantAndBed } = await import("@/lib/data/rooms");
+    const res = await updateTenantAndBed(tenantId, data);
+    revalidatePath("/dashboard/rooms");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/attendance");
+    revalidatePath("/dashboard/ledger");
+    revalidatePath("/tenant");
+    return res;
+  } catch (err: any) {
+    return { error: err?.message || "Failed to update resident details." };
+  }
+}

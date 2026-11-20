@@ -14,6 +14,9 @@ export interface PgDetailItem {
   status: "active" | "pending" | "suspended";
   subscription_tier: "Free Trial" | "Starter" | "Pro" | "Enterprise";
   subscription_valid_until?: string | null;
+  plan_expires_at?: string | null;
+  plan_price?: number;
+  plan_benefits?: string[];
   buildings_count: number;
   beds_count: number;
   residents_count: number;
@@ -41,6 +44,9 @@ export async function getAllPgs(): Promise<PgDetailItem[]> {
         status,
         subscription_tier,
         subscription_valid_until,
+        plan_expires_at,
+        plan_price,
+        plan_benefits,
         created_at
       `)
       .order("created_at", { ascending: false });
@@ -115,6 +121,19 @@ export async function getAllPgs(): Promise<PgDetailItem[]> {
         status: (d.status || "active") as any,
         subscription_tier: tier,
         subscription_valid_until: d.subscription_valid_until,
+        plan_expires_at: d.plan_expires_at || d.subscription_valid_until || null,
+        plan_price: Number(d.plan_price) || 1999,
+        plan_benefits: Array.isArray(d.plan_benefits)
+          ? d.plan_benefits
+          : typeof d.plan_benefits === "string"
+          ? JSON.parse(d.plan_benefits || "[]")
+          : [
+              "Full White-label Branding",
+              "Automated WhatsApp Rent Reminders",
+              "Live Attendance & Gate Pass System",
+              "2-Step Cash & UPI Ledger Settlement",
+              "Instant Real-Time Multi-Building Management",
+            ],
         buildings_count: bldgCounts[d.id] || 1,
         beds_count: bedCounts[d.id] || 12,
         residents_count: residentCounts[d.id] || 0,
