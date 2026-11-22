@@ -1,0 +1,132 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { getCurrentUserSession } from "@/lib/auth/session";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  toggleMealPoll,
+  submitTenantMealVote,
+  getTodayDateIST,
+} from "@/lib/data/meal-polls";
+
+/**
+ * Super Admin, PG Owner, or PG Admin (Warden):
+ * Toggle meal poll ON or OFF, or adjust the cut-off time (default preset 10:00 AM)
+ */
+export async function toggleMealPollAction(
+  pgId: string,
+  isActive: boolean,
+  cutoffTime: string = "10:00",
+  mealType: string = "lunch",
+  title?: string
+) {
+  const session = await getCurrentUserSession();
+
+  // Authorize: Super Admin, PG Owner, or Admin
+  const isAuthorized =
+    session.role === "super_admin" ||
+    session.role === "owner" ||
+    session.role === "admin" ||
+    session.is_super_admin;
+
+  if (!isAuthorized) {
+    return { error: "Unauthorized: Only PG Owner or Admin can manage meal polls." };
+  }
+
+  const effectivePgId = pgId || session.pg_id;
+  if (!effectivePgId) {
+    return { error: "Missing PG identifier." };
+  }
+
+  try {
+    const updated = await toggleMealPoll({
+      pgId: effectivePgId,
+      isActive,
+      cutoffTime: cutoffTime || "10:00",
+      mealType,
+      title: title || "Dopahar Ka Khana (Lunch Poll)",
+      userId: session.id,
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/mess");
+    revalidatePath("/tenant");
+    revalidatePath("/tenant/mess");
+
+    return {
+      success: true,
+      poll: updated,
+      message: isActive
+        ? `Lunch poll started! Cut-off time set to ${cutoffTime} AM.`
+        : "Lunch poll has been deactivated.",
+    };
+  } catch (err: any) {
+    console.error("toggleMealPollAction error:", err);
+    return { error: err?.message || "Failed to update meal poll." };
+  }
+}
+
+/**
+ * Tenant Action: Submit or change vote on the meal poll (Yes or No)
+ */
+export async function voteMealPollAction(
+  pollId: string,
+  vote: "yes" | "no",
+  providedTenantId?: string
+) {
+  const session = await getCurrentUserSession();
+  const admin = createAdminClient();
+
+  let resolvedTenantId = providedTenantId;
+
+  // If tenant ID not directly passed, resolve it from session.id or tenants table
+  if (!resolvedTenantId) {
+    const { data: tenantRecord } = await (admin.from("tenants" as any) as any)
+      .select("id, pg_id")
+      .or(`user_id.eq.${session.id},id.eq.${session.id}`)
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+
+    if (tenantRecord?.id) {
+      resolvedTenantId = tenantRecord.id;
+    } else {
+      // Fallback: If in demo mode or tenant record id matches session
+      resolvedTenantId = session.id;
+    }
+  }
+
+  if (!resolvedTenantId) {
+    return { error: "Unable to identify tenant record for voting." };
+  }
+
+  try {
+    const res = await submitTenantMealVote(
+      pollId,
+      resolvedTenantId,
+      vote,
+      session.id
+    );
+
+    if (res.error) {
+      return { error: res.error };
+    }
+
+    revalidatePath("/tenant");
+    revalidatePath("/tenant/mess");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/mess");
+
+    return {
+      success: true,
+      vote: res.vote,
+      message:
+        vote === "yes"
+          ? "✅ Vote recorded: YES (Lunch Confirmed)!"
+          : "❌ Vote recorded: NO (Not Eating).",
+    };
+  } catch (err: any) {
+    console.error("voteMealPollAction error:", err);
+    return { error: err?.message || "Failed to submit vote." };
+  }
+}

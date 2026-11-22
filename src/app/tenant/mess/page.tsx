@@ -1,12 +1,21 @@
 import { Utensils, Clock } from "lucide-react";
 import { getMessMenu } from "@/lib/data/rooms";
+import { getCurrentUserSession } from "@/lib/auth/session";
+import { getTenantMealPollStatus } from "@/lib/data/meal-polls";
+import { TenantMealPollCard } from "@/components/mess/TenantMealPollCard";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function TenantMessPage() {
-  const menuData = await getMessMenu();
+  const session = await getCurrentUserSession();
+  const pgId = session.pg_id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
+
+  const [menuData, pollStatus] = await Promise.all([
+    getMessMenu(),
+    getTenantMealPollStatus(pgId, session.id, "lunch"),
+  ]);
 
   const meals = [
     { meal: "Breakfast", time: "7:30 AM - 9:30 AM", items: menuData.breakfast, special: false },
@@ -18,11 +27,25 @@ export default async function TenantMessPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-black text-slate-900 dark:text-white">Mess Menu</h1>
-        <p className="text-xs text-slate-400">Live dining schedule from Supabase</p>
+        <h1 className="text-lg font-black text-slate-900 dark:text-white">Mess & Dining</h1>
+        <p className="text-xs text-slate-400">Vote for lunch and view today's meal schedule</p>
       </div>
 
+      {/* TENANT LUNCH HEADCOUNT POLL CARD */}
+      {pollStatus.poll && (
+        <TenantMealPollCard
+          poll={pollStatus.poll}
+          isCutoffPassed={pollStatus.isCutoffPassed}
+          initialVote={pollStatus.tenantVote}
+          tenantId={session.id}
+        />
+      )}
+
+      {/* WEEKLY DINING SCHEDULE */}
       <div className="space-y-2.5">
+        <h2 className="text-xs font-black uppercase tracking-wider text-slate-400 pt-1">
+          Daily Dining Schedule
+        </h2>
         {meals.map((m) => (
           <div
             key={m.meal}

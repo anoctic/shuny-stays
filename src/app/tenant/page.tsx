@@ -9,6 +9,7 @@ import {
   getSecurityDepositForTenant,
   getRentPaymentsForTenant,
 } from "@/lib/data/rooms";
+import { getTenantMealPollStatus } from "@/lib/data/meal-polls";
 import { TenantHomeExplorer } from "@/components/tenant/TenantHomeExplorer";
 
 export const runtime = "edge";
@@ -32,6 +33,7 @@ export default async function TenantDashboardPage() {
 
   const messMenu = await getMessMenu();
   const dinnerPoll = await getTenantDinnerPoll(session.id);
+  const mealPollStatus = await getTenantMealPollStatus(pg.id, session.id, "lunch");
 
   // Security Deposit for this tenant
   const dbDeposit = await getSecurityDepositForTenant(session.id);
@@ -108,6 +110,7 @@ export default async function TenantDashboardPage() {
       wifiName="ROYAL_5G_RESIDENT"
       wifiPass="StayRoyal@2026"
       broadcasts={broadcasts}
+      mealPollStatus={mealPollStatus}
     />
   );
 }

@@ -30,6 +30,8 @@ import { RentReceiptModal } from "@/components/tenant/RentReceiptModal";
 import { DepositReceiptModal } from "@/components/tenant/DepositReceiptModal";
 import { AccountSecurityCard } from "@/components/settings/AccountSecurityCard";
 import { SecurityDepositItem, RentPaymentRecord } from "@/lib/data/rooms";
+import { TenantMealPollCard } from "@/components/mess/TenantMealPollCard";
+import { MealPoll } from "@/types/meal-poll.types";
 import {
   submitTenantUpiScreenshotAction,
   verifySelfKycAction,
@@ -78,6 +80,13 @@ interface TenantHomeExplorerProps {
   wifiName?: string;
   wifiPass?: string;
   broadcasts?: PlatformBroadcast[];
+  mealPollStatus?: {
+    poll: MealPoll | null;
+    isCutoffPassed: boolean;
+    tenantVote: "yes" | "no" | null;
+    canVote: boolean;
+    statusMessage: string;
+  } | null;
 }
 
 export function TenantHomeExplorer({
@@ -98,6 +107,7 @@ export function TenantHomeExplorer({
   wifiName = "ROYAL_5G_RESIDENT",
   wifiPass = "StayRoyal@2026",
   broadcasts = [],
+  mealPollStatus,
 }: TenantHomeExplorerProps) {
   const router = useRouter();
   useRealtimeSync(["tenants", "payments", "complaints", "rooms", "attendance_logs"]);
@@ -278,6 +288,16 @@ export function TenantHomeExplorer({
           </div>
         </div>
       </div>
+
+      {/* Dopahar Ka Khana (Lunch Poll) Card */}
+      {mealPollStatus?.poll && (
+        <TenantMealPollCard
+          poll={mealPollStatus.poll}
+          isCutoffPassed={mealPollStatus.isCutoffPassed}
+          initialVote={mealPollStatus.tenantVote}
+          tenantId={session.id}
+        />
+      )}
 
       {/* 3. Live Today's Attendance Status Card */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-sm">
