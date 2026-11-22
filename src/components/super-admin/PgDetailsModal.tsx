@@ -197,38 +197,41 @@ export function PgDetailsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150 overflow-y-auto"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto max-h-[92vh] flex flex-col"
+        className="w-full sm:max-w-2xl bg-white dark:bg-slate-900 rounded-t-[28px] sm:rounded-3xl shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[92dvh] sm:max-h-[88vh] flex flex-col animate-in slide-in-from-bottom-5 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 overscroll-contain"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* MOBILE DRAG HANDLE */}
+        <div className="w-12 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto my-2 sm:hidden shrink-0" />
+
         {/* MODAL HEADER */}
-        <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-start justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="px-4 py-3 sm:p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
             {pg.logo_url ? (
               <img
                 src={pg.logo_url}
                 alt={pg.name}
-                className="w-12 h-12 rounded-2xl object-cover border-2 border-white/20 shadow-md shrink-0 bg-white"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover border-2 border-white/20 shadow-md shrink-0 bg-white"
               />
             ) : (
               <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-md shrink-0 border-2 border-white/20"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-white font-black text-xs sm:text-sm shadow-md shrink-0 border-2 border-white/20"
                 style={{ backgroundColor: pg.primary_color || "#4F46E5" }}
               >
                 {pg.name.slice(0, 2).toUpperCase()}
               </div>
             )}
 
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base sm:text-lg font-black text-white truncate">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h2 className="text-sm sm:text-base font-black text-white truncate max-w-[170px] sm:max-w-none">
                   {pg.name}
                 </h2>
                 <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                  className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${
                     currentStatus === "active"
                       ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
                       : currentStatus === "pending"
@@ -238,13 +241,13 @@ export function PgDetailsModal({
                 >
                   {currentStatus}
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 hidden xs:inline-flex items-center gap-1">
                   <Crown className="w-2.5 h-2.5 text-amber-300" />
                   {pg.subscription_tier}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-300 mt-1 truncate">
-                <span>/pg/{pg.slug}</span>
+              <div className="flex items-center gap-2 text-[11px] text-slate-300 mt-0.5 truncate">
+                <span className="font-mono">/pg/{pg.slug}</span>
                 <span>•</span>
                 <span className="flex items-center gap-1">
                   <MapPin className="w-3 h-3 text-slate-400" />
@@ -257,28 +260,28 @@ export function PgDetailsModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition shrink-0"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/10 hover:bg-white/20 active:scale-90 text-slate-300 hover:text-white transition flex items-center justify-center shrink-0"
             title="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
         {/* MODAL BODY (SCROLLABLE) */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 text-slate-800 dark:text-slate-200 text-xs">
+        <div className="p-3.5 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 text-slate-800 dark:text-slate-200 text-xs phone-scroll">
           {/* SECTION 1: PG OWNER CREDENTIALS & LOGIN PASSWORD */}
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/60 dark:from-indigo-950/40 dark:via-slate-900 dark:to-purple-950/30 border border-indigo-200/90 dark:border-indigo-800/60 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/60 dark:from-indigo-950/40 dark:via-slate-900 dark:to-purple-950/30 border border-indigo-200/90 dark:border-indigo-800/60 shadow-xs space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold shrink-0">
                   <KeyRound className="w-4 h-4" />
                 </div>
-                <div>
-                  <h3 className="text-xs font-black text-indigo-950 dark:text-indigo-200">
-                    Owner Login Credentials & Generated Password
+                <div className="min-w-0">
+                  <h3 className="text-xs font-black text-indigo-950 dark:text-indigo-200 truncate">
+                    Owner Login Credentials & Password
                   </h3>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                    Used by PG Owner to log into their management dashboard
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                    Used by PG Owner to log into dashboard
                   </p>
                 </div>
               </div>
@@ -287,31 +290,32 @@ export function PgDetailsModal({
                 type="button"
                 onClick={handleRegeneratePassword}
                 disabled={isResettingPassword}
-                className="px-2.5 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-[10px] font-extrabold flex items-center gap-1 shadow-xs transition"
+                className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 disabled:opacity-50 text-white text-[10px] font-extrabold flex items-center gap-1 shadow-xs transition shrink-0"
                 title="Generate fresh password and update Supabase Auth"
               >
                 <RefreshCw
                   className={`w-3 h-3 ${isResettingPassword ? "animate-spin" : ""}`}
                 />
-                <span>Reset / Regenerate</span>
+                <span className="hidden xs:inline">Reset / </span>
+                <span>Regenerate</span>
               </button>
             </div>
 
             {passwordToast && (
               <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-900 dark:text-indigo-100 font-bold text-[11px] flex items-center gap-1.5 animate-in fade-in">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                 <span>{passwordToast}</span>
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
               {/* Login ID / Mobile */}
-              <div className="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/90 dark:border-slate-700 space-y-1">
+              <div className="p-2.5 sm:p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/90 dark:border-slate-700 space-y-1">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
                   Owner Mobile / Login ID
                 </span>
                 <div className="flex items-center justify-between gap-1">
-                  <span className="font-mono font-bold text-slate-900 dark:text-white text-sm select-all">
+                  <span className="font-mono font-bold text-slate-900 dark:text-white text-sm sm:text-base select-all tracking-wide">
                     {cleanPhone || pg.contact_phone}
                   </span>
                   <button
@@ -319,50 +323,50 @@ export function PgDetailsModal({
                     onClick={() =>
                       handleCopy(cleanPhone || pg.contact_phone, "login_id")
                     }
-                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-indigo-600 transition"
+                    className="p-2 sm:p-1.5 rounded-lg hover:bg-slate-100 active:scale-90 text-slate-500 hover:text-indigo-600 transition"
                     title="Copy Login ID"
                   >
                     {copiedField === "login_id" ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <Check className="w-4 h-4 text-emerald-600" />
                     ) : (
-                      <Copy className="w-3.5 h-3.5" />
+                      <Copy className="w-4 h-4" />
                     )}
                   </button>
                 </div>
               </div>
 
               {/* Password */}
-              <div className="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-indigo-200 dark:border-indigo-800 space-y-1">
+              <div className="p-2.5 sm:p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-indigo-200 dark:border-indigo-800 space-y-1">
                 <span className="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">
                   Generated Password
                 </span>
                 <div className="flex items-center justify-between gap-1">
-                  <span className="font-mono font-black text-indigo-900 dark:text-indigo-200 text-sm select-all">
+                  <span className="font-mono font-black text-indigo-900 dark:text-indigo-200 text-sm sm:text-base select-all tracking-wider break-all">
                     {showPassword ? currentPassword : "••••••••••••"}
                   </span>
-                  <div className="flex items-center gap-0.5">
+                  <div className="flex items-center gap-0.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-indigo-600 transition"
+                      className="p-2 sm:p-1.5 rounded-lg hover:bg-slate-100 active:scale-90 text-slate-500 hover:text-indigo-600 transition"
                       title={showPassword ? "Hide Password" : "Show Password"}
                     >
                       {showPassword ? (
-                        <EyeOff className="w-3.5 h-3.5" />
+                        <EyeOff className="w-4 h-4" />
                       ) : (
-                        <Eye className="w-3.5 h-3.5" />
+                        <Eye className="w-4 h-4" />
                       )}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleCopy(currentPassword, "password")}
-                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-indigo-600 transition"
+                      className="p-2 sm:p-1.5 rounded-lg hover:bg-slate-100 active:scale-90 text-slate-500 hover:text-indigo-600 transition"
                       title="Copy Password"
                     >
                       {copiedField === "password" ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <Check className="w-4 h-4 text-emerald-600" />
                       ) : (
-                        <Copy className="w-3.5 h-3.5" />
+                        <Copy className="w-4 h-4" />
                       )}
                     </button>
                   </div>
@@ -371,10 +375,10 @@ export function PgDetailsModal({
             </div>
 
             {/* Owner Email & Auth Email */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
-              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 text-[11px] pt-0.5">
+              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 truncate">
                 <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span className="text-slate-400">Owner Name:</span>
+                <span className="text-slate-400">Owner:</span>
                 <strong className="text-slate-900 dark:text-white truncate">
                   {pg.owner_name}
                 </strong>
@@ -390,126 +394,126 @@ export function PgDetailsModal({
           </div>
 
           {/* SECTION 2: INITIAL DETAILS ENTERED AT PG ONBOARDING */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
               <Building2 className="w-3.5 h-3.5 text-indigo-600" />
               <span>Full PG Brand & Property Details</span>
             </h3>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-0.5">
+                <span className="text-[9px] font-bold text-slate-400 uppercase">
                   PG Name
                 </span>
-                <p className="font-extrabold text-slate-900 dark:text-white truncate">
+                <p className="font-extrabold text-slate-900 dark:text-white truncate text-xs">
                   {pg.name}
                 </p>
               </div>
 
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase">
+              <div className="p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-0.5">
+                <span className="text-[9px] font-bold text-slate-400 uppercase">
                   City / Location
                 </span>
-                <p className="font-extrabold text-slate-900 dark:text-white truncate">
+                <p className="font-extrabold text-slate-900 dark:text-white truncate text-xs">
                   {pg.city || "Bengaluru"}
                 </p>
               </div>
 
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase">
+              <div className="p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-0.5">
+                <span className="text-[9px] font-bold text-slate-400 uppercase">
                   Brand Color
                 </span>
-                <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex items-center gap-1.5 mt-0.5">
                   <div
-                    className="w-4 h-4 rounded-md border border-slate-300 shrink-0 shadow-2xs"
+                    className="w-3.5 h-3.5 rounded-md border border-slate-300 shrink-0 shadow-2xs"
                     style={{ backgroundColor: pg.primary_color || "#4F46E5" }}
                   />
-                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300 text-[11px]">
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300 text-[10px]">
                     {pg.primary_color || "#4F46E5"}
                   </span>
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase">
+              <div className="p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-0.5">
+                <span className="text-[9px] font-bold text-slate-400 uppercase">
                   Buildings
                 </span>
-                <p className="font-extrabold text-slate-900 dark:text-white">
-                  {pg.buildings_count} Property Wing
+                <p className="font-extrabold text-slate-900 dark:text-white text-xs">
+                  {pg.buildings_count} Wing
                 </p>
               </div>
 
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase">
+              <div className="p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-0.5">
+                <span className="text-[9px] font-bold text-slate-400 uppercase">
                   Total Capacity
                 </span>
-                <p className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1">
-                  <BedDouble className="w-3.5 h-3.5 text-indigo-500" />
-                  {pg.beds_count} Beds Total
+                <p className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1 text-xs">
+                  <BedDouble className="w-3 h-3 text-indigo-500" />
+                  {pg.beds_count} Beds
                 </p>
               </div>
 
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase">
+              <div className="p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-0.5">
+                <span className="text-[9px] font-bold text-slate-400 uppercase">
                   Active Residents
                 </span>
-                <p className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5 text-emerald-500" />
-                  {pg.residents_count} Residents
+                <p className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1 text-xs">
+                  <Users className="w-3 h-3 text-emerald-500" />
+                  {pg.residents_count} Tenants
                 </p>
               </div>
             </div>
 
             {/* Custom URL & White-label Portal Link */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">
-                  White-label Resident Portal URL
+            <div className="p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <span className="text-[9px] font-bold text-slate-400 uppercase block">
+                  Resident Portal URL
                 </span>
-                <p className="font-mono text-slate-800 dark:text-slate-200 truncate font-semibold">
+                <p className="font-mono text-slate-800 dark:text-slate-200 truncate font-semibold text-[11px] sm:text-xs">
                   {portalUrl}
                 </p>
               </div>
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => handleCopy(portalUrl, "portal_url")}
-                  className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 text-slate-700 dark:text-slate-200 text-[10px] font-bold flex items-center gap-1 transition"
+                  className="flex-1 sm:flex-none px-3 py-1.5 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 active:scale-95 text-slate-700 dark:text-slate-200 text-[10px] font-bold flex items-center justify-center gap-1 transition"
                   title="Copy URL"
                 >
                   {copiedField === "portal_url" ? (
-                    <Check className="w-3 h-3 text-emerald-600" />
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
                   ) : (
-                    <Copy className="w-3 h-3" />
+                    <Copy className="w-3.5 h-3.5" />
                   )}
-                  <span>Copy</span>
+                  <span>Copy Link</span>
                 </button>
                 <a
                   href={`/pg/${pg.slug}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold flex items-center gap-1 transition"
+                  className="flex-1 sm:flex-none px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 active:scale-95 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold flex items-center justify-center gap-1 transition"
                 >
-                  <span>Open</span>
-                  <ExternalLink className="w-3 h-3" />
+                  <span>Open Portal</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               </div>
             </div>
           </div>
 
           {/* SECTION 3: SUBSCRIPTION PLAN & EDIT PLAN */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/90 dark:border-slate-700/80 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/90 dark:border-slate-700/80 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold shrink-0">
                   <Calendar className="w-4 h-4" />
                 </div>
-                <div>
-                  <h3 className="text-xs font-black text-slate-900 dark:text-white">
+                <div className="min-w-0">
+                  <h3 className="text-xs font-black text-slate-900 dark:text-white truncate">
                     Subscription & Renewal Plan
                   </h3>
-                  <p className="text-[10px] text-slate-400">
-                    Expiry date, monthly pricing, and tenant access benefits
+                  <p className="text-[10px] text-slate-400 truncate">
+                    Expiry date, monthly pricing, and benefits
                   </p>
                 </div>
               </div>
@@ -517,7 +521,7 @@ export function PgDetailsModal({
               <button
                 type="button"
                 onClick={() => setIsEditingPlan(!isEditingPlan)}
-                className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 text-slate-800 dark:text-white text-[10px] font-extrabold flex items-center gap-1 transition shadow-2xs"
+                className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 active:scale-95 text-slate-800 dark:text-white text-[10px] font-extrabold flex items-center gap-1 transition shadow-2xs shrink-0"
               >
                 <Edit3 className="w-3 h-3 text-indigo-600" />
                 <span>{isEditingPlan ? "Cancel" : "Edit Plan"}</span>
@@ -526,7 +530,7 @@ export function PgDetailsModal({
 
             {planSuccess && (
               <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 text-emerald-800 dark:text-emerald-200 font-bold text-[11px] flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>{planSuccess}</span>
               </div>
             )}
@@ -541,9 +545,9 @@ export function PgDetailsModal({
             {isEditingPlan ? (
               <form
                 onSubmit={handleSavePlan}
-                className="p-3.5 bg-white dark:bg-slate-800 rounded-2xl border border-indigo-200 dark:border-indigo-800/80 space-y-3"
+                className="p-3 bg-white dark:bg-slate-800 rounded-2xl border border-indigo-200 dark:border-indigo-800/80 space-y-3"
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
                     <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">
                       Plan Expiry Date
@@ -553,7 +557,7 @@ export function PgDetailsModal({
                       value={planExpiryDate}
                       onChange={(e) => setPlanExpiryDate(e.target.value)}
                       required
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-base sm:text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
 
@@ -568,7 +572,7 @@ export function PgDetailsModal({
                       required
                       min={0}
                       step={50}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-base sm:text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                 </div>
@@ -577,14 +581,14 @@ export function PgDetailsModal({
                   <button
                     type="button"
                     onClick={() => setIsEditingPlan(false)}
-                    className="px-3 py-1.5 rounded-xl text-slate-500 hover:bg-slate-100 text-xs font-bold"
+                    className="px-3 py-2 rounded-xl text-slate-500 hover:bg-slate-100 text-xs font-bold active:scale-95"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSavingPlan}
-                    className="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-sm"
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-sm active:scale-95"
                   >
                     <Save className="w-3.5 h-3.5" />
                     <span>{isSavingPlan ? "Saving..." : "Save Plan Changes"}</span>
@@ -593,75 +597,81 @@ export function PgDetailsModal({
               </form>
             ) : (
               /* PLAN DISPLAY SUMMARY */
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/90 dark:border-slate-700">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="p-2.5 sm:p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/90 dark:border-slate-700">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">
                     Plan Expiry
                   </span>
-                  <p
-                    className={`font-black text-sm mt-0.5 ${
-                      isExpired ? "text-rose-600" : "text-slate-900 dark:text-white"
-                    }`}
-                  >
-                    {expiryDateObj
-                      ? expiryDateObj.toLocaleDateString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })
-                      : "30 Days"}
-                  </p>
-                  <span
-                    className={`inline-block mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
-                      isExpired
-                        ? "bg-rose-50 text-rose-700"
-                        : daysRemaining <= 5
-                        ? "bg-amber-50 text-amber-700"
-                        : "bg-emerald-50 text-emerald-700"
-                    }`}
-                  >
-                    {isExpired
-                      ? "Expired"
-                      : `${daysRemaining} days left`}
-                  </span>
+                  <div className="flex items-center justify-between sm:block mt-0.5">
+                    <p
+                      className={`font-black text-xs sm:text-sm ${
+                        isExpired ? "text-rose-600" : "text-slate-900 dark:text-white"
+                      }`}
+                    >
+                      {expiryDateObj
+                        ? expiryDateObj.toLocaleDateString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "30 Days"}
+                    </p>
+                    <span
+                      className={`inline-block sm:mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                        isExpired
+                          ? "bg-rose-50 text-rose-700"
+                          : daysRemaining <= 5
+                          ? "bg-amber-50 text-amber-700"
+                          : "bg-emerald-50 text-emerald-700"
+                      }`}
+                    >
+                      {isExpired
+                        ? "Expired"
+                        : `${daysRemaining} days left`}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/90 dark:border-slate-700">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                <div className="p-2.5 sm:p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/90 dark:border-slate-700">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">
                     Plan Price
                   </span>
-                  <p className="font-black text-sm text-indigo-600 dark:text-indigo-400 mt-0.5">
-                    ₹{pg.plan_price || 1999}
-                    <span className="text-[10px] font-normal text-slate-400">
-                      /month
+                  <div className="flex items-center justify-between sm:block mt-0.5">
+                    <p className="font-black text-xs sm:text-sm text-indigo-600 dark:text-indigo-400">
+                      ₹{pg.plan_price || 1999}
+                      <span className="text-[9px] font-normal text-slate-400">
+                        /month
+                      </span>
+                    </p>
+                    <span className="text-[9px] font-medium text-slate-400">
+                      UPI / Bank
                     </span>
-                  </p>
-                  <span className="inline-block mt-1 text-[10px] font-medium text-slate-400">
-                    Billed via UPI / Bank
-                  </span>
+                  </div>
                 </div>
 
-                <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/90 dark:border-slate-700">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                <div className="p-2.5 sm:p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/90 dark:border-slate-700">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">
                     Tier & Onboarding
                   </span>
-                  <p className="font-extrabold text-xs text-slate-900 dark:text-white mt-0.5">
-                    {pg.subscription_tier}
-                  </p>
-                  <span className="text-[10px] text-slate-400 block mt-1">
-                    Joined:{" "}
-                    {new Date(pg.created_at).toLocaleDateString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </span>
+                  <div className="flex items-center justify-between sm:block mt-0.5">
+                    <p className="font-extrabold text-xs text-slate-900 dark:text-white">
+                      {pg.subscription_tier}
+                    </p>
+                    <span className="text-[9px] text-slate-400">
+                      Joined:{" "}
+                      {new Date(pg.created_at).toLocaleDateString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* Plan Benefits Checklist */}
-            <div className="pt-1">
+            <div className="pt-0.5">
               <span className="text-[10px] font-extrabold text-slate-400 uppercase block mb-1.5">
                 Active Plan Benefits
               </span>
@@ -687,13 +697,13 @@ export function PgDetailsModal({
         </div>
 
         {/* MODAL FOOTER ACTIONS */}
-        <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 shrink-0 flex-wrap">
-          <div className="flex items-center gap-2">
+        <div className="p-3 sm:p-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between shrink-0">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               type="button"
               onClick={handleToggleStatus}
               disabled={isTogglingStatus}
-              className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition ${
+              className={`flex-1 sm:flex-none px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition active:scale-95 ${
                 currentStatus === "active"
                   ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
                   : "bg-emerald-600 text-white hover:bg-emerald-500 shadow-sm"
@@ -711,26 +721,24 @@ export function PgDetailsModal({
                 </>
               )}
             </button>
-          </div>
 
-          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleViewAsOwner}
-              className="px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-extrabold flex items-center gap-1.5 transition"
+              className="flex-1 sm:flex-none px-3.5 py-2.5 sm:py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-extrabold flex items-center justify-center gap-1.5 transition active:scale-95"
             >
               <span>Login as Owner</span>
               <ArrowRight className="w-3.5 h-3.5 text-indigo-500" />
             </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold transition"
-            >
-              Close
-            </button>
           </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold transition active:scale-95"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

@@ -107,7 +107,7 @@ export function EditPgPlanModal({ pg }: EditPgPlanModalProps) {
                   value={expiryDate}
                   onChange={(e) => setExpiryDate(e.target.value)}
                   required
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-slate-50/50"
+                  className="w-full px-3 py-2.5 sm:py-2 rounded-xl border border-slate-200 text-base sm:text-xs font-bold text-slate-900 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -120,7 +120,7 @@ export function EditPgPlanModal({ pg }: EditPgPlanModalProps) {
                   value={price}
                   onChange={(e) => setPrice(Number(e.target.value))}
                   required
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-slate-50/50"
+                  className="w-full px-3 py-2.5 sm:py-2 rounded-xl border border-slate-200 text-base sm:text-xs font-bold text-slate-900 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -128,14 +128,14 @@ export function EditPgPlanModal({ pg }: EditPgPlanModalProps) {
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50"
+                  className="px-3.5 py-2 sm:py-1.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 active:scale-95 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                  className="px-4 py-2 sm:py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black flex items-center gap-1.5 shadow-xs disabled:opacity-50 active:scale-95 transition"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>{isSubmitting ? "Saving..." : "Save Changes"}</span>

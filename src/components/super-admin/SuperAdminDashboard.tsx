@@ -501,8 +501,9 @@ export function SuperAdminDashboard({
             return (
               <div
                 key={pg.id}
-                className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-3 shadow-sm hover:border-indigo-300 transition"
+                className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 space-y-3 shadow-sm hover:border-indigo-300 transition"
               >
+                {/* CARD HEADER: LOGO, NAME, STATUS & DELETE */}
                 <div className="flex items-start justify-between gap-2">
                   <div
                     onClick={() => setSelectedPgForDetails(pg)}
@@ -524,9 +525,9 @@ export function SuperAdminDashboard({
                       </div>
                     )}
 
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-extrabold text-slate-900 truncate group-hover:text-indigo-600 transition">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-black text-slate-900 truncate group-hover:text-indigo-600 transition">
                           {pg.name}
                         </span>
                         <span
@@ -544,68 +545,71 @@ export function SuperAdminDashboard({
                       <div className="text-[10px] text-slate-400 truncate mt-0.5">
                         /pg/{pg.slug} • {pg.owner_name} • {pg.subscription_tier}
                       </div>
-                      <div className="flex items-center gap-2 mt-1 text-[10px]">
-                        <span className="font-bold text-slate-600">
-                          Expires:{" "}
-                          <strong className={pg.plan_expires_at && new Date(pg.plan_expires_at) < new Date() ? "text-rose-600" : "text-slate-800"}>
-                            {pg.plan_expires_at
-                              ? new Date(pg.plan_expires_at).toLocaleDateString("en-IN", {
-                                  day: "2-digit",
-                                  month: "short",
-                                  year: "numeric",
-                                })
-                              : "30 Days"}
-                          </strong>
-                        </span>
-                        <span>•</span>
-                        <span className="font-bold text-indigo-600">
-                          ₹{pg.plan_price || 1999}/mo
-                        </span>
-                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPgForDetails(pg)}
-                      className="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-extrabold border border-indigo-200 transition flex items-center gap-1 shrink-0"
-                      title="View all details, phone, and password"
-                    >
-                      <KeyRound className="w-3 h-3 text-indigo-600" />
-                      <span>Details & Password</span>
-                    </button>
-
-                    <EditPgPlanModal pg={pg} />
-                    <EditBrandingModal
-                      pg={pg}
-                      triggerButton={
-                        <button
-                          type="button"
-                          className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-extrabold border border-slate-200 transition"
-                        >
-                          Branding
-                        </button>
-                      }
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() => setPgToDelete(pg)}
-                      className="p-1 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition"
-                      title="Permanently Delete PG"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPgToDelete(pg)}
+                    className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:scale-90 border border-transparent hover:border-rose-200 transition shrink-0"
+                    title="Permanently Delete PG"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
+                {/* PLAN EXPIRY & PRICING BAR */}
+                <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-100 text-[10.5px]">
+                  <span className="font-medium text-slate-600 truncate">
+                    Expires:{" "}
+                    <strong className={pg.plan_expires_at && new Date(pg.plan_expires_at) < new Date() ? "text-rose-600" : "text-slate-800"}>
+                      {pg.plan_expires_at
+                        ? new Date(pg.plan_expires_at).toLocaleDateString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "30 Days"}
+                    </strong>
+                  </span>
+                  <span className="font-extrabold text-indigo-600 shrink-0">
+                    ₹{pg.plan_price || 1999}/mo
+                  </span>
+                </div>
+
+                {/* ACTION BUTTONS ROW */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPgForDetails(pg)}
+                    className="flex-1 py-1.5 px-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 text-[10.5px] font-extrabold border border-indigo-200 transition flex items-center justify-center gap-1.5 shadow-2xs"
+                    title="View all details, phone, and password"
+                  >
+                    <KeyRound className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                    <span>Details & Password</span>
+                  </button>
+
+                  <EditPgPlanModal pg={pg} />
+                  <EditBrandingModal
+                    pg={pg}
+                    triggerButton={
+                      <button
+                        type="button"
+                        className="py-1.5 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-[10.5px] font-extrabold border border-slate-200 transition"
+                      >
+                        Branding
+                      </button>
+                    }
+                  />
+                </div>
+
+                {/* OPERATION CONTROLS: SUSPEND / ACTIVATE & VIEW AS OWNER */}
                 <div className="grid grid-cols-2 gap-2 pt-0.5">
                   {isPending ? (
                     <button
                       type="button"
                       onClick={() => handleToggleStatus(pg.id, "pending")}
-                      className="py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold shadow-xs transition"
+                      className="py-2.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-[11px] font-extrabold shadow-xs transition"
                     >
                       Approve PG
                     </button>
@@ -613,7 +617,7 @@ export function SuperAdminDashboard({
                     <button
                       type="button"
                       onClick={() => handleToggleStatus(pg.id, pg.status)}
-                      className={`py-2 rounded-xl text-[11px] font-extrabold transition border flex items-center justify-center gap-1.5 ${
+                      className={`py-2.5 sm:py-2 rounded-xl text-[11px] font-extrabold transition active:scale-95 border flex items-center justify-center gap-1.5 ${
                         isActive
                           ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
                           : "bg-emerald-600 text-white border-transparent hover:bg-emerald-500 shadow-xs"
@@ -622,12 +626,12 @@ export function SuperAdminDashboard({
                       {isActive ? (
                         <>
                           <Pause className="w-3 h-3 text-rose-600" />
-                          <span>Suspend Membership</span>
+                          <span>Suspend PG</span>
                         </>
                       ) : (
                         <>
                           <Play className="w-3 h-3 text-white" />
-                          <span>Re-Activate PG</span>
+                          <span>Activate PG</span>
                         </>
                       )}
                     </button>
@@ -636,7 +640,7 @@ export function SuperAdminDashboard({
                   <button
                     type="button"
                     onClick={() => handleViewAsOwner(pg.name)}
-                    className="py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-extrabold transition flex items-center justify-center gap-1"
+                    className="py-2.5 sm:py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200 text-[11px] font-extrabold transition flex items-center justify-center gap-1"
                   >
                     <span>View as Owner</span>
                     <ArrowRight className="w-3 h-3 text-indigo-500" />
