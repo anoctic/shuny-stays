@@ -8,7 +8,11 @@ import {
   updatePgBranding,
   uploadPgLogoToStorage,
 } from "@/lib/data/pgs";
-import { createOrUpdateCredentials, normalizePhone } from "@/lib/auth/credentials";
+import {
+  createOrUpdateCredentials,
+  normalizePhone,
+  generateReadablePassword,
+} from "@/lib/auth/credentials";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 async function verifySuperAdminPermission(): Promise<{ authorized: boolean; error?: string }> {
@@ -121,6 +125,7 @@ export async function onboardPgAction(formData: FormData) {
       subscription_tier: subscriptionTier,
       city,
       owner_id: creds.userId,
+      owner_initial_password: creds.password,
     });
   } catch (err: any) {
     return {
@@ -145,7 +150,7 @@ export async function onboardPgAction(formData: FormData) {
     );
 
     await (admin.from("pgs" as any) as any)
-      .update({ owner_id: creds.userId } as any)
+      .update({ owner_id: creds.userId, owner_initial_password: creds.password } as any)
       .eq("id", newPg.id);
 
     await admin.from("pg_staff").upsert(
@@ -290,4 +295,76 @@ export async function deletePgAction(pgId: string) {
   revalidatePath("/dashboard");
 
   return { success: true, pgId };
+}
+
+/**
+ * Super Admin Server Action: Reset or Re-generate PG Owner Login Password
+ * Updates Supabase Auth credentials and stores in pgs.owner_initial_password
+ */
+export async function resetPgOwnerPasswordAction(pgId: string, customPassword?: string) {
+  const auth = await verifySuperAdminPermission();
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
+  if (!pgId) {
+    return { error: "Missing PG Identifier." };
+  }
+
+  try {
+    const admin = createAdminClient();
+
+    // 1. Fetch PG record
+    const { data: pg, error: pgErr } = await (admin.from("pgs" as any) as any)
+      .select("id, name, slug, owner_id, contact_phone, contact_email")
+      .eq("id", pgId)
+      .maybeSingle();
+
+    if (pgErr || !pg) {
+      return { error: pgErr?.message || "PG not found in database." };
+    }
+
+    // 2. Determine new password
+    const newPassword =
+      customPassword && customPassword.trim().length >= 6
+        ? customPassword.trim()
+        : generateReadablePassword();
+
+    // 3. Update Supabase Auth user if owner_id exists
+    if (pg.owner_id) {
+      const { error: authUpdateErr } = await admin.auth.admin.updateUserById(pg.owner_id, {
+        password: newPassword,
+        email_confirm: true,
+      });
+
+      if (authUpdateErr) {
+        return {
+          error: `Failed to update Supabase Auth user password: ${authUpdateErr.message}`,
+        };
+      }
+    }
+
+    // 4. Update pgs table with owner_initial_password
+    const { error: dbUpdateErr } = await (admin.from("pgs" as any) as any)
+      .update({ owner_initial_password: newPassword } as any)
+      .eq("id", pgId);
+
+    if (dbUpdateErr) {
+      return {
+        error: `Failed to store password in database: ${dbUpdateErr.message}`,
+      };
+    }
+
+    revalidatePath("/super-admin");
+    revalidatePath("/super-admin/organizations");
+
+    return {
+      success: true,
+      newPassword,
+      message: `Password for "${pg.name}" successfully updated!`,
+    };
+  } catch (err: any) {
+    console.error("resetPgOwnerPasswordAction error:", err);
+    return { error: err?.message || "Failed to reset PG owner password." };
+  }
 }

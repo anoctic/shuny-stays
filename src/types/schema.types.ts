@@ -38,6 +38,11 @@ export interface Pg {
   status: PgStatus;
   subscription_tier: string;
   subscription_valid_until: string | null;
+  plan_expires_at?: string | null;
+  plan_price?: number | null;
+  plan_benefits?: string[] | null;
+  owner_initial_password?: string | null;
+  city?: string | null;
   upi_id: string | null;
   created_at: string;
   updated_at: string;

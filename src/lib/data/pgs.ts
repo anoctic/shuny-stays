@@ -23,6 +23,7 @@ export interface PgDetailItem {
   city: string;
   created_at: string;
   upi_id?: string | null;
+  owner_initial_password?: string | null;
 }
 
 /**
@@ -47,6 +48,8 @@ export async function getAllPgs(): Promise<PgDetailItem[]> {
         plan_expires_at,
         plan_price,
         plan_benefits,
+        owner_initial_password,
+        city,
         created_at
       `)
       .order("created_at", { ascending: false });
@@ -137,8 +140,9 @@ export async function getAllPgs(): Promise<PgDetailItem[]> {
         buildings_count: bldgCounts[d.id] || 1,
         beds_count: bedCounts[d.id] || 12,
         residents_count: residentCounts[d.id] || 0,
-        city: "Bengaluru",
+        city: d.city || "Bengaluru",
         created_at: d.created_at,
+        owner_initial_password: d.owner_initial_password || null,
       };
     });
 
@@ -217,6 +221,7 @@ export async function onboardNewPg(data: {
   subscription_tier: "Free Trial" | "Starter" | "Pro" | "Enterprise";
   city?: string;
   owner_id?: string;
+  owner_initial_password?: string;
 }): Promise<PgDetailItem> {
   const pgId = crypto.randomUUID();
   const ownerId = data.owner_id || crypto.randomUUID();
@@ -240,6 +245,7 @@ export async function onboardNewPg(data: {
     residents_count: 0,
     city: data.city || "Bengaluru",
     created_at: now,
+    owner_initial_password: data.owner_initial_password || null,
   };
 
   const admin = createAdminClient();
@@ -273,6 +279,8 @@ export async function onboardNewPg(data: {
     contact_phone: newPg.contact_phone,
     status: "active",
     subscription_tier: newPg.subscription_tier.toLowerCase().replace(" ", "_"),
+    owner_initial_password: data.owner_initial_password || null,
+    city: data.city || "Bengaluru",
   } as any);
   if (pgErr) {
     console.error("onboardNewPg pgs step 2 error:", pgErr.message);

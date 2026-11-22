@@ -40,6 +40,7 @@ import {
 } from "@/lib/data/billing-settings";
 import { PlatformBillingCard } from "@/components/super-admin/PlatformBillingCard";
 import { EditPgPlanModal } from "@/components/super-admin/EditPgPlanModal";
+import { PgDetailsModal } from "@/components/super-admin/PgDetailsModal";
 import { PlanManagementModal } from "@/components/super-admin/PlanManagementModal";
 import { OnboardPgModal } from "@/components/super-admin/OnboardPgModal";
 import { EditBrandingModal } from "@/components/super-admin/EditBrandingModal";
@@ -107,6 +108,9 @@ export function SuperAdminDashboard({
   // PG deletion modal state
   const [pgToDelete, setPgToDelete] = useState<PgDetailItem | null>(null);
   const [isDeletingPg, setIsDeletingPg] = useState(false);
+
+  // PG details and credentials modal state
+  const [selectedPgForDetails, setSelectedPgForDetails] = useState<PgDetailItem | null>(null);
 
   // Sync with searchParams / bottom navigation
   useEffect(() => {
@@ -497,19 +501,23 @@ export function SuperAdminDashboard({
             return (
               <div
                 key={pg.id}
-                className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-3 shadow-sm"
+                className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-3 shadow-sm hover:border-indigo-300 transition"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div
+                    onClick={() => setSelectedPgForDetails(pg)}
+                    className="flex items-center gap-2.5 min-w-0 cursor-pointer group flex-1"
+                    title="Click to view all PG details, login ID & password"
+                  >
                     {pg.logo_url ? (
                       <img
                         src={pg.logo_url}
                         alt={pg.name}
-                        className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0"
+                        className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0 group-hover:scale-105 transition"
                       />
                     ) : (
                       <div
-                        className="w-10 h-10 rounded-xl text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs"
+                        className="w-10 h-10 rounded-xl text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs group-hover:scale-105 transition"
                         style={{ backgroundColor: primaryColor }}
                       >
                         {pg.name.slice(0, 2).toUpperCase()}
@@ -518,7 +526,7 @@ export function SuperAdminDashboard({
 
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-extrabold text-slate-900 truncate">
+                        <span className="text-xs font-extrabold text-slate-900 truncate group-hover:text-indigo-600 transition">
                           {pg.name}
                         </span>
                         <span
@@ -557,7 +565,17 @@ export function SuperAdminDashboard({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPgForDetails(pg)}
+                      className="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-extrabold border border-indigo-200 transition flex items-center gap-1 shrink-0"
+                      title="View all details, phone, and password"
+                    >
+                      <KeyRound className="w-3 h-3 text-indigo-600" />
+                      <span>Details & Password</span>
+                    </button>
+
                     <EditPgPlanModal pg={pg} />
                     <EditBrandingModal
                       pg={pg}
@@ -679,6 +697,45 @@ export function SuperAdminDashboard({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Full PG Details & Generated Credentials Modal */}
+      {selectedPgForDetails && (
+        <PgDetailsModal
+          pg={selectedPgForDetails}
+          isOpen={!!selectedPgForDetails}
+          onClose={() => setSelectedPgForDetails(null)}
+          onPlanUpdated={(newExpiry, newPrice) => {
+            setPgsList((prev) =>
+              prev.map((p) =>
+                p.id === selectedPgForDetails.id
+                  ? { ...p, plan_expires_at: newExpiry, plan_price: newPrice }
+                  : p
+              )
+            );
+            setSelectedPgForDetails((prev) =>
+              prev
+                ? { ...prev, plan_expires_at: newExpiry, plan_price: newPrice }
+                : null
+            );
+            showToast("Plan details updated successfully!");
+          }}
+          onStatusToggled={(newStatus) => {
+            setPgsList((prev) =>
+              prev.map((p) =>
+                p.id === selectedPgForDetails.id ? { ...p, status: newStatus } : p
+              )
+            );
+            setSelectedPgForDetails((prev) =>
+              prev ? { ...prev, status: newStatus } : null
+            );
+            showToast(
+              newStatus === "active"
+                ? "PG Activated!"
+                : "PG Membership Suspended"
+            );
+          }}
+        />
       )}
 
       {/* TAB 3: BROADCAST */}
