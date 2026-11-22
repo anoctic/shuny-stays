@@ -47,15 +47,16 @@ export default async function TenantMessPage() {
         <h2 className="text-xs font-black uppercase tracking-wider text-slate-400 pt-1">
           Daily Dining Schedule
         </h2>
-        {meals.map((m) => (
-          <div
-            key={m.meal}
-            className={`p-3.5 rounded-2xl border shadow-xs ${
-              m.special
-                ? "bg-amber-50/60 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800"
-                : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800"
-            }`}
-          >
+        <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-3.5">
+          {meals.map((m) => (
+            <div
+              key={m.meal}
+              className={`p-3.5 rounded-2xl border shadow-xs hover:border-slate-300 transition ${
+                m.special
+                  ? "bg-amber-50/60 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800"
+                  : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800"
+              }`}
+            >
             <div className="flex items-center justify-between mb-1">
               <span className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
                 <Utensils className="w-3.5 h-3.5 text-blue-600" /> {m.meal}
@@ -67,6 +68,7 @@ export default async function TenantMessPage() {
             <p className="text-xs text-slate-700 dark:text-slate-300 font-medium mt-1">{m.items}</p>
           </div>
         ))}
+        </div>
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { getCurrentUserSession } from "@/lib/auth/session";
 import { getAllBroadcasts } from "@/lib/data/broadcasts";
 import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { RealtimeSyncSubscriber } from "@/components/common/RealtimeSyncSubscriber";
 
 export const runtime = "edge";
@@ -37,13 +38,21 @@ export default async function SuperAdminLayout({
       <RealtimeSyncSubscriber
         tables={["pgs", "profiles", "buildings", "platform_broadcasts", "subscription_plans"]}
       />
+      <DesktopSidebar
+        role="super_admin"
+        fullName={session.full_name}
+      />
       <MobileTopHeader
         fullName={session.full_name}
         role="super_admin"
         pgName="Shuny Stays Governance (All Hosted PGs)"
         broadcasts={broadcasts}
       />
-      <main className="flex-1 p-4 pb-24 overflow-y-auto">{children}</main>
+      <main className="flex-1 p-4 pb-24 lg:ml-64 lg:p-6 lg:pb-12 overflow-y-auto">
+        <div className="w-full max-w-7xl mx-auto space-y-4">
+          {children}
+        </div>
+      </main>
       <MobileBottomNav role="super_admin" />
     </div>
   );

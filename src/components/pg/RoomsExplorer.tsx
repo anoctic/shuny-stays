@@ -182,31 +182,53 @@ export function RoomsExplorer({
 
   return (
     <div className="space-y-3.5">
-      {/* 1. 2-Column Compact KPI Strip */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-sm">
+      {/* 1. Multi-Column Responsive KPI Strip (2 cols mobile, 4 cols desktop) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-3.5">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-sm hover:border-slate-300 transition">
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
             Live Occupancy
           </div>
-          <div className="text-sm font-extrabold text-slate-900 tabular-nums mt-0.5">
+          <div className="text-sm md:text-base font-extrabold text-slate-900 tabular-nums mt-0.5">
             {occupiedBeds}/{totalBeds} Beds
           </div>
-          <div className="text-[10px] font-bold text-emerald-600 mt-0.5">
-            {vacantBeds} Beds Vacant
+          <div className="text-[10px] font-bold text-slate-500 mt-0.5">
+            {totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0}% Occupied
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Rent Pipeline
-            </div>
-            <div className="text-sm font-extrabold text-indigo-600 tabular-nums mt-0.5">
-              ₹{collectedRent.toLocaleString("en-IN")}
-            </div>
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-sm hover:border-emerald-300 transition">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Vacant Beds
           </div>
-          <div className="text-[10px] text-slate-400">
-            Expected: ₹{expectedRent.toLocaleString("en-IN")}
+          <div className="text-sm md:text-base font-extrabold text-emerald-600 tabular-nums mt-0.5">
+            {vacantBeds} Beds Vacant
+          </div>
+          <div className="text-[10px] font-bold text-emerald-600 mt-0.5">
+            Ready for Walk-In
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-sm hover:border-indigo-300 transition">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Rent Collected
+          </div>
+          <div className="text-sm md:text-base font-extrabold text-indigo-600 tabular-nums mt-0.5">
+            ₹{collectedRent.toLocaleString("en-IN")}
+          </div>
+          <div className="text-[10px] font-bold text-indigo-500 mt-0.5">
+            This Month Live
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-sm hover:border-slate-300 transition">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Expected Pipeline
+          </div>
+          <div className="text-sm md:text-base font-extrabold text-slate-800 tabular-nums mt-0.5">
+            ₹{expectedRent.toLocaleString("en-IN")}
+          </div>
+          <div className="text-[10px] text-slate-400 mt-0.5">
+            Pending: ₹{(expectedRent - collectedRent).toLocaleString("en-IN")}
           </div>
         </div>
       </div>
@@ -393,11 +415,13 @@ export function RoomsExplorer({
                       )}
                     </div>
 
-                    {activeFloor.rooms.map((room) => (
-                      <div
-                        key={room.id}
-                        className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-2.5"
-                      >
+                    {/* Desktop Multi-Column Grid (1 col mobile, 2 col md, 3 col lg, 4 col xl) */}
+                    <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-3.5">
+                      {activeFloor.rooms.map((room) => (
+                        <div
+                          key={room.id}
+                          className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-2.5 flex flex-col justify-between hover:border-slate-300 transition"
+                        >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             <span className="px-2 py-0.5 rounded bg-slate-900 text-white text-[11px] font-extrabold">
@@ -554,6 +578,7 @@ export function RoomsExplorer({
                         </div>
                       </div>
                     ))}
+                    </div>
                   </div>
                 ) : null}
               </section>

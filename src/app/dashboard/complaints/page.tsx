@@ -22,11 +22,11 @@ export default async function ComplaintsPage() {
           <p className="text-[11px] text-slate-400">All resident tickets are resolved and up to date</p>
         </div>
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-3.5">
           {complaints.map((c) => (
             <div
               key={c.id}
-              className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs"
+              className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-slate-300 transition"
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">

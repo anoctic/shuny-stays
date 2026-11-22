@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { Building } from "@/types/schema.types";
 import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 import { getPlatformBillingSettings } from "@/lib/data/billing-settings";
@@ -130,6 +131,18 @@ export default async function DashboardLayout({
         platformSettings={platformSettings}
         userRole={session.role as "owner" | "admin"}
       />
+      {/* Permanent Desktop Left Sidebar for PC/Screens (>= lg) */}
+      <DesktopSidebar
+        role={session.role}
+        fullName={session.full_name}
+        pgName={session.pg_name}
+        buildings={buildings}
+        activeBuildingId={activeBuildingId}
+        openComplaintsCount={2}
+        pendingPassesCount={1}
+        pendingDuesCount={3}
+      />
+      {/* Top Header (Compact on mobile, right-aligned next to sidebar on PC) */}
       <MobileTopHeader
         fullName={session.full_name}
         role={session.role}
@@ -138,7 +151,12 @@ export default async function DashboardLayout({
         activeBuildingId={activeBuildingId}
         broadcasts={broadcasts}
       />
-      <main className="flex-1 p-4 pb-24 overflow-y-auto">{children}</main>
+      {/* Content Area: on mobile standard pb-24, on desktop wide multi-column max-w-7xl */}
+      <main className="flex-1 p-4 pb-24 lg:ml-64 lg:p-6 lg:pb-12 overflow-y-auto">
+        <div className="w-full max-w-7xl mx-auto space-y-4">
+          {children}
+        </div>
+      </main>
       <MobileBottomNav role={session.role} openComplaintsCount={2} pendingDuesCount={3} />
     </div>
   );

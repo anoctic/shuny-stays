@@ -198,7 +198,11 @@ export function TenantHomeExplorer({
       {/* Urgent / Emergency Broadcast Banner */}
       <ActiveBroadcastBanner broadcasts={broadcasts} userRole="tenant" />
 
-      {/* 1. White-Labeled Top Bar: PG Logo + Name */}
+      {/* Main Desktop Split Layout (1 col mobile, 7/5 split on desktop >= lg) */}
+      <div className="space-y-3.5 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6">
+        {/* LEFT COLUMN: Identity, Attendance & Meals */}
+        <div className="lg:col-span-7 space-y-3.5">
+          {/* 1. White-Labeled Top Bar: PG Logo + Name */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-3">
           {pg.logo_url ? (
@@ -352,7 +356,10 @@ export function TenantHomeExplorer({
           </div>
         )}
       </div>
+    </div>
 
+    {/* RIGHT COLUMN: Deposit, Rent Invoices & Passes */}
+    <div className="lg:col-span-5 space-y-3.5">
       {/* 4. Security Deposit Held Card */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-3">
         <div className="flex items-center justify-between">
@@ -692,6 +699,8 @@ export function TenantHomeExplorer({
           currentEmail={session.email}
         />
       </div>
+    </div>
+  </div>
 
       {/* 7. Subtle White-Label Footer: "Powered by Shuny Stays Software" */}
       <footer className="pt-3 pb-1 text-center space-y-1">

@@ -83,33 +83,35 @@ export function TenantComplaintsExplorer({ initialTickets }: TenantComplaintsExp
             No complaints raised yet!
           </div>
         ) : (
-          tickets.map((c) => (
-            <div
-              key={c.id}
-              className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3 space-y-1 shadow-xs"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-slate-900 dark:text-white">
-                  {c.cat || c.category} • {c.id.slice(0, 8)}
-                </span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
-                    c.status === "Resolved"
-                      ? "bg-emerald-500/15 text-emerald-600"
-                      : "bg-amber-500/20 text-amber-600"
-                  }`}
-                >
-                  {c.status}
-                </span>
+          <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-3.5">
+            {tickets.map((c) => (
+              <div
+                key={c.id}
+                className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3 space-y-1 shadow-xs hover:border-slate-300 transition"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-slate-900 dark:text-white">
+                    {c.cat || c.category} • {c.id.slice(0, 8)}
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
+                      c.status === "Resolved"
+                        ? "bg-emerald-500/15 text-emerald-600"
+                        : "bg-amber-500/20 text-amber-600"
+                    }`}
+                  >
+                    {c.status}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">{c.desc || c.issue}</p>
+                {c.note && (
+                  <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 pt-0.5">
+                    ✓ {c.note}
+                  </p>
+                )}
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">{c.desc || c.issue}</p>
-              {c.note && (
-                <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 pt-0.5">
-                  ✓ {c.note}
-                </p>
-              )}
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
 

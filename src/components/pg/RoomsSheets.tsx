@@ -84,11 +84,11 @@ export function WalkInSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
+      className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-[480px] mx-auto rounded-t-[28px] p-5 pb-8 shadow-2xl border-t border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up"
+        className="w-full max-w-[480px] md:max-w-lg mx-auto rounded-t-[28px] md:rounded-3xl p-5 pb-8 shadow-2xl border-t md:border border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up max-h-[92%] md:max-h-[88vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="space-y-3.5">
@@ -313,11 +313,11 @@ export function AutoBuildingSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
+      className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-[480px] mx-auto rounded-t-[28px] p-5 pb-8 shadow-2xl border-t border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up"
+        className="w-full max-w-[480px] md:max-w-lg mx-auto rounded-t-[28px] md:rounded-3xl p-5 pb-8 shadow-2xl border-t md:border border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up max-h-[92%] md:max-h-[88vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="space-y-3.5">
@@ -473,11 +473,11 @@ export function AddFloorSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
+      className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-[480px] mx-auto rounded-t-[28px] p-5 pb-8 shadow-2xl border-t border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up"
+        className="w-full max-w-[480px] md:max-w-lg mx-auto rounded-t-[28px] md:rounded-3xl p-5 pb-8 shadow-2xl border-t md:border border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up max-h-[92%] md:max-h-[88vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="space-y-3.5">
@@ -596,11 +596,11 @@ export function AddRoomSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
+      className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-[480px] mx-auto rounded-t-[28px] p-5 pb-8 shadow-2xl border-t border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up"
+        className="w-full max-w-[480px] md:max-w-lg mx-auto rounded-t-[28px] md:rounded-3xl p-5 pb-8 shadow-2xl border-t md:border border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up max-h-[92%] md:max-h-[88vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="space-y-3.5">
@@ -773,11 +773,11 @@ export function AddBedSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
+      className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-[480px] mx-auto rounded-t-[28px] p-5 pb-8 shadow-2xl border-t border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up"
+        className="w-full max-w-[480px] md:max-w-lg mx-auto rounded-t-[28px] md:rounded-3xl p-5 pb-8 shadow-2xl border-t md:border border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up max-h-[92%] md:max-h-[88vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="space-y-3.5">

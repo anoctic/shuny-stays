@@ -265,96 +265,98 @@ export function AttendanceSheet({
                       </button>
                     </div>
 
-                    {/* Beds on Floor */}
+                    {/* Beds on Floor: 1 col mobile, 2 col md, 3 col lg, 4 col xl */}
                     {floor.beds.length === 0 ? (
                       <p className="text-[10.5px] text-slate-400 px-2">
                         No occupied beds on this floor.
                       </p>
                     ) : (
-                      floor.beds.map((bed) => {
-                        const st = bedStatuses[bed.bed_id]?.status || bed.status;
-                        const hasPass = bed.active_pass_type != null;
+                      <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-3">
+                        {floor.beds.map((bed) => {
+                          const st = bedStatuses[bed.bed_id]?.status || bed.status;
+                          const hasPass = bed.active_pass_type != null;
 
-                        return (
-                          <div
-                            key={bed.bed_id}
-                            className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-2"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="text-xs font-extrabold text-slate-900">
-                                  {bed.tenant_name}
+                          return (
+                            <div
+                              key={bed.bed_id}
+                              className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-2 hover:border-slate-300 transition flex flex-col justify-between"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="text-xs font-extrabold text-slate-900">
+                                    {bed.tenant_name}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400">
+                                    Room {bed.room_number} • {bed.bed_name}
+                                  </div>
                                 </div>
-                                <div className="text-[10px] text-slate-400">
-                                  Room {bed.room_number} • {bed.bed_name}
-                                </div>
+                                {hasPass && (
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
+                                      bed.active_pass_type === "day_pass"
+                                        ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                        : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                    }`}
+                                  >
+                                    Active {bed.active_pass_type === "day_pass" ? "Day Pass" : "Night Pass"}
+                                  </span>
+                                )}
                               </div>
-                              {hasPass && (
-                                <span
-                                  className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
-                                    bed.active_pass_type === "day_pass"
-                                      ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                      : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+
+                              {/* 4 Quick-Tap Attendance Status Pills */}
+                              <div className="grid grid-cols-4 gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(bed.bed_id, bed.tenant_id, "present")}
+                                  className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition cursor-pointer ${
+                                    st === "present"
+                                      ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                                      : "bg-white text-slate-600 border-slate-200 hover:text-slate-900"
                                   }`}
                                 >
-                                  Active {bed.active_pass_type === "day_pass" ? "Day Pass" : "Night Pass"}
-                                </span>
-                              )}
+                                  Present
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(bed.bed_id, bed.tenant_id, "absent")}
+                                  className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition cursor-pointer ${
+                                    st === "absent"
+                                      ? "bg-rose-600 text-white border-rose-600 shadow-xs"
+                                      : "bg-white text-slate-600 border-slate-200 hover:text-slate-900"
+                                  }`}
+                                >
+                                  Absent
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(bed.bed_id, bed.tenant_id, "day_pass")}
+                                  className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition cursor-pointer ${
+                                    st === "day_pass"
+                                      ? "bg-amber-500 text-slate-950 border-amber-500 shadow-xs"
+                                      : "bg-white text-slate-600 border-slate-200 hover:text-slate-900"
+                                  }`}
+                                >
+                                  Day Pass
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(bed.bed_id, bed.tenant_id, "night_pass")}
+                                  className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition cursor-pointer ${
+                                    st === "night_pass"
+                                      ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
+                                      : "bg-white text-slate-600 border-slate-200 hover:text-slate-900"
+                                  }`}
+                                >
+                                  Night Pass
+                                </button>
+                              </div>
                             </div>
-
-                            {/* 4 Quick-Tap Attendance Status Pills */}
-                            <div className="grid grid-cols-4 gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleStatusChange(bed.bed_id, bed.tenant_id, "present")}
-                                className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition ${
-                                  st === "present"
-                                    ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                                    : "bg-white text-slate-600 border-slate-200 hover:text-slate-900"
-                                }`}
-                              >
-                                Present
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleStatusChange(bed.bed_id, bed.tenant_id, "absent")}
-                                className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition ${
-                                  st === "absent"
-                                    ? "bg-rose-600 text-white border-rose-600 shadow-xs"
-                                    : "bg-white text-slate-600 border-slate-200 hover:text-slate-900"
-                                }`}
-                              >
-                                Absent
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleStatusChange(bed.bed_id, bed.tenant_id, "day_pass")}
-                                className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition ${
-                                  st === "day_pass"
-                                    ? "bg-amber-500 text-slate-950 border-amber-500 shadow-xs"
-                                    : "bg-white text-slate-600 border-slate-200 hover:text-slate-900"
-                                }`}
-                              >
-                                Day Pass
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleStatusChange(bed.bed_id, bed.tenant_id, "night_pass")}
-                                className={`py-1.5 rounded-lg text-[9.5px] font-extrabold border transition ${
-                                  st === "night_pass"
-                                    ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
-                                    : "bg-white text-slate-600 border-slate-200 hover:text-slate-900"
-                                }`}
-                              >
-                                Night Pass
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 );

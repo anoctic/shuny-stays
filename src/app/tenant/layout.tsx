@@ -3,6 +3,7 @@ import { getCurrentUserSession } from "@/lib/auth/session";
 import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { RealtimeSyncSubscriber } from "@/components/common/RealtimeSyncSubscriber";
 
 export const runtime = "edge";
@@ -44,13 +45,23 @@ export default async function TenantLayout({
           "platform_broadcasts",
         ]}
       />
+      <DesktopSidebar
+        role="tenant"
+        fullName={session.full_name}
+        pgName={session.pg_name || "Shuny Stays Luxury PG"}
+        pendingDuesCount={1}
+      />
       <MobileTopHeader
         fullName={session.full_name}
         role="tenant"
         pgName={session.pg_name || "Shuny Stays Luxury PG"}
         broadcasts={broadcasts}
       />
-      <main className="flex-1 p-4 pb-24 overflow-y-auto">{children}</main>
+      <main className="flex-1 p-4 pb-24 lg:ml-64 lg:p-6 lg:pb-12 overflow-y-auto">
+        <div className="w-full max-w-7xl mx-auto space-y-4">
+          {children}
+        </div>
+      </main>
       <MobileBottomNav role="tenant" pendingDuesCount={1} />
     </div>
   );

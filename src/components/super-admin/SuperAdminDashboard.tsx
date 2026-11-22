@@ -430,27 +430,51 @@ export function SuperAdminDashboard({
       {/* TAB 1: OVERVIEW */}
       {activeTab === "overview" && (
         <div className="space-y-3">
-          {/* MRR & Platform Beds KPI Cards */}
-          <div className="grid grid-cols-2 gap-2.5">
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+          {/* MRR & Platform Beds KPI Cards (2 cols mobile, 4 cols desktop) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4">
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm hover:border-indigo-300 transition">
               <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
                 Shuny Stays MRR
               </div>
-              <div className="text-xl font-extrabold text-indigo-600 tabular-nums mt-1">
+              <div className="text-xl md:text-2xl font-extrabold text-indigo-600 tabular-nums mt-1">
                 ₹{totalMrr.toLocaleString("en-IN")}
               </div>
               <div className="text-[10px] font-bold text-emerald-600 mt-0.5">+28% MoM SaaS</div>
             </div>
 
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm hover:border-slate-300 transition">
               <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
                 Active Platform Beds
               </div>
-              <div className="text-xl font-extrabold text-slate-900 tabular-nums mt-1">
+              <div className="text-xl md:text-2xl font-extrabold text-slate-900 tabular-nums mt-1">
                 {totalBeds}
               </div>
               <div className="text-[10px] font-bold text-slate-400 mt-0.5">
                 Across {pgsList.length} White-Label PGs
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm hover:border-emerald-300 transition">
+              <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
+                Hosted PG Brands
+              </div>
+              <div className="text-xl md:text-2xl font-extrabold text-emerald-600 tabular-nums mt-1">
+                {pgsList.length}
+              </div>
+              <div className="text-[10px] font-bold text-emerald-600 mt-0.5">
+                {pgsList.filter((p) => p.status === "active").length} Active / Live
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm hover:border-amber-300 transition">
+              <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
+                Pending Actions
+              </div>
+              <div className="text-xl md:text-2xl font-extrabold text-amber-600 tabular-nums mt-1">
+                {pgsList.filter((p) => p.status === "pending").length + (subscriptionRequests?.length || 0)}
+              </div>
+              <div className="text-[10px] font-bold text-amber-600 mt-0.5">
+                Approvals & Requests
               </div>
             </div>
           </div>
@@ -458,7 +482,7 @@ export function SuperAdminDashboard({
           {/* City Footprint Card */}
           <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-sm">
             <h3 className="text-xs font-extrabold text-slate-900">City Footprint</h3>
-            <div className="space-y-1.5 text-[11px]">
+            <div className="space-y-1.5 md:space-y-0 md:grid md:grid-cols-3 md:gap-3 text-[11px]">
               <div className="flex justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
                 <span className="text-slate-700">Noida & Greater Noida</span>
                 <strong className="text-slate-900">140 Beds</strong>
@@ -491,7 +515,7 @@ export function SuperAdminDashboard({
 
       {/* TAB 2: PGS DIRECTORY */}
       {activeTab === "pgs" && (
-        <div className="space-y-2.5">
+        <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 xl:grid-cols-3 md:gap-4">
           {pgsList.map((pg) => {
             const isSuspended = pg.status === "suspended";
             const isPending = pg.status === "pending";
@@ -744,9 +768,9 @@ export function SuperAdminDashboard({
 
       {/* TAB 3: BROADCAST */}
       {activeTab === "broadcast" && (
-        <div className="space-y-3">
+        <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6">
           {/* Targeted Platform Broadcast Creator */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-3 shadow-sm">
+          <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-2xl p-4 space-y-3 shadow-sm h-fit">
             <div>
               <h3 className="text-xs font-extrabold text-slate-900">
                 Targeted Platform Broadcast
@@ -817,7 +841,7 @@ export function SuperAdminDashboard({
           </div>
 
           {/* Active Platform Broadcasts List */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2 shadow-sm">
+          <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2 shadow-sm">
             <h3 className="text-xs font-extrabold text-slate-900">
               Active Platform Broadcasts
             </h3>

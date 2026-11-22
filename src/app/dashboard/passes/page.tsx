@@ -46,7 +46,7 @@ export default async function DashboardPassesPage() {
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-3.5">
         {passes.map((pass) => (
           <GatePassCard key={pass.id} pass={pass} viewerRole={session.role} />
         ))}

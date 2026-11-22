@@ -4,7 +4,8 @@
   "description": "Cloud-native PG, hostel & co-living property management operating system.",
   "start_url": "/login",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
+  "categories": ["business", "productivity", "utilities"],
   "background_color": "#4F46E5",
   "theme_color": "#4F46E5",
   "icons": [

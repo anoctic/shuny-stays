@@ -119,8 +119,8 @@ export function LedgerExplorer({
       {/* ========================================================================= */}
       {isOwner ? (
         <>
-          {/* 1. Exactly 3 Clean KPI Cards */}
-          <div className="space-y-2.5">
+          {/* 1. Exactly 3 Clean KPI Cards (1 col mobile, 3 cols desktop) */}
+          <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-3 md:gap-4">
             {/* KPI 1: Rent Collected */}
             <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex items-center justify-between">
               <div>
@@ -220,56 +220,58 @@ export function LedgerExplorer({
                     All cash collections from warden desk have been settled!
                   </div>
                 ) : (
-                  pendingHandovers.map((item) => (
-                    <div
-                      key={item.id}
-                      className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-sm"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="text-xs font-extrabold text-slate-900 block">
-                            {item.tenantName}
-                          </span>
-                          <span className="text-[10px] text-slate-400">
-                            {item.room} • Mode: <strong className="text-slate-700">{item.paymentMode.toUpperCase()}</strong>
-                          </span>
+                  <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-2 md:gap-3.5">
+                    {pendingHandovers.map((item) => (
+                      <div
+                        key={item.id}
+                        className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-sm hover:border-amber-300 transition"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-extrabold text-slate-900 block">
+                              {item.tenantName}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {item.room} • Mode: <strong className="text-slate-700">{item.paymentMode.toUpperCase()}</strong>
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-sm font-black text-slate-900 tabular-nums">
+                              ₹{item.amount.toLocaleString("en-IN")}
+                            </span>
+                            <span className="text-[10px] text-amber-600 font-bold block">
+                              Pending Handover
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <span className="text-sm font-black text-slate-900 tabular-nums">
-                            ₹{item.amount.toLocaleString("en-IN")}
+
+                        {/* Alert banner matching exact spec: Collected by [Admin] • Collect ₹X from Admin */}
+                        <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200/90 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-950">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>Collected by {item.collectedByName} • Collect ₹{item.amount.toLocaleString("en-IN")} from {item.collectedByName}</span>
+                          </div>
+                        </div>
+
+                        <div className="pt-1.5 flex items-center justify-between gap-2">
+                          <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            {item.collectedAt}
                           </span>
-                          <span className="text-[10px] text-amber-600 font-bold block">
-                            Pending Handover
-                          </span>
+
+                          <button
+                            type="button"
+                            disabled={isProcessingId === item.id}
+                            onClick={() => handleConfirmHandover(item)}
+                            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 shadow-xs active:scale-95 transition cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>{isProcessingId === item.id ? "Settling..." : "Confirm Cash Received"}</span>
+                          </button>
                         </div>
                       </div>
-
-                      {/* Alert banner matching exact spec: Collected by [Admin] • Collect ₹X from Admin */}
-                      <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200/90 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-950">
-                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                          <span>Collected by {item.collectedByName} • Collect ₹{item.amount.toLocaleString("en-IN")} from {item.collectedByName}</span>
-                        </div>
-                      </div>
-
-                      <div className="pt-1.5 flex items-center justify-between gap-2">
-                        <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-slate-400" />
-                          {item.collectedAt}
-                        </span>
-
-                        <button
-                          type="button"
-                          disabled={isProcessingId === item.id}
-                          onClick={() => handleConfirmHandover(item)}
-                          className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 shadow-xs active:scale-95 transition"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>{isProcessingId === item.id ? "Settling..." : "Confirm Cash Received"}</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
               </div>
 
@@ -279,50 +281,52 @@ export function LedgerExplorer({
                   Settled Payments & Auto-Invoices ({settledPayments.length})
                 </h3>
 
-                {settledPayments.map((inv) => (
-                  <div
-                    key={inv.id}
-                    className="bg-white border border-slate-200/90 rounded-2xl p-4 flex items-center justify-between gap-2 shadow-sm"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-extrabold text-slate-900">
-                          {inv.tenantName}
-                        </span>
-                        <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          Settled
-                        </span>
+                <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-2 md:gap-3.5">
+                  {settledPayments.map((inv) => (
+                    <div
+                      key={inv.id}
+                      className="bg-white border border-slate-200/90 rounded-2xl p-4 flex items-center justify-between gap-2 shadow-sm hover:border-slate-300 transition"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-extrabold text-slate-900">
+                            {inv.tenantName}
+                          </span>
+                          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Settled
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">
+                          {inv.room} • {inv.paymentMode.toUpperCase()} • <span className="font-mono">{inv.id}</span>
+                        </div>
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
-                        {inv.room} • {inv.paymentMode.toUpperCase()} • <span className="font-mono">{inv.id}</span>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-black text-slate-900 tabular-nums">
+                          ₹{inv.amount.toLocaleString("en-IN")}
+                        </span>
+
+                        <RentReceiptModal
+                          pgName="Royal Stay PG"
+                          primaryColor="#4F46E5"
+                          tenantName={inv.tenantName}
+                          roomNumber={inv.room}
+                          invoiceNumber={inv.id}
+                          amount={`₹${inv.amount.toLocaleString("en-IN")}`}
+                          dueDate={inv.collectedAt}
+                          triggerButton={
+                            <button
+                              type="button"
+                              className="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-[#4F46E5] text-[10px] font-extrabold border border-indigo-200 transition cursor-pointer"
+                            >
+                              Invoice PDF
+                            </button>
+                          }
+                        />
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-black text-slate-900 tabular-nums">
-                        ₹{inv.amount.toLocaleString("en-IN")}
-                      </span>
-
-                      <RentReceiptModal
-                        pgName="Royal Stay PG"
-                        primaryColor="#4F46E5"
-                        tenantName={inv.tenantName}
-                        roomNumber={inv.room}
-                        invoiceNumber={inv.id}
-                        amount={`₹${inv.amount.toLocaleString("en-IN")}`}
-                        dueDate={inv.collectedAt}
-                        triggerButton={
-                          <button
-                            type="button"
-                            className="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-[#4F46E5] text-[10px] font-extrabold border border-indigo-200 transition"
-                          >
-                            Invoice PDF
-                          </button>
-                        }
-                      />
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -337,80 +341,82 @@ export function LedgerExplorer({
                 <span className="text-[10px] text-indigo-600 font-bold">100% Refundable</span>
               </div>
 
-              {deposits.map((dep) => (
-                <div
-                  key={dep.id}
-                  className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-sm"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-extrabold text-slate-900">
-                          {dep.tenantName}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
-                            dep.status === "paid"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 md:gap-3.5">
+                {deposits.map((dep) => (
+                  <div
+                    key={dep.id}
+                    className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-sm hover:border-slate-300 transition"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-extrabold text-slate-900">
+                            {dep.tenantName}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
+                              dep.status === "paid"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : dep.status === "pending"
+                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                : "bg-purple-50 text-purple-700 border border-purple-200"
+                            }`}
+                          >
+                            {dep.status === "paid"
+                              ? "Paid • Held Safely"
                               : dep.status === "pending"
-                              ? "bg-amber-50 text-amber-700 border border-amber-200"
-                              : "bg-purple-50 text-purple-700 border border-purple-200"
-                          }`}
-                        >
-                          {dep.status === "paid"
-                            ? "Paid • Held Safely"
-                            : dep.status === "pending"
-                            ? "Deposit Pending"
-                            : "Refunded"}
+                              ? "Deposit Pending"
+                              : "Refunded"}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-400">
+                          {dep.buildingName} • Room {dep.roomNumber} ({dep.bedLabel})
                         </span>
                       </div>
-                      <span className="text-[10px] text-slate-400">
-                        {dep.buildingName} • Room {dep.roomNumber} ({dep.bedLabel})
-                      </span>
+
+                      <div className="text-right">
+                        <span className="text-sm font-black text-slate-900 tabular-nums">
+                          ₹{(dep.paidAmount || dep.expectedAmount).toLocaleString("en-IN")}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block font-mono">
+                          #{dep.id}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="text-right">
-                      <span className="text-sm font-black text-slate-900 tabular-nums">
-                        ₹{(dep.paidAmount || dep.expectedAmount).toLocaleString("en-IN")}
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
+                      <span>
+                        Mode: <strong className="text-slate-800">{dep.paymentMode.toUpperCase()}</strong> • Collected by{" "}
+                        <strong className="text-slate-800">{dep.collectedByName || "Staff"}</strong>
                       </span>
-                      <span className="text-[10px] text-slate-400 block font-mono">
-                        #{dep.id}
-                      </span>
+
+                      <DepositReceiptModal
+                        pgName="Royal Stay PG"
+                        primaryColor="#4F46E5"
+                        tenantName={dep.tenantName}
+                        roomNumber={`Room ${dep.roomNumber}`}
+                        bedLabel={dep.bedLabel}
+                        receiptNumber={dep.id}
+                        amount={dep.paidAmount || dep.expectedAmount}
+                        paymentMode={dep.paymentMode}
+                        collectedByName={dep.collectedByName || "Staff Desk"}
+                        status={dep.status === "paid" ? "Paid • Held Safely" : "Refunded"}
+                        deductionAmount={dep.deductionAmount}
+                        deductionReason={dep.deductionReason}
+                        refundedAmount={dep.refundedAmount}
+                        triggerButton={
+                          <button
+                            type="button"
+                            className="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-[#4F46E5] text-[10px] font-extrabold border border-indigo-200 transition cursor-pointer"
+                          >
+                            Deposit Receipt
+                          </button>
+                        }
+                      />
                     </div>
                   </div>
-
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
-                    <span>
-                      Mode: <strong className="text-slate-800">{dep.paymentMode.toUpperCase()}</strong> • Collected by{" "}
-                      <strong className="text-slate-800">{dep.collectedByName || "Staff"}</strong>
-                    </span>
-
-                    <DepositReceiptModal
-                      pgName="Royal Stay PG"
-                      primaryColor="#4F46E5"
-                      tenantName={dep.tenantName}
-                      roomNumber={`Room ${dep.roomNumber}`}
-                      bedLabel={dep.bedLabel}
-                      receiptNumber={dep.id}
-                      amount={dep.paidAmount || dep.expectedAmount}
-                      paymentMode={dep.paymentMode}
-                      collectedByName={dep.collectedByName || "Staff Desk"}
-                      status={dep.status === "paid" ? "Paid • Held Safely" : "Refunded"}
-                      deductionAmount={dep.deductionAmount}
-                      deductionReason={dep.deductionReason}
-                      refundedAmount={dep.refundedAmount}
-                      triggerButton={
-                        <button
-                          type="button"
-                          className="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-[#4F46E5] text-[10px] font-extrabold border border-indigo-200 transition"
-                        >
-                          Deposit Receipt
-                        </button>
-                      }
-                    />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </>
@@ -451,72 +457,74 @@ export function LedgerExplorer({
               <span className="text-[10px] text-slate-400">Warden Cash Register</span>
             </div>
 
-            {myAdminCollections.map((col) => {
-              const isSettled = col.status === "settled_with_owner";
+            <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-2 md:gap-3.5">
+              {myAdminCollections.map((col) => {
+                const isSettled = col.status === "settled_with_owner";
 
-              return (
-                <div
-                  key={col.id}
-                  className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2 shadow-sm"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-extrabold text-slate-900">
-                          {col.tenantName}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${
-                            isSettled
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-amber-50 text-amber-700 border-amber-200"
-                          }`}
-                        >
-                          {isSettled ? "Handed Over to Owner ✅" : "Pending Handover to Owner"}
+                return (
+                  <div
+                    key={col.id}
+                    className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2 shadow-sm hover:border-slate-300 transition"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-extrabold text-slate-900">
+                            {col.tenantName}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${
+                              isSettled
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-amber-50 text-amber-700 border-amber-200"
+                            }`}
+                          >
+                            {isSettled ? "Handed Over to Owner ✅" : "Pending Handover to Owner"}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-400">
+                          {col.room} • Mode: <strong className="text-slate-700">{col.paymentMode.toUpperCase()}</strong>
                         </span>
                       </div>
-                      <span className="text-[10px] text-slate-400">
-                        {col.room} • Mode: <strong className="text-slate-700">{col.paymentMode.toUpperCase()}</strong>
-                      </span>
+
+                      <div className="text-right">
+                        <span className="text-sm font-black text-slate-900 tabular-nums">
+                          ₹{col.amount.toLocaleString("en-IN")}
+                        </span>
+                        <span className="text-[9.5px] font-mono text-slate-400 block">
+                          #{col.id}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="text-right">
-                      <span className="text-sm font-black text-slate-900 tabular-nums">
-                        ₹{col.amount.toLocaleString("en-IN")}
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-slate-400" />
+                        {col.collectedAt}
                       </span>
-                      <span className="text-[9.5px] font-mono text-slate-400 block">
-                        #{col.id}
-                      </span>
+
+                      <RentReceiptModal
+                        pgName="Royal Stay PG"
+                        primaryColor="#4F46E5"
+                        tenantName={col.tenantName}
+                        roomNumber={col.room}
+                        invoiceNumber={col.id}
+                        amount={`₹${col.amount.toLocaleString("en-IN")}`}
+                        dueDate={col.collectedAt}
+                        triggerButton={
+                          <button
+                            type="button"
+                            className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold cursor-pointer"
+                          >
+                            View Receipt
+                          </button>
+                        }
+                      />
                     </div>
                   </div>
-
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-slate-400" />
-                      {col.collectedAt}
-                    </span>
-
-                    <RentReceiptModal
-                      pgName="Royal Stay PG"
-                      primaryColor="#4F46E5"
-                      tenantName={col.tenantName}
-                      roomNumber={col.room}
-                      invoiceNumber={col.id}
-                      amount={`₹${col.amount.toLocaleString("en-IN")}`}
-                      dueDate={col.collectedAt}
-                      triggerButton={
-                        <button
-                          type="button"
-                          className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold"
-                        >
-                          View Receipt
-                        </button>
-                      }
-                    />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

@@ -294,11 +294,11 @@ export function BedProfileSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
+      className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[480px] mx-auto rounded-t-3xl p-5 pb-8 max-h-[92%] overflow-y-auto shadow-2xl border-t border-slate-200 bg-white text-slate-900 animate-slide-up"
+        className="w-full max-w-[480px] md:max-w-2xl mx-auto rounded-t-3xl md:rounded-3xl p-5 pb-8 max-h-[92%] md:max-h-[88vh] overflow-y-auto shadow-2xl border-t md:border border-slate-200 bg-white text-slate-900 animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="space-y-3.5">
