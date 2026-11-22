@@ -18,6 +18,7 @@ import {
   Building2,
   Megaphone,
   CreditCard,
+  Utensils,
   LucideIcon,
 } from "lucide-react";
 import { UserRole } from "@/types/schema.types";
@@ -110,6 +111,13 @@ function MobileBottomNavInner({
       isActive: pathname.startsWith("/dashboard/attendance"),
     },
     {
+      id: "meal_poll",
+      label: "Meal Poll",
+      href: "/dashboard/meal-poll",
+      icon: Utensils,
+      isActive: pathname.startsWith("/dashboard/meal-poll"),
+    },
+    {
       id: "ledger",
       label: "Ledger",
       href: "/dashboard/ledger",
@@ -145,6 +153,13 @@ function MobileBottomNavInner({
       href: "/dashboard/attendance",
       icon: ClipboardCheck,
       isActive: pathname.startsWith("/dashboard/attendance"),
+    },
+    {
+      id: "meal_poll",
+      label: "Meal Poll",
+      href: "/dashboard/meal-poll",
+      icon: Utensils,
+      isActive: pathname.startsWith("/dashboard/meal-poll"),
     },
     {
       id: "passes_help",

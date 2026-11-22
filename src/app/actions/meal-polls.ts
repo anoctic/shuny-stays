@@ -49,6 +49,7 @@ export async function toggleMealPollAction(
     });
 
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard/meal-poll");
     revalidatePath("/dashboard/mess");
     revalidatePath("/tenant");
     revalidatePath("/tenant/mess");
@@ -115,6 +116,7 @@ export async function voteMealPollAction(
     revalidatePath("/tenant");
     revalidatePath("/tenant/mess");
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard/meal-poll");
     revalidatePath("/dashboard/mess");
 
     return {
@@ -128,5 +130,46 @@ export async function voteMealPollAction(
   } catch (err: any) {
     console.error("voteMealPollAction error:", err);
     return { error: err?.message || "Failed to submit vote." };
+  }
+}
+
+/**
+ * Super Admin Action: Enable or disable the Meal Poll Facility for a PG
+ */
+export async function togglePgMealPollFacilityAction(pgId: string, enabled: boolean) {
+  const session = await getCurrentUserSession();
+
+  if (session.role !== "super_admin" && !session.is_super_admin) {
+    return { error: "Unauthorized: Only Super Admin can toggle PG facility access." };
+  }
+
+  try {
+    const admin = createAdminClient();
+    const { error } = await (admin.from("pgs" as any) as any)
+      .update({ meal_poll_enabled: enabled, updated_at: new Date().toISOString() })
+      .eq("id", pgId);
+
+    if (error) {
+      console.error("togglePgMealPollFacilityAction error:", error);
+      return { error: error.message };
+    }
+
+    revalidatePath("/super-admin");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/meal-poll");
+    revalidatePath("/dashboard/mess");
+    revalidatePath("/tenant");
+    revalidatePath("/tenant/mess");
+
+    return {
+      success: true,
+      enabled,
+      message: enabled
+        ? "Meal Poll facility activated for this PG!"
+        : "Meal Poll facility disabled for this PG.",
+    };
+  } catch (err: any) {
+    console.error("togglePgMealPollFacilityAction exception:", err);
+    return { error: err?.message || "Failed to update facility access." };
   }
 }

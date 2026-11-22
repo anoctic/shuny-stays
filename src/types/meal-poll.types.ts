@@ -37,6 +37,10 @@ export interface TenantHeadcountItem {
 export interface MealPollSummary {
   poll: MealPoll | null;
   isCutoffPassed: boolean;
+  scheduleStatus: "upcoming" | "open" | "closed";
+  isFacilityEnabled: boolean;
+  autoStartTime: string; // "06:00"
+  cutoffTime: string; // "10:00"
   totalYes: number;
   totalNo: number;
   totalNotAnswered: number;
@@ -44,4 +48,14 @@ export interface MealPollSummary {
   yesList: TenantHeadcountItem[];
   noList: TenantHeadcountItem[];
   notAnsweredList: TenantHeadcountItem[];
+}
+
+export interface TenantMealPollStatusResult {
+  poll: MealPoll | null;
+  isFacilityEnabled: boolean;
+  scheduleStatus: "upcoming" | "open" | "closed";
+  isCutoffPassed: boolean;
+  tenantVote: "yes" | "no" | null;
+  canVote: boolean;
+  statusMessage: string;
 }

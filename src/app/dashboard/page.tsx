@@ -1,10 +1,11 @@
+import Link from "next/link";
+import { Utensils } from "lucide-react";
 import { getCurrentUserSession } from "@/lib/auth/session";
 import { getAllBuildings } from "@/lib/data/rooms";
 import { getPassesForManagement } from "@/lib/data/gate-passes";
 import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 import { getMealPollSummary } from "@/lib/data/meal-polls";
 import { ActiveBroadcastBanner } from "@/components/broadcasts/ActiveBroadcastBanner";
-import { AdminMealPollCard } from "@/components/mess/AdminMealPollCard";
 import { RoomsExplorer } from "@/components/pg/RoomsExplorer";
 
 export const runtime = "edge";
@@ -33,8 +34,33 @@ export default async function DashboardPage() {
       {/* Targeted Platform Broadcast Banner */}
       <ActiveBroadcastBanner broadcasts={broadcasts} userRole={session.role} />
 
-      {/* Lunch Headcount Poll & Wastage Prevention Card */}
-      <AdminMealPollCard summary={pollSummary} pgId={pgId} />
+      {/* Lunch Headcount Quick Link (Direct to dedicated /dashboard/meal-poll section) */}
+      {pollSummary.isFacilityEnabled !== false && (
+        <Link
+          href="/dashboard/meal-poll"
+          className="p-3 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 dark:from-amber-950/40 dark:to-orange-950/20 border border-amber-200/90 dark:border-amber-800/60 rounded-2xl flex items-center justify-between gap-2 transition hover:bg-amber-100/50 shadow-2xs group"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black shrink-0 shadow-xs">
+              <Utensils className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-black text-slate-900 dark:text-white truncate">
+                Dopahar Ka Khana: {pollSummary.totalYes} Plates Confirmed
+              </div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                {pollSummary.scheduleStatus === "open"
+                  ? `🟢 Voting Open till ${pollSummary.cutoffTime} AM`
+                  : `Cut-off ${pollSummary.cutoffTime} AM passed • Cook for ${pollSummary.totalYes} Only`}
+              </div>
+            </div>
+          </div>
+          <span className="text-[10.5px] font-extrabold text-amber-700 dark:text-amber-400 flex items-center gap-0.5 shrink-0 group-hover:translate-x-0.5 transition">
+            <span>Open Meal Poll</span>
+            <span>→</span>
+          </span>
+        </Link>
+      )}
 
       {/* 5-Level Rooms & Beds Explorer */}
       <RoomsExplorer

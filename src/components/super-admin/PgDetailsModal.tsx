@@ -31,6 +31,8 @@ import {
   Save,
   Clock,
   Crown,
+  Utensils,
+  Power,
 } from "lucide-react";
 import { PgDetailItem } from "@/lib/data/pgs";
 import {
@@ -39,6 +41,7 @@ import {
 } from "@/app/actions/branding";
 import { updatePgPlanDetailsAction } from "@/app/actions/billing";
 import { switchDemoPersonaAction } from "@/app/actions/auth";
+import { togglePgMealPollFacilityAction } from "@/app/actions/meal-polls";
 
 interface PgDetailsModalProps {
   pg: PgDetailItem;
@@ -83,7 +86,38 @@ export function PgDetailsModal({
   const [planError, setPlanError] = useState<string | null>(null);
   const [planSuccess, setPlanSuccess] = useState<string | null>(null);
 
+  // Meal Poll Facility Master Switch state
+  const [mealPollEnabled, setMealPollEnabled] = useState<boolean>(
+    pg.meal_poll_enabled !== false
+  );
+  const [isTogglingFacility, setIsTogglingFacility] = useState(false);
+  const [facilityToast, setFacilityToast] = useState<string | null>(null);
+
   if (!isOpen) return null;
+
+  const handleToggleMealFacility = async () => {
+    setIsTogglingFacility(true);
+    const nextState = !mealPollEnabled;
+    try {
+      const res = await togglePgMealPollFacilityAction(pg.id, nextState);
+      if (res.error) {
+        setFacilityToast(`Error: ${res.error}`);
+      } else {
+        setMealPollEnabled(nextState);
+        setFacilityToast(
+          nextState
+            ? "✅ Lunch Headcount & Meal Poll Facility Activated!"
+            : "❌ Lunch Headcount & Meal Poll Facility Disabled."
+        );
+        router.refresh();
+      }
+    } catch (err: any) {
+      setFacilityToast(`Error: ${err?.message || "Failed to update facility"}`);
+    } finally {
+      setIsTogglingFacility(false);
+      setTimeout(() => setFacilityToast(null), 3500);
+    }
+  };
 
   const handleCopy = (text: string, fieldName: string) => {
     navigator.clipboard.writeText(text);
@@ -498,6 +532,65 @@ export function PgDetailsModal({
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               </div>
+            </div>
+          </div>
+
+          {/* SECTION 2.5: MEAL POLL & FOOD WASTAGE FACILITY SWITCH */}
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/90 dark:border-slate-700/80 space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold shrink-0">
+                  <Utensils className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-xs font-black text-slate-900 dark:text-white truncate">
+                    Meal Poll & Food Wastage Facility (Master Switch)
+                  </h3>
+                  <p className="text-[10px] text-slate-400 truncate">
+                    Allow this PG to use auto-lunch poll (06:00 AM) & headcount system
+                  </p>
+                </div>
+              </div>
+
+              {/* Master Switch Button */}
+              <button
+                type="button"
+                onClick={handleToggleMealFacility}
+                disabled={isTogglingFacility}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition active:scale-95 shadow-2xs ${
+                  mealPollEnabled
+                    ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20"
+                    : "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+                }`}
+              >
+                <Power className="w-3.5 h-3.5" />
+                <span>
+                  {isTogglingFacility
+                    ? "Updating..."
+                    : mealPollEnabled
+                    ? "Facility: Enabled"
+                    : "Facility: Disabled"}
+                </span>
+              </button>
+            </div>
+
+            {facilityToast && (
+              <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 text-indigo-900 dark:text-indigo-200 font-bold text-[11px] flex items-center gap-1.5 animate-in fade-in">
+                <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span>{facilityToast}</span>
+              </div>
+            )}
+
+            <div className="p-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/90 dark:border-slate-700 flex items-center justify-between text-[11px]">
+              <span className="text-slate-600 dark:text-slate-300">
+                Current Access Status:{" "}
+                <strong className={mealPollEnabled ? "text-emerald-600" : "text-rose-600"}>
+                  {mealPollEnabled ? "Active & Running (06:00 AM Daily Auto-Start)" : "Access Revoked (Hidden from Portal)"}
+                </strong>
+              </span>
+              <span className="text-[10px] font-bold text-slate-400">
+                {mealPollEnabled ? "Zero Food Waste ON" : "No Headcount"}
+              </span>
             </div>
           </div>
 

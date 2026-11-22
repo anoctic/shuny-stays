@@ -44,6 +44,7 @@ export interface Pg {
   owner_initial_password?: string | null;
   city?: string | null;
   upi_id: string | null;
+  meal_poll_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }

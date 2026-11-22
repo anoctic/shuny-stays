@@ -24,6 +24,7 @@ export interface PgDetailItem {
   created_at: string;
   upi_id?: string | null;
   owner_initial_password?: string | null;
+  meal_poll_enabled?: boolean;
 }
 
 /**
@@ -50,6 +51,7 @@ export async function getAllPgs(): Promise<PgDetailItem[]> {
         plan_benefits,
         owner_initial_password,
         city,
+        meal_poll_enabled,
         created_at
       `)
       .order("created_at", { ascending: false });
@@ -143,6 +145,7 @@ export async function getAllPgs(): Promise<PgDetailItem[]> {
         city: d.city || "Bengaluru",
         created_at: d.created_at,
         owner_initial_password: d.owner_initial_password || null,
+        meal_poll_enabled: d.meal_poll_enabled !== false,
       };
     });
 

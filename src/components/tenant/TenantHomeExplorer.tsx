@@ -83,6 +83,7 @@ interface TenantHomeExplorerProps {
   mealPollStatus?: {
     poll: MealPoll | null;
     isCutoffPassed: boolean;
+    scheduleStatus?: "upcoming" | "open" | "closed";
     tenantVote: "yes" | "no" | null;
     canVote: boolean;
     statusMessage: string;
@@ -296,6 +297,7 @@ export function TenantHomeExplorer({
           isCutoffPassed={mealPollStatus.isCutoffPassed}
           initialVote={mealPollStatus.tenantVote}
           tenantId={session.id}
+          scheduleStatus={mealPollStatus.scheduleStatus}
         />
       )}
 

@@ -16,6 +16,8 @@ import {
   DoorOpen,
   ChevronRight,
   Flame,
+  ShieldAlert,
+  Zap,
 } from "lucide-react";
 import { MealPollSummary, TenantHeadcountItem } from "@/types/meal-poll.types";
 import { toggleMealPollAction } from "@/app/actions/meal-polls";
@@ -33,9 +35,10 @@ export function AdminMealPollCard({ summary: initialSummary, pgId }: AdminMealPo
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const poll = summary.poll;
-  const isPollActive = poll?.is_active ?? false;
+  const isPollActive = poll?.is_active ?? true;
   const isExpired = summary.isCutoffPassed;
-  const cutoffTime = poll?.cutoff_time || "10:00";
+  const cutoffTime = poll?.cutoff_time || summary.cutoffTime || "10:00";
+  const scheduleStatus = summary.scheduleStatus || (isExpired ? "closed" : "open");
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -53,8 +56,8 @@ export function AdminMealPollCard({ summary: initialSummary, pgId }: AdminMealPo
       } else {
         showToast(
           nextActive
-            ? `Lunch Poll Activated! Cut-off: ${cutoffTime} AM`
-            : "Lunch Poll Deactivated"
+            ? `Lunch Poll Active! Auto-runs 06:00 AM - ${cutoffTime} AM`
+            : "Lunch Poll Paused for today"
         );
         router.refresh();
       }
@@ -82,6 +85,30 @@ export function AdminMealPollCard({ summary: initialSummary, pgId }: AdminMealPo
     }
   };
 
+  // If Super Admin disabled the facility for this PG
+  if (summary.isFacilityEnabled === false) {
+    return (
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-black shrink-0 border border-amber-200/50">
+            <ShieldAlert className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-sm font-black text-slate-900 dark:text-white">
+              Meal Poll & Food Wastage Prevention
+            </h2>
+            <p className="text-xs text-amber-700 dark:text-amber-400 font-bold">
+              Facility Disabled by Super Admin
+            </p>
+          </div>
+        </div>
+        <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 rounded-2xl border border-amber-200 dark:border-amber-900/50 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+          Ye facility Super Admin dwara is PG ke liye deactivate ki gayi hai. Rozana automatic 06:00 AM lunch headcount poll aur zero-wastage system chalu karne ke liye Super Admin se activate karwayein.
+        </div>
+      </div>
+    );
+  }
+
   const currentTabList: TenantHeadcountItem[] =
     activeTab === "yes"
       ? summary.yesList
@@ -91,7 +118,7 @@ export function AdminMealPollCard({ summary: initialSummary, pgId }: AdminMealPo
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-4 sm:p-5 shadow-sm space-y-4">
-      {/* HEADER ROW WITH TOGGLE & STATUS */}
+      {/* HEADER ROW WITH STATUS & PAUSE/RESUME */}
       <div className="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-black shrink-0 border border-amber-200/50">
@@ -100,36 +127,42 @@ export function AdminMealPollCard({ summary: initialSummary, pgId }: AdminMealPo
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate">
-                Dopahar Ka Khana (Lunch Poll)
+                Dopahar Ka Khana (Lunch Headcount)
               </h2>
               <span
-                className={`px-2 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider ${
+                className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider ${
                   !isPollActive
                     ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                    : isExpired
-                    ? "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300"
-                    : "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300"
+                    : scheduleStatus === "upcoming"
+                    ? "bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300"
+                    : scheduleStatus === "open"
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 animate-pulse"
+                    : "bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300"
                 }`}
               >
                 {!isPollActive
-                  ? "Off / Inactive"
-                  : isExpired
-                  ? `Closed (${cutoffTime} AM passed)`
-                  : "Live Voting Active"}
+                  ? "Paused"
+                  : scheduleStatus === "upcoming"
+                  ? "Opens at 06:00 AM IST"
+                  : scheduleStatus === "open"
+                  ? "🟢 Live Voting Active"
+                  : `Closed (${cutoffTime} AM passed)`}
               </span>
             </div>
             <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3 text-slate-400" />
-                Cut-off: <strong>{cutoffTime} AM IST</strong>
+                Auto-Window: <strong>06:00 AM - {cutoffTime} AM IST</strong>
               </span>
               <span>•</span>
-              <span>Food Wastage Prevention System</span>
+              <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-0.5">
+                <Flame className="w-3 h-3" /> Zero Food Wastage
+              </span>
             </p>
           </div>
         </div>
 
-        {/* TOGGLE SWITCH BUTTON */}
+        {/* TOGGLE / OVERRIDE BUTTON */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
@@ -137,14 +170,27 @@ export function AdminMealPollCard({ summary: initialSummary, pgId }: AdminMealPo
             disabled={isToggling}
             className={`px-3 py-2 rounded-2xl text-xs font-black flex items-center gap-1.5 transition active:scale-95 shadow-xs ${
               isPollActive
-                ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+                ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200"
                 : "bg-emerald-600 text-white hover:bg-emerald-500 shadow-emerald-600/20"
             }`}
           >
             <Power className="w-3.5 h-3.5" />
-            <span>{isToggling ? "Updating..." : isPollActive ? "Stop Poll" : "Start Lunch Poll"}</span>
+            <span>{isToggling ? "Updating..." : isPollActive ? "Pause Today" : "Resume Poll"}</span>
           </button>
         </div>
+      </div>
+
+      {/* AUTO-SCHEDULE BANNER */}
+      <div className="p-3 bg-indigo-50/70 dark:bg-indigo-950/30 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 text-[11px] text-indigo-900 dark:text-indigo-200 flex items-center justify-between gap-2 flex-wrap">
+        <span className="flex items-center gap-1.5 font-medium">
+          <Zap className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+          <span>
+            <strong>100% Automated:</strong> Subah 06:00 AM par poll khud khulta hai aur {cutoffTime} AM par band hota hai.
+          </span>
+        </span>
+        <span className="font-extrabold text-indigo-700 dark:text-indigo-300 text-[10.5px]">
+          Cook for: <strong>{summary.totalYes} Plates</strong>
+        </span>
       </div>
 
       {toastMessage && (
@@ -154,34 +200,32 @@ export function AdminMealPollCard({ summary: initialSummary, pgId }: AdminMealPo
         </div>
       )}
 
-      {/* CUT-OFF TIME PRESETS (WHEN ACTIVE) */}
-      {isPollActive && (
-        <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
-          <span className="text-[11px] font-extrabold text-slate-600 dark:text-slate-300 flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Preset Cut-off Deadline:</span>
-          </span>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {["09:30", "10:00", "10:30", "11:00"].map((timeStr) => (
-              <button
-                key={timeStr}
-                type="button"
-                onClick={() => handleChangeCutoff(timeStr)}
-                disabled={isToggling || cutoffTime === timeStr}
-                className={`px-2.5 py-1 rounded-xl text-[10.5px] font-bold border transition active:scale-95 ${
-                  cutoffTime === timeStr
-                    ? "bg-indigo-600 text-white border-transparent shadow-xs"
-                    : "bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                {timeStr} AM {timeStr === "10:00" ? "(Default)" : ""}
-              </button>
-            ))}
-          </div>
+      {/* CUT-OFF TIME PRESETS */}
+      <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+        <span className="text-[11px] font-extrabold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+          <Clock className="w-3.5 h-3.5 text-indigo-600" />
+          <span>Preset Cut-off Deadline:</span>
+        </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {["09:30", "10:00", "10:30", "11:00"].map((timeStr) => (
+            <button
+              key={timeStr}
+              type="button"
+              onClick={() => handleChangeCutoff(timeStr)}
+              disabled={isToggling || cutoffTime === timeStr}
+              className={`px-2.5 py-1 rounded-xl text-[10.5px] font-bold border transition active:scale-95 ${
+                cutoffTime === timeStr
+                  ? "bg-indigo-600 text-white border-transparent shadow-xs"
+                  : "bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              {timeStr} AM {timeStr === "10:00" ? "(Default)" : ""}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
-      {/* KPI METRIC CARDS (TOTAL YES, NO, NOT ANSWERED) */}
+      {/* KPI METRIC CARDS (TOTAL YES, NO, NOT ANSWERED, TOTAL RESIDENTS) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {/* YES: Total Food to prepare */}
         <div
@@ -229,7 +273,7 @@ export function AdminMealPollCard({ summary: initialSummary, pgId }: AdminMealPo
           </div>
         </div>
 
-        {/* NOT ANSWERED: Counted as NO */}
+        {/* NOT ANSWERED: Auto-considered NO */}
         <div
           onClick={() => setActiveTab("not_answered")}
           className={`p-3 rounded-2xl border cursor-pointer transition active:scale-98 ${
@@ -252,7 +296,7 @@ export function AdminMealPollCard({ summary: initialSummary, pgId }: AdminMealPo
           </div>
         </div>
 
-        {/* Total Tenants */}
+        {/* TOTAL RESIDENTS */}
         <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
@@ -267,19 +311,6 @@ export function AdminMealPollCard({ summary: initialSummary, pgId }: AdminMealPo
             Active in PG
           </div>
         </div>
-      </div>
-
-      {/* WASTAGE SAVINGS NOTICE */}
-      <div className="px-3.5 py-2.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 text-[11px] text-indigo-900 dark:text-indigo-200 flex items-center justify-between gap-2">
-        <span className="flex items-center gap-1.5 font-medium">
-          <Flame className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-          <span>
-            Non-respondents ({summary.totalNotAnswered}) are auto-marked as <strong>NO</strong> after {cutoffTime} AM to stop meal wastage.
-          </span>
-        </span>
-        <strong className="text-indigo-700 dark:text-indigo-300 shrink-0 font-black">
-          Cook for {summary.totalYes} Only
-        </strong>
       </div>
 
       {/* 3 HEADCOUNT SECTIONS / TABS */}
@@ -326,7 +357,7 @@ export function AdminMealPollCard({ summary: initialSummary, pgId }: AdminMealPo
         </div>
 
         {/* TENANT LIST CARDS */}
-        <div className="space-y-1.5 max-h-[300px] overflow-y-auto phone-scroll pr-0.5">
+        <div className="space-y-1.5 max-h-[320px] overflow-y-auto phone-scroll pr-0.5">
           {currentTabList.length === 0 ? (
             <div className="text-center py-6 text-slate-400 text-xs">
               Koi bhi tenant is category me nahi hai.

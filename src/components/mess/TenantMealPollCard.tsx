@@ -11,6 +11,7 @@ import {
   Sparkles,
   Flame,
   Check,
+  Zap,
 } from "lucide-react";
 import { MealPoll } from "@/types/meal-poll.types";
 import { voteMealPollAction } from "@/app/actions/meal-polls";
@@ -20,6 +21,7 @@ interface TenantMealPollCardProps {
   isCutoffPassed: boolean;
   initialVote: "yes" | "no" | null;
   tenantId: string;
+  scheduleStatus?: "upcoming" | "open" | "closed";
 }
 
 export function TenantMealPollCard({
@@ -27,6 +29,7 @@ export function TenantMealPollCard({
   isCutoffPassed,
   initialVote,
   tenantId,
+  scheduleStatus = isCutoffPassed ? "closed" : "open",
 }: TenantMealPollCardProps) {
   const router = useRouter();
   const [currentVote, setCurrentVote] = useState<"yes" | "no" | null>(initialVote);
@@ -38,7 +41,8 @@ export function TenantMealPollCard({
   }
 
   const cutoffTime = poll.cutoff_time || "10:00";
-  const canVote = poll.is_active && !isCutoffPassed;
+  const isUpcoming = scheduleStatus === "upcoming";
+  const canVote = poll.is_active && !isCutoffPassed && scheduleStatus === "open";
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -94,12 +98,14 @@ export function TenantMealPollCard({
 
         <span
           className={`px-2.5 py-1 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider shrink-0 border ${
-            canVote
-              ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300"
+            isUpcoming
+              ? "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300"
+              : canVote
+              ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 animate-pulse"
               : "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400"
           }`}
         >
-          {canVote ? "Voting Open" : "Poll Closed"}
+          {isUpcoming ? "Opens at 06:00 AM" : canVote ? "Voting Open" : "Poll Closed"}
         </span>
       </div>
 
@@ -110,8 +116,19 @@ export function TenantMealPollCard({
         </div>
       )}
 
-      {/* VOTING STATE (BEFORE 10:00 AM) */}
-      {canVote ? (
+      {/* UPCOMING STATE (BEFORE 06:00 AM) */}
+      {isUpcoming ? (
+        <div className="p-3 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 text-xs text-indigo-900 dark:text-indigo-200 space-y-1">
+          <div className="font-extrabold flex items-center gap-1.5">
+            <Zap className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Poll subah 06:00 AM par open hoga</span>
+          </div>
+          <p className="text-[11px] text-indigo-700 dark:text-indigo-300 font-normal">
+            Aap subah 06:00 AM se {cutoffTime} AM ke beech me lunch ke liye apna YES ya NO vote submit kar sakenge.
+          </p>
+        </div>
+      ) : canVote ? (
+        /* VOTING STATE (BETWEEN 06:00 AM AND CUTOFF) */
         <div className="space-y-3">
           <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">
             Kya aap aaj PG me lunch khayenge? Please vote before <strong>{cutoffTime} AM</strong>:

@@ -38,6 +38,7 @@ export default async function TenantMessPage() {
           isCutoffPassed={pollStatus.isCutoffPassed}
           initialVote={pollStatus.tenantVote}
           tenantId={session.id}
+          scheduleStatus={pollStatus.scheduleStatus}
         />
       )}
 
