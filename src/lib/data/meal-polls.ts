@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   MealPoll,
   MealPollSummary,
+  MealPollHistoryItem,
   TenantHeadcountItem,
   TenantPollResponse,
   TenantMealPollStatusResult,
@@ -50,71 +51,90 @@ export function getTodayDateIST(): string {
 
 /**
  * Calculates current schedule status:
- * - "upcoming": Poll is scheduled to auto-open at 06:00 AM IST
- * - "open": Currently active between 06:00 AM and Cut-off time (e.g. 10:00 AM)
+ * - "upcoming": Current time is before Start Time (e.g. before 06:00 AM)
+ * - "open": Currently active between Start Time and Cut-off time
  * - "closed": Cut-off time has passed for today
  */
 export function getPollScheduleStatus(
   pollDate: string,
+  startTime: string = "06:00",
   cutoffTime: string = "10:00"
 ): {
   status: "upcoming" | "open" | "closed";
   isCutoffPassed: boolean;
   currentMinutes: number;
+  startMinutes: number;
   cutoffMinutes: number;
 } {
   const { todayIST, currentMinutes } = getISTTimeParts();
 
+  const [startH, startM] = (startTime || "06:00").split(":").map((v) => parseInt(v, 10));
+  const startMinutes = (startH || 6) * 60 + (startM || 0);
+
   const [cutoffH, cutoffM] = (cutoffTime || "10:00").split(":").map((v) => parseInt(v, 10));
   const cutoffMinutes = (cutoffH || 10) * 60 + (cutoffM || 0);
-  const autoStartMinutes = 6 * 60; // 06:00 AM IST
 
   if (todayIST > pollDate) {
-    return { status: "closed", isCutoffPassed: true, currentMinutes, cutoffMinutes };
+    return { status: "closed", isCutoffPassed: true, currentMinutes, startMinutes, cutoffMinutes };
   }
   if (todayIST < pollDate) {
-    return { status: "upcoming", isCutoffPassed: false, currentMinutes, cutoffMinutes };
+    return { status: "upcoming", isCutoffPassed: false, currentMinutes, startMinutes, cutoffMinutes };
   }
 
   // Today
-  if (currentMinutes < autoStartMinutes) {
-    return { status: "upcoming", isCutoffPassed: false, currentMinutes, cutoffMinutes };
+  if (currentMinutes < startMinutes) {
+    return { status: "upcoming", isCutoffPassed: false, currentMinutes, startMinutes, cutoffMinutes };
   } else if (currentMinutes >= cutoffMinutes) {
-    return { status: "closed", isCutoffPassed: true, currentMinutes, cutoffMinutes };
+    return { status: "closed", isCutoffPassed: true, currentMinutes, startMinutes, cutoffMinutes };
   } else {
-    return { status: "open", isCutoffPassed: false, currentMinutes, cutoffMinutes };
+    return { status: "open", isCutoffPassed: false, currentMinutes, startMinutes, cutoffMinutes };
   }
 }
 
 /**
  * Checks whether the cut-off time for a poll has passed in IST
  */
-export function isPollCutoffPassed(pollDate: string, cutoffTime: string = "10:00"): boolean {
-  return getPollScheduleStatus(pollDate, cutoffTime).isCutoffPassed;
+export function isPollCutoffPassed(
+  pollDate: string,
+  cutoffTime: string = "10:00",
+  startTime: string = "06:00"
+): boolean {
+  return getPollScheduleStatus(pollDate, startTime, cutoffTime).isCutoffPassed;
 }
 
 /**
- * Check if the PG has the Meal Poll Facility enabled by Super Admin
+ * Check if the PG has the Meal Poll Facility enabled by Super Admin and get its default schedule
  */
-export async function isMealPollFacilityEnabled(pgId: string): Promise<boolean> {
+export async function getPgMealSettings(pgId: string): Promise<{
+  isEnabled: boolean;
+  defaultStartTime: string;
+  defaultCutoffTime: string;
+}> {
   try {
     const admin = createAdminClient();
     const { data } = await (admin.from("pgs" as any) as any)
-      .select("meal_poll_enabled")
+      .select("meal_poll_enabled, meal_poll_start_time, meal_poll_cutoff")
       .eq("id", pgId)
       .maybeSingle();
 
-    if (!data) return true; // Default enabled for legacy or demo PGs
-    return data.meal_poll_enabled !== false;
+    if (!data) {
+      return { isEnabled: true, defaultStartTime: "06:00", defaultCutoffTime: "10:00" };
+    }
+
+    return {
+      isEnabled: data.meal_poll_enabled !== false,
+      defaultStartTime: data.meal_poll_start_time || "06:00",
+      defaultCutoffTime: data.meal_poll_cutoff || "10:00",
+    };
   } catch (err) {
-    console.error("isMealPollFacilityEnabled check error:", err);
-    return true;
+    console.error("getPgMealSettings check error:", err);
+    return { isEnabled: true, defaultStartTime: "06:00", defaultCutoffTime: "10:00" };
   }
 }
 
 /**
  * Fetch or auto-initialize today's meal poll for a PG
- * Starts automatically at 06:00 AM IST and closes at the designated cut-off time
+ * Starts automatically at designated start_time (default 06:00 AM IST) and closes at cutoff_time
  */
 export async function getTodayMealPoll(
   pgId: string,
@@ -124,9 +144,9 @@ export async function getTodayMealPoll(
     const admin = createAdminClient();
     const today = getTodayDateIST();
 
-    // 1. Check if facility is enabled for this PG
-    const isEnabled = await isMealPollFacilityEnabled(pgId);
-    if (!isEnabled) {
+    // 1. Check facility and default schedule for this PG
+    const settings = await getPgMealSettings(pgId);
+    if (!settings.isEnabled) {
       return null;
     }
 
@@ -143,14 +163,18 @@ export async function getTodayMealPoll(
     }
 
     if (data) {
-      const { isCutoffPassed } = getPollScheduleStatus(data.poll_date, data.cutoff_time);
+      const startTime = data.start_time || settings.defaultStartTime || "06:00";
+      const cutoffTime = data.cutoff_time || settings.defaultCutoffTime || "10:00";
+      const { isCutoffPassed } = getPollScheduleStatus(data.poll_date, startTime, cutoffTime);
+
       return {
         id: data.id,
         pg_id: data.pg_id,
         poll_date: data.poll_date,
         meal_type: data.meal_type,
         title: data.title || "Dopahar Ka Khana (Lunch Poll)",
-        cutoff_time: data.cutoff_time || "10:00",
+        start_time: startTime,
+        cutoff_time: cutoffTime,
         is_active: data.is_active,
         created_by: data.created_by,
         created_at: data.created_at,
@@ -159,14 +183,15 @@ export async function getTodayMealPoll(
       };
     }
 
-    // 3. Auto-initialize today's poll: Runs automatically every morning without requiring manual admin start!
+    // 3. Auto-initialize today's poll using PG's configured start & cutoff times
     const autoPayload = {
       pg_id: pgId,
       poll_date: today,
       meal_type: mealType,
       title: "Dopahar Ka Khana (Lunch Poll)",
-      cutoff_time: "10:00",
-      is_active: true, // Automatically active
+      start_time: settings.defaultStartTime,
+      cutoff_time: settings.defaultCutoffTime,
+      is_active: true,
       updated_at: new Date().toISOString(),
     };
 
@@ -176,15 +201,19 @@ export async function getTodayMealPoll(
       .single();
 
     if (createErr || !createdPoll) {
-      // If DB upsert failed, return in-memory active fallback so the user is never blocked
-      const { isCutoffPassed } = getPollScheduleStatus(today, "10:00");
+      const { isCutoffPassed } = getPollScheduleStatus(
+        today,
+        settings.defaultStartTime,
+        settings.defaultCutoffTime
+      );
       return {
         id: `auto-${pgId}-${today}`,
         pg_id: pgId,
         poll_date: today,
         meal_type: mealType,
         title: "Dopahar Ka Khana (Lunch Poll)",
-        cutoff_time: "10:00",
+        start_time: settings.defaultStartTime,
+        cutoff_time: settings.defaultCutoffTime,
         is_active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -192,14 +221,20 @@ export async function getTodayMealPoll(
       };
     }
 
-    const { isCutoffPassed } = getPollScheduleStatus(createdPoll.poll_date, createdPoll.cutoff_time);
+    const { isCutoffPassed } = getPollScheduleStatus(
+      createdPoll.poll_date,
+      createdPoll.start_time || settings.defaultStartTime,
+      createdPoll.cutoff_time || settings.defaultCutoffTime
+    );
+
     return {
       id: createdPoll.id,
       pg_id: createdPoll.pg_id,
       poll_date: createdPoll.poll_date,
       meal_type: createdPoll.meal_type,
       title: createdPoll.title || "Dopahar Ka Khana (Lunch Poll)",
-      cutoff_time: createdPoll.cutoff_time || "10:00",
+      start_time: createdPoll.start_time || settings.defaultStartTime,
+      cutoff_time: createdPoll.cutoff_time || settings.defaultCutoffTime,
       is_active: createdPoll.is_active,
       created_by: createdPoll.created_by,
       created_at: createdPoll.created_at,
@@ -213,11 +248,12 @@ export async function getTodayMealPoll(
 }
 
 /**
- * Toggle or customize meal poll for a PG
+ * Toggle or customize meal poll times (Start Time & Cut-off Time) for a PG
  */
 export async function toggleMealPoll(params: {
   pgId: string;
   isActive: boolean;
+  startTime?: string;
   cutoffTime?: string;
   mealType?: string;
   title?: string;
@@ -226,6 +262,7 @@ export async function toggleMealPoll(params: {
   const admin = createAdminClient();
   const today = getTodayDateIST();
   const mealType = params.mealType || "lunch";
+  const startTime = params.startTime || "06:00";
   const cutoffTime = params.cutoffTime || "10:00";
   const title = params.title || "Dopahar Ka Khana (Lunch Poll)";
 
@@ -234,26 +271,38 @@ export async function toggleMealPoll(params: {
     poll_date: today,
     meal_type: mealType,
     title: title,
+    start_time: startTime,
     cutoff_time: cutoffTime,
     is_active: params.isActive,
     created_by: params.userId || null,
     updated_at: new Date().toISOString(),
   };
 
+  // 1. Upsert today's poll row
   const { data, error } = await (admin.from("meal_polls" as any) as any)
     .upsert(payload, { onConflict: "pg_id,poll_date,meal_type" })
     .select()
     .single();
 
+  // 2. Persist preferred start_time and cutoff on pgs table as default for future days
+  await (admin.from("pgs" as any) as any)
+    .update({
+      meal_poll_start_time: startTime,
+      meal_poll_cutoff: cutoffTime,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.pgId);
+
   if (error || !data) {
     console.error("toggleMealPoll error:", error);
-    const { isCutoffPassed } = getPollScheduleStatus(today, cutoffTime);
+    const { isCutoffPassed } = getPollScheduleStatus(today, startTime, cutoffTime);
     return {
       id: `poll-${params.pgId}-${today}`,
       pg_id: params.pgId,
       poll_date: today,
       meal_type: mealType,
       title,
+      start_time: startTime,
       cutoff_time: cutoffTime,
       is_active: params.isActive,
       created_at: new Date().toISOString(),
@@ -262,14 +311,20 @@ export async function toggleMealPoll(params: {
     };
   }
 
-  const { isCutoffPassed } = getPollScheduleStatus(data.poll_date, data.cutoff_time);
+  const { isCutoffPassed } = getPollScheduleStatus(
+    data.poll_date,
+    data.start_time || startTime,
+    data.cutoff_time || cutoffTime
+  );
+
   return {
     id: data.id,
     pg_id: data.pg_id,
     poll_date: data.poll_date,
     meal_type: data.meal_type,
     title: data.title,
-    cutoff_time: data.cutoff_time,
+    start_time: data.start_time || startTime,
+    cutoff_time: data.cutoff_time || cutoffTime,
     is_active: data.is_active,
     created_by: data.created_by,
     created_at: data.created_at,
@@ -290,15 +345,15 @@ export async function getMealPollSummary(
     const admin = createAdminClient();
 
     // 1. Check if facility is enabled by Super Admin
-    const isFacilityEnabled = await isMealPollFacilityEnabled(pgId);
-    if (!isFacilityEnabled) {
+    const settings = await getPgMealSettings(pgId);
+    if (!settings.isEnabled) {
       return {
         poll: null,
         isCutoffPassed: true,
         scheduleStatus: "closed",
         isFacilityEnabled: false,
-        autoStartTime: "06:00",
-        cutoffTime: "10:00",
+        startTime: settings.defaultStartTime || "06:00",
+        cutoffTime: settings.defaultCutoffTime || "10:00",
         totalYes: 0,
         totalNo: 0,
         totalNotAnswered: 0,
@@ -311,10 +366,13 @@ export async function getMealPollSummary(
 
     // 2. Get or auto-initialize today's poll
     const poll = await getTodayMealPoll(pgId, mealType);
-    const cutoffTime = poll?.cutoff_time || "10:00";
+    const startTime = poll?.start_time || settings.defaultStartTime || "06:00";
+    const cutoffTime = poll?.cutoff_time || settings.defaultCutoffTime || "10:00";
     const today = getTodayDateIST();
+
     const { status: scheduleStatus, isCutoffPassed } = getPollScheduleStatus(
       poll?.poll_date || today,
+      startTime,
       cutoffTime
     );
 
@@ -396,7 +454,7 @@ export async function getMealPollSummary(
       isCutoffPassed,
       scheduleStatus,
       isFacilityEnabled: true,
-      autoStartTime: "06:00",
+      startTime,
       cutoffTime,
       totalYes: yesList.length,
       totalNo: noList.length,
@@ -413,7 +471,7 @@ export async function getMealPollSummary(
       isCutoffPassed: false,
       scheduleStatus: "closed",
       isFacilityEnabled: true,
-      autoStartTime: "06:00",
+      startTime: "06:00",
       cutoffTime: "10:00",
       totalYes: 0,
       totalNo: 0,
@@ -427,6 +485,113 @@ export async function getMealPollSummary(
 }
 
 /**
+ * Fetch Date-wise Meal Poll History for Admin / Owner
+ * Returns all past polls with detailed YES / NO / NOT ANSWERED lists
+ */
+export async function getMealPollHistory(
+  pgId: string,
+  limit: number = 30
+): Promise<MealPollHistoryItem[]> {
+  try {
+    const admin = createAdminClient();
+
+    // 1. Fetch polls for this PG ordered newest to oldest
+    const { data: pollsData, error: pollsErr } = await (admin.from("meal_polls" as any) as any)
+      .select("id, poll_date, start_time, cutoff_time, is_active, created_at")
+      .eq("pg_id", pgId)
+      .order("poll_date", { ascending: false })
+      .limit(limit);
+
+    if (pollsErr || !pollsData || pollsData.length === 0) {
+      return [];
+    }
+
+    // 2. Fetch all tenants for this PG
+    const { data: tenantsData } = await (admin.from("tenants" as any) as any)
+      .select(`
+        id,
+        full_name,
+        phone,
+        rooms (room_number),
+        beds (bed_name)
+      `)
+      .eq("pg_id", pgId)
+      .order("full_name", { ascending: true });
+
+    const tenants = tenantsData || [];
+
+    // 3. Fetch responses for all these polls in one batch
+    const pollIds = pollsData.map((p: any) => p.id);
+    const { data: responsesData } = await (admin.from("meal_poll_responses" as any) as any)
+      .select("poll_id, tenant_id, vote, updated_at, created_at")
+      .in("poll_id", pollIds);
+
+    // Map: poll_id -> Map<tenant_id, voteInfo>
+    const pollResponsesMap = new Map<string, Map<string, { vote: "yes" | "no"; votedAt: string }>>();
+    (responsesData || []).forEach((r: any) => {
+      if (!pollResponsesMap.has(r.poll_id)) {
+        pollResponsesMap.set(r.poll_id, new Map());
+      }
+      pollResponsesMap.get(r.poll_id)!.set(r.tenant_id, {
+        vote: r.vote as "yes" | "no",
+        votedAt: r.updated_at || r.created_at,
+      });
+    });
+
+    // 4. Construct history items
+    const historyList: MealPollHistoryItem[] = pollsData.map((p: any) => {
+      const respMap = pollResponsesMap.get(p.id) || new Map();
+      const yesList: TenantHeadcountItem[] = [];
+      const noList: TenantHeadcountItem[] = [];
+      const notAnsweredList: TenantHeadcountItem[] = [];
+
+      tenants.forEach((t: any) => {
+        const resp = respMap.get(t.id);
+        const roomNum = t.rooms?.room_number ? `Room ${t.rooms.room_number}` : "Room Assigned";
+        const bedName = t.beds?.bed_name ? `• ${t.beds.bed_name}` : "";
+
+        const item: TenantHeadcountItem = {
+          tenantId: t.id,
+          fullName: t.full_name || "Resident",
+          phone: t.phone || "",
+          roomNumber: roomNum,
+          bedName: bedName,
+          vote: resp ? resp.vote : "not_answered",
+          votedAt: resp ? resp.votedAt : null,
+        };
+
+        if (resp?.vote === "yes") {
+          yesList.push(item);
+        } else if (resp?.vote === "no") {
+          noList.push(item);
+        } else {
+          notAnsweredList.push(item);
+        }
+      });
+
+      return {
+        id: p.id,
+        pollDate: p.poll_date,
+        startTime: p.start_time || "06:00",
+        cutoffTime: p.cutoff_time || "10:00",
+        totalYes: yesList.length,
+        totalNo: noList.length,
+        totalNotAnswered: notAnsweredList.length,
+        totalTenants: tenants.length,
+        yesList,
+        noList,
+        notAnsweredList,
+      };
+    });
+
+    return historyList;
+  } catch (err) {
+    console.error("getMealPollHistory critical error:", err);
+    return [];
+  }
+}
+
+/**
  * Fetch tenant's personal poll status for today
  */
 export async function getTenantMealPollStatus(
@@ -435,8 +600,8 @@ export async function getTenantMealPollStatus(
   mealType: string = "lunch"
 ): Promise<TenantMealPollStatusResult> {
   try {
-    const isEnabled = await isMealPollFacilityEnabled(pgId);
-    if (!isEnabled) {
+    const settings = await getPgMealSettings(pgId);
+    if (!settings.isEnabled) {
       return {
         poll: null,
         isFacilityEnabled: false,
@@ -461,9 +626,13 @@ export async function getTenantMealPollStatus(
       };
     }
 
+    const startTime = poll.start_time || settings.defaultStartTime || "06:00";
+    const cutoffTime = poll.cutoff_time || settings.defaultCutoffTime || "10:00";
+
     const { status: scheduleStatus, isCutoffPassed } = getPollScheduleStatus(
       poll.poll_date,
-      poll.cutoff_time
+      startTime,
+      cutoffTime
     );
 
     const admin = createAdminClient();
@@ -484,23 +653,23 @@ export async function getTenantMealPollStatus(
 
     let statusMessage = "";
     if (scheduleStatus === "upcoming") {
-      statusMessage = `Aaj ka lunch poll subah 06:00 AM par open hoga (Cut-off: ${poll.cutoff_time} AM).`;
+      statusMessage = `Aaj ka lunch poll subah ${startTime} AM par open hoga (Cut-off: ${cutoffTime} AM).`;
     } else if (scheduleStatus === "open") {
       if (vote === "yes") {
-        statusMessage = `Aapne YES vote kiya hai (Lunch confirmed). Aap ${poll.cutoff_time} AM tak apna vote change kar sakte hain.`;
+        statusMessage = `Aapne YES vote kiya hai (Lunch confirmed). Aap ${cutoffTime} AM tak apna vote change kar sakte hain.`;
       } else if (vote === "no") {
-        statusMessage = `Aapne NO vote kiya hai (Not eating). Aap ${poll.cutoff_time} AM tak apna vote change kar sakte hain.`;
+        statusMessage = `Aapne NO vote kiya hai (Not eating). Aap ${cutoffTime} AM tak apna vote change kar sakte hain.`;
       } else {
-        statusMessage = `Voting open hai! Please ${poll.cutoff_time} AM se pehle vote karein.`;
+        statusMessage = `Voting open hai! Please ${cutoffTime} AM se pehle vote karein.`;
       }
     } else {
       // Closed / Cutoff passed
       if (vote === "yes") {
-        statusMessage = `Aapne YES vote kiya tha. Aapka lunch confirm ho chuka hai (${poll.cutoff_time} AM cut-off passed).`;
+        statusMessage = `Aapne YES vote kiya tha. Aapka lunch confirm ho chuka hai (${cutoffTime} AM cut-off passed).`;
       } else if (vote === "no") {
         statusMessage = `Aapne NO vote kiya tha. Aapka lunch skip kar diya gaya hai.`;
       } else {
-        statusMessage = `Aapne ${poll.cutoff_time} AM tak vote nahi kiya tha. Food wastage rokne ke liye system ne aapka vote automatically NO (Not Eating) mark kar diya hai.`;
+        statusMessage = `Aapne ${cutoffTime} AM tak vote nahi kiya tha. Food wastage rokne ke liye system ne aapka vote automatically NO (Not Eating) mark kar diya hai.`;
       }
     }
 
@@ -541,7 +710,7 @@ export async function submitTenantMealVote(
 
     // Verify poll exists and is currently in "open" window
     const { data: poll, error: pollErr } = await (admin.from("meal_polls" as any) as any)
-      .select("id, poll_date, cutoff_time, is_active")
+      .select("id, poll_date, start_time, cutoff_time, is_active")
       .eq("id", pollId)
       .maybeSingle();
 
@@ -553,16 +722,20 @@ export async function submitTenantMealVote(
       return { success: false, vote, error: "Poll has been deactivated by management." };
     }
 
+    const startTime = poll.start_time || "06:00";
+    const cutoffTime = poll.cutoff_time || "10:00";
+
     const { status: scheduleStatus, isCutoffPassed } = getPollScheduleStatus(
       poll.poll_date,
-      poll.cutoff_time
+      startTime,
+      cutoffTime
     );
 
     if (scheduleStatus === "upcoming") {
       return {
         success: false,
         vote,
-        error: "Voting has not started yet. Poll will open automatically at 06:00 AM IST.",
+        error: `Voting has not started yet. Poll will open automatically at ${startTime} AM IST.`,
       };
     }
 
@@ -570,7 +743,7 @@ export async function submitTenantMealVote(
       return {
         success: false,
         vote,
-        error: `Voting is closed! Cut-off deadline (${poll.cutoff_time} AM) has passed.`,
+        error: `Voting is closed! Cut-off deadline (${cutoffTime} AM) has passed.`,
       };
     }
 

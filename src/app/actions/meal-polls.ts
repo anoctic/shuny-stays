@@ -16,6 +16,7 @@ import {
 export async function toggleMealPollAction(
   pgId: string,
   isActive: boolean,
+  startTime: string = "06:00",
   cutoffTime: string = "10:00",
   mealType: string = "lunch",
   title?: string
@@ -42,6 +43,7 @@ export async function toggleMealPollAction(
     const updated = await toggleMealPoll({
       pgId: effectivePgId,
       isActive,
+      startTime: startTime || "06:00",
       cutoffTime: cutoffTime || "10:00",
       mealType,
       title: title || "Dopahar Ka Khana (Lunch Poll)",
@@ -58,12 +60,63 @@ export async function toggleMealPollAction(
       success: true,
       poll: updated,
       message: isActive
-        ? `Lunch poll started! Cut-off time set to ${cutoffTime} AM.`
-        : "Lunch poll has been deactivated.",
+        ? `Lunch poll active! Schedule: ${startTime} AM - ${cutoffTime} AM.`
+        : "Lunch poll has been paused.",
     };
   } catch (err: any) {
     console.error("toggleMealPollAction error:", err);
     return { error: err?.message || "Failed to update meal poll." };
+  }
+}
+
+/**
+ * Owner/Admin Action: Update Schedule (Start Time & Cut-off Time)
+ */
+export async function updateMealScheduleAction(
+  pgId: string,
+  startTime: string,
+  cutoffTime: string
+) {
+  const session = await getCurrentUserSession();
+
+  const isAuthorized =
+    session.role === "super_admin" ||
+    session.role === "owner" ||
+    session.role === "admin" ||
+    session.is_super_admin;
+
+  if (!isAuthorized) {
+    return { error: "Unauthorized." };
+  }
+
+  const effectivePgId = pgId || session.pg_id;
+  if (!effectivePgId) {
+    return { error: "Missing PG identifier." };
+  }
+
+  try {
+    const updated = await toggleMealPoll({
+      pgId: effectivePgId,
+      isActive: true,
+      startTime: startTime || "06:00",
+      cutoffTime: cutoffTime || "10:00",
+      userId: session.id,
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/meal-poll");
+    revalidatePath("/dashboard/mess");
+    revalidatePath("/tenant");
+    revalidatePath("/tenant/mess");
+
+    return {
+      success: true,
+      poll: updated,
+      message: `Poll schedule updated: ${startTime} AM to ${cutoffTime} AM IST!`,
+    };
+  } catch (err: any) {
+    console.error("updateMealScheduleAction error:", err);
+    return { error: err?.message || "Failed to update schedule." };
   }
 }
 

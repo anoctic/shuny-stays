@@ -6,6 +6,7 @@ export interface MealPoll {
   poll_date: string; // YYYY-MM-DD
   meal_type: string; // "lunch"
   title: string; // "Dopahar Ka Khana (Lunch Poll)"
+  start_time?: string; // "06:00"
   cutoff_time: string; // "10:00"
   is_active: boolean;
   created_by?: string | null;
@@ -39,8 +40,22 @@ export interface MealPollSummary {
   isCutoffPassed: boolean;
   scheduleStatus: "upcoming" | "open" | "closed";
   isFacilityEnabled: boolean;
-  autoStartTime: string; // "06:00"
-  cutoffTime: string; // "10:00"
+  startTime: string; // e.g. "06:00"
+  cutoffTime: string; // e.g. "10:00"
+  totalYes: number;
+  totalNo: number;
+  totalNotAnswered: number;
+  totalTenants: number;
+  yesList: TenantHeadcountItem[];
+  noList: TenantHeadcountItem[];
+  notAnsweredList: TenantHeadcountItem[];
+}
+
+export interface MealPollHistoryItem {
+  id: string;
+  pollDate: string; // "YYYY-MM-DD"
+  startTime: string;
+  cutoffTime: string;
   totalYes: number;
   totalNo: number;
   totalNotAnswered: number;

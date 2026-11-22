@@ -40,6 +40,7 @@ export function TenantMealPollCard({
     return null;
   }
 
+  const startTime = poll.start_time || "06:00";
   const cutoffTime = poll.cutoff_time || "10:00";
   const isUpcoming = scheduleStatus === "upcoming";
   const canVote = poll.is_active && !isCutoffPassed && scheduleStatus === "open";
@@ -105,7 +106,7 @@ export function TenantMealPollCard({
               : "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400"
           }`}
         >
-          {isUpcoming ? "Opens at 06:00 AM" : canVote ? "Voting Open" : "Poll Closed"}
+          {isUpcoming ? `Opens at ${startTime} AM` : canVote ? "Voting Open" : "Poll Closed"}
         </span>
       </div>
 
@@ -116,15 +117,15 @@ export function TenantMealPollCard({
         </div>
       )}
 
-      {/* UPCOMING STATE (BEFORE 06:00 AM) */}
+      {/* UPCOMING STATE (BEFORE START TIME) */}
       {isUpcoming ? (
         <div className="p-3 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 text-xs text-indigo-900 dark:text-indigo-200 space-y-1">
           <div className="font-extrabold flex items-center gap-1.5">
             <Zap className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Poll subah 06:00 AM par open hoga</span>
+            <span>Poll subah {startTime} AM par open hoga</span>
           </div>
           <p className="text-[11px] text-indigo-700 dark:text-indigo-300 font-normal">
-            Aap subah 06:00 AM se {cutoffTime} AM ke beech me lunch ke liye apna YES ya NO vote submit kar sakenge.
+            Aap subah {startTime} AM se {cutoffTime} AM ke beech me lunch ke liye apna YES ya NO vote submit kar sakenge.
           </p>
         </div>
       ) : canVote ? (
