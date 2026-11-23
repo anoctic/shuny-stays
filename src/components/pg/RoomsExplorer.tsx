@@ -182,8 +182,11 @@ export function RoomsExplorer({
 
   return (
     <div className="space-y-3.5">
-      {/* 1. Multi-Column Responsive KPI Strip (2 cols mobile, 4 cols desktop) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-3.5">
+      <div className="lg:grid lg:grid-cols-12 lg:gap-6 items-start">
+        {/* Left: Property Explorer & Room Grid */}
+        <div className={activeProfileBed ? "space-y-3.5 lg:col-span-8" : "space-y-3.5 lg:col-span-12"}>
+          {/* 1. Multi-Column Responsive KPI Strip (2 cols mobile, 4 cols desktop) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-3.5">
         <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-sm hover:border-slate-300 transition">
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
             Live Occupancy
@@ -586,22 +589,44 @@ export function RoomsExplorer({
           })
         )}
       </div>
+      </div>
 
-      {/* 360 Occupied Bed Profile Bottom Sheet */}
+      {/* Right: Sticky Docked Bed Profile Side Inspector (Desktop >= 1024px) */}
       {activeProfileBed && (
-        <BedProfileSheet
-          isOpen={true}
-          onClose={() => setActiveProfileBed(null)}
-          building={activeProfileBed.building}
-          floor={activeProfileBed.floor}
-          floorIdx={activeProfileBed.floorIdx}
-          room={activeProfileBed.room}
-          bed={activeProfileBed.bed}
-          bedIdx={activeProfileBed.bedIdx}
-          userRole={userRole}
-          allBuildings={initialBuildings}
-        />
+        <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto phone-scroll">
+          <BedProfileSheet
+            isOpen={true}
+            onClose={() => setActiveProfileBed(null)}
+            building={activeProfileBed.building}
+            floor={activeProfileBed.floor}
+            floorIdx={activeProfileBed.floorIdx}
+            room={activeProfileBed.room}
+            bed={activeProfileBed.bed}
+            bedIdx={activeProfileBed.bedIdx}
+            userRole={userRole}
+            allBuildings={initialBuildings}
+            isDocked={true}
+          />
+        </div>
       )}
+    </div>
+
+    {/* 360 Occupied Bed Profile Bottom Sheet (< 1024px) */}
+    {activeProfileBed && (
+      <BedProfileSheet
+        isOpen={true}
+        onClose={() => setActiveProfileBed(null)}
+        building={activeProfileBed.building}
+        floor={activeProfileBed.floor}
+        floorIdx={activeProfileBed.floorIdx}
+        room={activeProfileBed.room}
+        bed={activeProfileBed.bed}
+        bedIdx={activeProfileBed.bedIdx}
+        userRole={userRole}
+        allBuildings={initialBuildings}
+        isDocked={false}
+      />
+    )}
 
       {/* Walk-In Sheet */}
       {activeWalkInBed && (

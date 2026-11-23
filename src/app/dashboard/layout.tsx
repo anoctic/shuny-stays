@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
+import { DesktopTopBar } from "@/components/layout/DesktopTopBar";
 import { Building } from "@/types/schema.types";
 import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 import { getPlatformBillingSettings } from "@/lib/data/billing-settings";
@@ -142,7 +143,7 @@ export default async function DashboardLayout({
         pendingPassesCount={1}
         pendingDuesCount={3}
       />
-      {/* Top Header (Compact on mobile, right-aligned next to sidebar on PC) */}
+      {/* Mobile Top Header (strictly lg:hidden) */}
       <MobileTopHeader
         fullName={session.full_name}
         role={session.role}
@@ -151,9 +152,18 @@ export default async function DashboardLayout({
         activeBuildingId={activeBuildingId}
         broadcasts={broadcasts}
       />
-      {/* Content Area: on mobile standard pb-24, on desktop wide multi-column max-w-7xl */}
-      <main className="flex-1 p-4 pb-24 lg:ml-64 lg:p-6 lg:pb-12 overflow-y-auto">
-        <div className="w-full max-w-7xl mx-auto space-y-4">
+      {/* Desktop Top Utility Bar (strictly hidden lg:flex) */}
+      <DesktopTopBar
+        fullName={session.full_name}
+        role={session.role}
+        pgName={session.pg_name}
+        buildings={buildings}
+        activeBuildingId={activeBuildingId}
+        broadcasts={broadcasts}
+      />
+      {/* Content Area: on mobile standard p-4 pb-24, on desktop wide container lg:pl-64 lg:p-8 */}
+      <main className="flex-1 p-4 pb-24 lg:pl-64 lg:p-8 lg:pb-12 overflow-y-auto">
+        <div className="w-full max-w-[1600px] mx-auto space-y-6">
           {children}
         </div>
       </main>

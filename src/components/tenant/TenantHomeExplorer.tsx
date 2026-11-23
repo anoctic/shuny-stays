@@ -198,12 +198,12 @@ export function TenantHomeExplorer({
       {/* Urgent / Emergency Broadcast Banner */}
       <ActiveBroadcastBanner broadcasts={broadcasts} userRole="tenant" />
 
-      {/* Main Desktop Split Layout (1 col mobile, 7/5 split on desktop >= lg) */}
-      <div className="space-y-3.5 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6">
-        {/* LEFT COLUMN: Identity, Attendance & Meals */}
-        <div className="lg:col-span-7 space-y-3.5">
+      {/* 3-Column Desktop Bento Workspace (1 col mobile, 3 cols desktop >= 1024px) */}
+      <div className="space-y-3.5 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6 lg:items-start">
+        {/* COLUMN 1: Identity, KYC, Attendance & Security */}
+        <div className="space-y-3.5">
           {/* 1. White-Labeled Top Bar: PG Logo + Name */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-3">
           {pg.logo_url ? (
             <img
@@ -294,17 +294,6 @@ export function TenantHomeExplorer({
         </div>
       </div>
 
-      {/* Dopahar Ka Khana (Lunch Poll) Card */}
-      {mealPollStatus?.poll && (
-        <TenantMealPollCard
-          poll={mealPollStatus.poll}
-          isCutoffPassed={mealPollStatus.isCutoffPassed}
-          initialVote={mealPollStatus.tenantVote}
-          tenantId={session.id}
-          scheduleStatus={mealPollStatus.scheduleStatus}
-        />
-      )}
-
       {/* 3. Live Today's Attendance Status Card */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-sm">
         <div className="flex items-center justify-between">
@@ -356,10 +345,32 @@ export function TenantHomeExplorer({
           </div>
         )}
       </div>
+
+      {/* Mobile-only Lunch Poll Card (< lg) */}
+      {mealPollStatus?.poll && (
+        <div className="lg:hidden">
+          <TenantMealPollCard
+            poll={mealPollStatus.poll}
+            isCutoffPassed={mealPollStatus.isCutoffPassed}
+            initialVote={mealPollStatus.tenantVote}
+            tenantId={session.id}
+            scheduleStatus={mealPollStatus.scheduleStatus}
+          />
+        </div>
+      )}
+
+      {/* Resident Account & Login Security on Desktop (Column 1 bottom) */}
+      <div className="hidden lg:block pt-1">
+        <AccountSecurityCard
+          role="tenant"
+          currentPhone={session.phone}
+          currentEmail={session.email}
+        />
+      </div>
     </div>
 
-    {/* RIGHT COLUMN: Deposit, Rent Invoices & Passes */}
-    <div className="lg:col-span-5 space-y-3.5">
+    {/* COLUMN 2: Monthly Rent, Auto-Invoices & Security Deposit */}
+    <div className="space-y-3.5">
       {/* 4. Security Deposit Held Card */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-3">
         <div className="flex items-center justify-between">
@@ -550,6 +561,22 @@ export function TenantHomeExplorer({
           )}
         </div>
       </div>
+    </div>
+
+    {/* COLUMN 3: Lunch Poll, Outing Passes & Quick Support */}
+    <div className="space-y-3.5">
+      {/* Desktop-only Lunch Poll Card (>= lg) */}
+      {mealPollStatus?.poll && (
+        <div className="hidden lg:block">
+          <TenantMealPollCard
+            poll={mealPollStatus.poll}
+            isCutoffPassed={mealPollStatus.isCutoffPassed}
+            initialVote={mealPollStatus.tenantVote}
+            tenantId={session.id}
+            scheduleStatus={mealPollStatus.scheduleStatus}
+          />
+        </div>
+      )}
 
       {/* 6. Day/Night Gate Pass Cards (Yellow when issued by Warden, Green when approved by Owner) */}
       <div className="space-y-2.5">
@@ -640,59 +667,22 @@ export function TenantHomeExplorer({
           })}
       </div>
 
-      {/* KYC Upload Modal */}
-      {isKycModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
-          <div className="bg-white w-full max-w-[420px] rounded-3xl border border-slate-200 p-4 space-y-3.5 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <IdCard className="w-5 h-5 text-indigo-600" />
-                <h3 className="text-sm font-extrabold text-slate-900">
-                  Self-Service KYC Upload
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsKycModalOpen(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between font-bold text-slate-800">
-                <span>Aadhar Card (Front & Back)</span>
-                <span className="text-emerald-600 font-extrabold flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5" /> Captured
-                </span>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between font-bold text-slate-800">
-                <span>Live Resident Selfie</span>
-                <span className="text-emerald-600 font-extrabold flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5" /> Captured
-                </span>
-              </div>
-            </div>
-
-            <p className="text-[10px] text-slate-400">
-              Verified instantly with government biometric simulation. Synced directly to Owner bed profile.
-            </p>
-
-            <button
-              type="button"
-              disabled={kycLoading}
-              onClick={handleKycSubmit}
-              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-xs transition"
-            >
-              {kycLoading ? "Verifying KYC..." : "Submit & Verify KYC"}
-            </button>
-          </div>
+      {/* Quick Maintenance Complaint Card */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-xs font-extrabold text-slate-900">Need Help or Maintenance?</div>
+          <div className="text-[10px] text-slate-400">Raise Wi-Fi, plumbing, electrical or room issues</div>
         </div>
-      )}
+        <Link
+          href="/tenant/complaints"
+          className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-extrabold shrink-0 transition"
+        >
+          Complaints →
+        </Link>
+      </div>
 
-      {/* Resident Account & Login Security */}
-      <div className="pt-2">
+      {/* Mobile-only Resident Account & Login Security (bottom of page on mobile) */}
+      <div className="lg:hidden pt-1">
         <AccountSecurityCard
           role="tenant"
           currentPhone={session.phone}
@@ -701,6 +691,57 @@ export function TenantHomeExplorer({
       </div>
     </div>
   </div>
+
+  {/* KYC Upload Modal */}
+  {isKycModalOpen && (
+    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-[420px] rounded-3xl border border-slate-200 p-4 space-y-3.5 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <IdCard className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-sm font-extrabold text-slate-900">
+              Self-Service KYC Upload
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsKycModalOpen(false)}
+            className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="space-y-2 text-xs">
+          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between font-bold text-slate-800">
+            <span>Aadhar Card (Front & Back)</span>
+            <span className="text-emerald-600 font-extrabold flex items-center gap-1">
+              <Check className="w-3.5 h-3.5" /> Captured
+            </span>
+          </div>
+          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between font-bold text-slate-800">
+            <span>Live Resident Selfie</span>
+            <span className="text-emerald-600 font-extrabold flex items-center gap-1">
+              <Check className="w-3.5 h-3.5" /> Captured
+            </span>
+          </div>
+        </div>
+
+        <p className="text-[10px] text-slate-400">
+          Verified instantly with government biometric simulation. Synced directly to Owner bed profile.
+        </p>
+
+        <button
+          type="button"
+          disabled={kycLoading}
+          onClick={handleKycSubmit}
+          className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-xs transition"
+        >
+          {kycLoading ? "Verifying KYC..." : "Submit & Verify KYC"}
+        </button>
+      </div>
+    </div>
+  )}
 
       {/* 7. Subtle White-Label Footer: "Powered by Shuny Stays Software" */}
       <footer className="pt-3 pb-1 text-center space-y-1">

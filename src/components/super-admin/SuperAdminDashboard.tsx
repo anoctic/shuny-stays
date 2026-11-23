@@ -515,164 +515,355 @@ export function SuperAdminDashboard({
 
       {/* TAB 2: PGS DIRECTORY */}
       {activeTab === "pgs" && (
-        <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 xl:grid-cols-3 md:gap-4">
-          {pgsList.map((pg) => {
-            const isSuspended = pg.status === "suspended";
-            const isPending = pg.status === "pending";
-            const isActive = pg.status === "active";
-            const primaryColor = pg.primary_color || "#4F46E5";
+        <div className="space-y-4">
+          {/* Mobile & Tablet Card Grid (< lg) */}
+          <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 md:gap-4 lg:hidden">
+            {pgsList.map((pg) => {
+              const isSuspended = pg.status === "suspended";
+              const isPending = pg.status === "pending";
+              const isActive = pg.status === "active";
+              const primaryColor = pg.primary_color || "#4F46E5";
 
-            return (
-              <div
-                key={pg.id}
-                className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 space-y-3 shadow-sm hover:border-indigo-300 transition"
-              >
-                {/* CARD HEADER: LOGO, NAME, STATUS & DELETE */}
-                <div className="flex items-start justify-between gap-2">
-                  <div
-                    onClick={() => setSelectedPgForDetails(pg)}
-                    className="flex items-center gap-2.5 min-w-0 cursor-pointer group flex-1"
-                    title="Click to view all PG details, login ID & password"
-                  >
-                    {pg.logo_url ? (
-                      <img
-                        src={pg.logo_url}
-                        alt={pg.name}
-                        className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0 group-hover:scale-105 transition"
-                      />
-                    ) : (
-                      <div
-                        className="w-10 h-10 rounded-xl text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs group-hover:scale-105 transition"
-                        style={{ backgroundColor: primaryColor }}
-                      >
-                        {pg.name.slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-black text-slate-900 truncate group-hover:text-indigo-600 transition">
-                          {pg.name}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${
-                            isActive
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : isPending
-                              ? "bg-amber-50 text-amber-700 border-amber-200"
-                              : "bg-rose-50 text-rose-700 border-rose-200"
-                          }`}
+              return (
+                <div
+                  key={pg.id}
+                  className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 space-y-3 shadow-sm hover:border-indigo-300 transition"
+                >
+                  {/* CARD HEADER: LOGO, NAME, STATUS & DELETE */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div
+                      onClick={() => setSelectedPgForDetails(pg)}
+                      className="flex items-center gap-2.5 min-w-0 cursor-pointer group flex-1"
+                      title="Click to view all PG details, login ID & password"
+                    >
+                      {pg.logo_url ? (
+                        <img
+                          src={pg.logo_url}
+                          alt={pg.name}
+                          className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0 group-hover:scale-105 transition"
+                        />
+                      ) : (
+                        <div
+                          className="w-10 h-10 rounded-xl text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs group-hover:scale-105 transition"
+                          style={{ backgroundColor: primaryColor }}
                         >
-                          {isActive ? "Active" : isPending ? "Pending" : "Suspended"}
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                        /pg/{pg.slug} • {pg.owner_name} • {pg.subscription_tier}
+                          {pg.name.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-black text-slate-900 truncate group-hover:text-indigo-600 transition">
+                            {pg.name}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${
+                              isActive
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : isPending
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-rose-50 text-rose-700 border-rose-200"
+                            }`}
+                          >
+                            {isActive ? "Active" : isPending ? "Pending" : "Suspended"}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                          /pg/{pg.slug} • {pg.owner_name} • {pg.subscription_tier}
+                        </div>
                       </div>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setPgToDelete(pg)}
+                      className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:scale-90 border border-transparent hover:border-rose-200 transition shrink-0"
+                      title="Permanently Delete PG"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setPgToDelete(pg)}
-                    className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:scale-90 border border-transparent hover:border-rose-200 transition shrink-0"
-                    title="Permanently Delete PG"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                  {/* PLAN EXPIRY & PRICING BAR */}
+                  <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-100 text-[10.5px]">
+                    <span className="font-medium text-slate-600 truncate">
+                      Expires:{" "}
+                      <strong className={pg.plan_expires_at && new Date(pg.plan_expires_at) < new Date() ? "text-rose-600" : "text-slate-800"}>
+                        {pg.plan_expires_at
+                          ? new Date(pg.plan_expires_at).toLocaleDateString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })
+                          : "30 Days"}
+                      </strong>
+                    </span>
+                    <span className="font-extrabold text-indigo-600 shrink-0">
+                      ₹{pg.plan_price || 1999}/mo
+                    </span>
+                  </div>
 
-                {/* PLAN EXPIRY & PRICING BAR */}
-                <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-100 text-[10.5px]">
-                  <span className="font-medium text-slate-600 truncate">
-                    Expires:{" "}
-                    <strong className={pg.plan_expires_at && new Date(pg.plan_expires_at) < new Date() ? "text-rose-600" : "text-slate-800"}>
-                      {pg.plan_expires_at
-                        ? new Date(pg.plan_expires_at).toLocaleDateString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })
-                        : "30 Days"}
-                    </strong>
-                  </span>
-                  <span className="font-extrabold text-indigo-600 shrink-0">
-                    ₹{pg.plan_price || 1999}/mo
-                  </span>
-                </div>
+                  {/* ACTION BUTTONS ROW */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPgForDetails(pg)}
+                      className="flex-1 py-1.5 px-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 text-[10.5px] font-extrabold border border-indigo-200 transition flex items-center justify-center gap-1.5 shadow-2xs"
+                      title="View all details, phone, and password"
+                    >
+                      <KeyRound className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <span>Details & Password</span>
+                    </button>
 
-                {/* ACTION BUTTONS ROW */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPgForDetails(pg)}
-                    className="flex-1 py-1.5 px-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 text-[10.5px] font-extrabold border border-indigo-200 transition flex items-center justify-center gap-1.5 shadow-2xs"
-                    title="View all details, phone, and password"
-                  >
-                    <KeyRound className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                    <span>Details & Password</span>
-                  </button>
+                    <EditPgPlanModal pg={pg} />
+                    <EditBrandingModal
+                      pg={pg}
+                      triggerButton={
+                        <button
+                          type="button"
+                          className="py-1.5 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-[10.5px] font-extrabold border border-slate-200 transition"
+                        >
+                          Branding
+                        </button>
+                      }
+                    />
+                  </div>
 
-                  <EditPgPlanModal pg={pg} />
-                  <EditBrandingModal
-                    pg={pg}
-                    triggerButton={
+                  {/* OPERATION CONTROLS: SUSPEND / ACTIVATE & VIEW AS OWNER */}
+                  <div className="grid grid-cols-2 gap-2 pt-0.5">
+                    {isPending ? (
                       <button
                         type="button"
-                        className="py-1.5 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-[10.5px] font-extrabold border border-slate-200 transition"
+                        onClick={() => handleToggleStatus(pg.id, "pending")}
+                        className="py-2.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-[11px] font-extrabold shadow-xs transition"
                       >
-                        Branding
+                        Approve PG
                       </button>
-                    }
-                  />
-                </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStatus(pg.id, pg.status)}
+                        className={`py-2.5 sm:py-2 rounded-xl text-[11px] font-extrabold transition active:scale-95 border flex items-center justify-center gap-1.5 ${
+                          isActive
+                            ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
+                            : "bg-emerald-600 text-white border-transparent hover:bg-emerald-500 shadow-xs"
+                        }`}
+                      >
+                        {isActive ? (
+                          <>
+                            <Pause className="w-3 h-3 text-rose-600" />
+                            <span>Suspend PG</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-3 h-3 text-white" />
+                            <span>Activate PG</span>
+                          </>
+                        )}
+                      </button>
+                    )}
 
-                {/* OPERATION CONTROLS: SUSPEND / ACTIVATE & VIEW AS OWNER */}
-                <div className="grid grid-cols-2 gap-2 pt-0.5">
-                  {isPending ? (
                     <button
                       type="button"
-                      onClick={() => handleToggleStatus(pg.id, "pending")}
-                      className="py-2.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-[11px] font-extrabold shadow-xs transition"
+                      onClick={() => handleViewAsOwner(pg.name)}
+                      className="py-2.5 sm:py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200 text-[11px] font-extrabold transition flex items-center justify-center gap-1"
                     >
-                      Approve PG
+                      <span>View as Owner</span>
+                      <ArrowRight className="w-3 h-3 text-indigo-500" />
                     </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleToggleStatus(pg.id, pg.status)}
-                      className={`py-2.5 sm:py-2 rounded-xl text-[11px] font-extrabold transition active:scale-95 border flex items-center justify-center gap-1.5 ${
-                        isActive
-                          ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
-                          : "bg-emerald-600 text-white border-transparent hover:bg-emerald-500 shadow-xs"
-                      }`}
-                    >
-                      {isActive ? (
-                        <>
-                          <Pause className="w-3 h-3 text-rose-600" />
-                          <span>Suspend PG</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-3 h-3 text-white" />
-                          <span>Activate PG</span>
-                        </>
-                      )}
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => handleViewAsOwner(pg.name)}
-                    className="py-2.5 sm:py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200 text-[11px] font-extrabold transition flex items-center justify-center gap-1"
-                  >
-                    <span>View as Owner</span>
-                    <ArrowRight className="w-3 h-3 text-indigo-500" />
-                  </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+
+          {/* Full Widescreen Desktop Table (>= lg) */}
+          <div className="hidden lg:block overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] font-extrabold tracking-wider">
+                  <tr>
+                    <th scope="col" className="px-4 py-3.5">PG Brand & Slug</th>
+                    <th scope="col" className="px-4 py-3.5">Owner & Contact</th>
+                    <th scope="col" className="px-4 py-3.5">Plan & Expiry</th>
+                    <th scope="col" className="px-4 py-3.5">Status</th>
+                    <th scope="col" className="px-4 py-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {pgsList.map((pg) => {
+                    const isSuspended = pg.status === "suspended";
+                    const isPending = pg.status === "pending";
+                    const isActive = pg.status === "active";
+                    const primaryColor = pg.primary_color || "#4F46E5";
+
+                    return (
+                      <tr key={pg.id} className="hover:bg-slate-50/70 transition group">
+                        {/* PG Brand & Slug */}
+                        <td className="px-4 py-3.5">
+                          <div
+                            onClick={() => setSelectedPgForDetails(pg)}
+                            className="flex items-center gap-3 cursor-pointer group-hover:text-indigo-600 transition"
+                            title="Click to view details & credentials"
+                          >
+                            {pg.logo_url ? (
+                              <img
+                                src={pg.logo_url}
+                                alt={pg.name}
+                                className="w-9 h-9 rounded-xl object-cover border border-slate-200 shrink-0"
+                              />
+                            ) : (
+                              <div
+                                className="w-9 h-9 rounded-xl text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs"
+                                style={{ backgroundColor: primaryColor }}
+                              >
+                                {pg.name.slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="font-extrabold text-slate-900 group-hover:text-indigo-600 transition truncate">
+                                {pg.name}
+                              </div>
+                              <div className="text-[10.5px] font-mono text-slate-400 truncate">
+                                /pg/{pg.slug}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Owner & Contact */}
+                        <td className="px-4 py-3.5">
+                          <div className="font-bold text-slate-800">{pg.owner_name}</div>
+                          <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                            {pg.contact_phone || "No phone"} • {pg.contact_email || "No email"}
+                          </div>
+                        </td>
+
+                        {/* Plan & Expiry */}
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-extrabold border border-indigo-200 uppercase">
+                              {pg.subscription_tier}
+                            </span>
+                            <span className="font-extrabold text-slate-900 tabular-nums text-xs">
+                              ₹{pg.plan_price || 1999}/mo
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-1">
+                            Expires:{" "}
+                            <span className={pg.plan_expires_at && new Date(pg.plan_expires_at) < new Date() ? "text-rose-600 font-bold" : "text-slate-600 font-medium"}>
+                              {pg.plan_expires_at
+                                ? new Date(pg.plan_expires_at).toLocaleDateString("en-IN", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                  })
+                                : "30 Days"}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-4 py-3.5">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
+                              isActive
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : isPending
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-rose-50 text-rose-700 border-rose-200"
+                            }`}
+                          >
+                            {isActive ? "Active" : isPending ? "Pending" : "Suspended"}
+                          </span>
+                        </td>
+
+                        {/* Quick Actions */}
+                        <td className="px-4 py-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedPgForDetails(pg)}
+                              className="py-1 px-2.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10.5px] font-extrabold border border-indigo-200 transition flex items-center gap-1 cursor-pointer"
+                              title="View details & login password"
+                            >
+                              <KeyRound className="w-3 h-3 text-indigo-600" />
+                              <span>Details & Password</span>
+                            </button>
+
+                            <EditPgPlanModal pg={pg} />
+
+                            <EditBrandingModal
+                              pg={pg}
+                              triggerButton={
+                                <button
+                                  type="button"
+                                  className="py-1 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10.5px] font-extrabold border border-slate-200 transition cursor-pointer"
+                                >
+                                  Branding
+                                </button>
+                              }
+                            />
+
+                            {isPending ? (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStatus(pg.id, "pending")}
+                                className="py-1 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-extrabold shadow-xs transition cursor-pointer"
+                              >
+                                Approve
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStatus(pg.id, pg.status)}
+                                className={`py-1 px-2 rounded-lg text-[10.5px] font-extrabold transition border flex items-center gap-1 cursor-pointer ${
+                                  isActive
+                                    ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
+                                    : "bg-emerald-600 text-white border-transparent hover:bg-emerald-500"
+                                }`}
+                              >
+                                {isActive ? (
+                                  <>
+                                    <Pause className="w-3 h-3" />
+                                    <span>Suspend</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Play className="w-3 h-3" />
+                                    <span>Activate</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => handleViewAsOwner(pg.name)}
+                              className="py-1 px-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[10.5px] font-extrabold transition flex items-center gap-0.5 cursor-pointer"
+                              title="Impersonate & View as Owner"
+                            >
+                              <span>Owner View</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setPgToDelete(pg)}
+                              className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition cursor-pointer"
+                              title="Delete PG"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 

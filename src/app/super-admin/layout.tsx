@@ -5,6 +5,7 @@ import { getAllBroadcasts } from "@/lib/data/broadcasts";
 import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
+import { DesktopTopBar } from "@/components/layout/DesktopTopBar";
 import { RealtimeSyncSubscriber } from "@/components/common/RealtimeSyncSubscriber";
 
 export const runtime = "edge";
@@ -42,14 +43,22 @@ export default async function SuperAdminLayout({
         role="super_admin"
         fullName={session.full_name}
       />
+      {/* Mobile Top Header (strictly lg:hidden) */}
       <MobileTopHeader
         fullName={session.full_name}
         role="super_admin"
         pgName="Shuny Stays Governance (All Hosted PGs)"
         broadcasts={broadcasts}
       />
-      <main className="flex-1 p-4 pb-24 lg:ml-64 lg:p-6 lg:pb-12 overflow-y-auto">
-        <div className="w-full max-w-7xl mx-auto space-y-4">
+      {/* Desktop Top Utility Bar (strictly hidden lg:flex) */}
+      <DesktopTopBar
+        fullName={session.full_name}
+        role="super_admin"
+        pgName="Shuny Stays SaaS Governance (All Hosted PGs)"
+        broadcasts={broadcasts}
+      />
+      <main className="flex-1 p-4 pb-24 lg:pl-64 lg:p-8 lg:pb-12 overflow-y-auto">
+        <div className="w-full max-w-[1600px] mx-auto space-y-6">
           {children}
         </div>
       </main>

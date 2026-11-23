@@ -49,6 +49,7 @@ interface BedProfileSheetProps {
   userRole: "owner" | "admin" | "super_admin" | "tenant";
   initialTemplate?: "rent_reminder" | "welcome_info" | "custom";
   allBuildings?: BuildingItem[];
+  isDocked?: boolean;
 }
 
 export function BedProfileSheet({
@@ -63,6 +64,7 @@ export function BedProfileSheet({
   userRole,
   initialTemplate = "rent_reminder",
   allBuildings = [],
+  isDocked = false,
 }: BedProfileSheetProps) {
   const router = useRouter();
   const [whatsappTemplate, setWhatsappTemplate] = useState<"rent_reminder" | "welcome_info" | "custom">(initialTemplate);
@@ -292,16 +294,8 @@ export function BedProfileSheet({
 
   const netRefund = Math.max(0, (t.deposit || 8500) - deductionAmount);
 
-  return (
-    <div
-      className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-[480px] md:max-w-2xl mx-auto rounded-t-3xl md:rounded-3xl p-5 pb-8 max-h-[92%] md:max-h-[88vh] overflow-y-auto shadow-2xl border-t md:border border-slate-200 bg-white text-slate-900 animate-slide-up"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="space-y-3.5">
+  const sheetBody = (
+    <div className="space-y-3.5">
           {/* Header */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2.5">
@@ -1051,6 +1045,26 @@ export function BedProfileSheet({
             </div>
           )}
         </div>
+  );
+
+  if (isDocked) {
+    return (
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-5 shadow-sm text-slate-900 dark:text-white">
+        {sheetBody}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in lg:hidden"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[480px] md:max-w-2xl mx-auto rounded-t-3xl md:rounded-3xl p-5 pb-8 max-h-[92%] md:max-h-[88vh] overflow-y-auto shadow-2xl border-t md:border border-slate-200 bg-white text-slate-900 animate-slide-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {sheetBody}
       </div>
     </div>
   );
