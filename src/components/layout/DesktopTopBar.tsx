@@ -71,7 +71,7 @@ export function DesktopTopBar({
     <header
       className={cn(
         "hidden lg:flex h-16 sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-8 transition-[padding] duration-300 ease-in-out",
-        isCollapsed ? "lg:pl-8" : "lg:pl-64"
+        isCollapsed ? "lg:pl-[72px]" : "lg:pl-64"
       )}
     >
       <div className="w-full max-w-[1600px] mx-auto flex items-center justify-between gap-4">

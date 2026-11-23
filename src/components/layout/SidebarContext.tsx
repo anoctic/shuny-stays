@@ -17,15 +17,15 @@ const SidebarContext = createContext<SidebarContextType>({
 const STORAGE_KEY = "shuny_sidebar_collapsed";
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [mounted, setMounted] = useState(false);
 
   // Initialize from localStorage after client hydration
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === "true") {
-        setIsCollapsed(true);
+      if (saved !== null) {
+        setIsCollapsed(saved === "true");
       }
     } catch {
       // localStorage may fail in private browsing

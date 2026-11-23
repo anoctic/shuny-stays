@@ -66,6 +66,8 @@ export function DesktopSidebar({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { isCollapsed, toggleSidebar } = useSidebar();
+  const [isHovered, setIsHovered] = useState(false);
+  const isExpanded = !isCollapsed || isHovered;
   const [activeTabOverride, setActiveTabOverride] = useState<string | null>(null);
 
   useEffect(() => {
@@ -328,18 +330,27 @@ export function DesktopSidebar({
 
   return (
     <aside
+      onMouseEnter={() => {
+        if (isCollapsed) setIsHovered(true);
+      }}
+      onMouseLeave={() => {
+        if (isCollapsed) setIsHovered(false);
+      }}
       className={cn(
-        "hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:left-0 z-50 bg-white dark:bg-slate-900 border-r border-slate-200/90 dark:border-slate-800 shadow-sm transition-all duration-300 ease-in-out",
-        isCollapsed
-          ? "-translate-x-full pointer-events-none opacity-0 invisible"
-          : "translate-x-0 pointer-events-auto opacity-100 visible"
+        "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 z-50 bg-white dark:bg-slate-900 border-r border-slate-200/90 dark:border-slate-800 shadow-sm transition-[width,box-shadow] duration-300 ease-in-out select-none overflow-x-hidden",
+        isExpanded ? "lg:w-64" : "lg:w-[72px]",
+        isCollapsed && isHovered && "shadow-2xl ring-1 ring-slate-900/10 dark:ring-white/10"
       )}
       aria-label="Desktop Sidebar Navigation"
     >
       {/* 1. BRAND HEADER */}
-      <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2.5">
-        <Link href={role === "super_admin" ? "/super-admin" : role === "tenant" ? "/tenant" : "/dashboard"} className="flex items-center gap-2.5 min-w-0 group flex-1">
-          <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+      <div className="p-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 min-h-[64px]">
+        <Link
+          href={role === "super_admin" ? "/super-admin" : role === "tenant" ? "/tenant" : "/dashboard"}
+          className="flex items-center gap-2.5 min-w-0 group flex-1 overflow-hidden"
+          title={role === "super_admin" ? "ShunyStays Admin" : pgName || "Shuny Stays PG"}
+        >
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs group-hover:scale-105 transition-transform mx-auto">
             {role === "super_admin" ? (
               <Crown className="w-5 h-5 text-amber-300" />
             ) : pgName && pgName !== "Shuny Stays Properties" ? (
@@ -348,39 +359,46 @@ export function DesktopSidebar({
               <ShunyStaysEmblem className="w-7 h-7" />
             )}
           </div>
-          <div className="min-w-0">
-            <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-white truncate">
-              {role === "super_admin" ? (
-                <span>Shuny<span className="text-indigo-600">Stays</span> Admin</span>
-              ) : (
-                pgName || "Shuny Stays PG"
-              )}
+          {isExpanded && (
+            <div className="min-w-0 flex-1 animate-in fade-in duration-200">
+              <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-white truncate">
+                {role === "super_admin" ? (
+                  <span>Shuny<span className="text-indigo-600">Stays</span> Admin</span>
+                ) : (
+                  pgName || "Shuny Stays PG"
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={cn("px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider border", roleColors[role])}>
+                  {roleLabels[role]}
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className={cn("px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider border", roleColors[role])}>
-                {roleLabels[role]}
-              </span>
-            </div>
-          </div>
+          )}
         </Link>
 
-        {/* Collapse Sidebar Button (3 lines / toggle) */}
-        <button
-          type="button"
-          onClick={toggleSidebar}
-          title="Collapse sidebar (Ctrl+B)"
-          className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95 cursor-pointer shrink-0"
-          aria-label="Collapse Sidebar"
-        >
-          <Menu className="w-4 h-4" />
-        </button>
+        {isExpanded && (
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            title={isCollapsed ? "Pin sidebar open" : "Shrink sidebar to icons (Ctrl+B)"}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95 cursor-pointer shrink-0 animate-in fade-in duration-200"
+            aria-label="Toggle Sidebar Shrink"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* 2. NAVIGATION LINKS */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto phone-scroll">
-        <div className="text-[9.5px] font-extrabold uppercase tracking-widest text-slate-400 px-3 pb-1">
-          Menu & Operations
-        </div>
+      <nav className="flex-1 px-2.5 py-4 space-y-1.5 overflow-y-auto phone-scroll overflow-x-hidden">
+        {isExpanded ? (
+          <div className="text-[9.5px] font-extrabold uppercase tracking-widest text-slate-400 px-3 pb-1 truncate animate-in fade-in duration-200">
+            Menu & Operations
+          </div>
+        ) : (
+          <div className="h-1" />
+        )}
 
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -388,39 +406,48 @@ export function DesktopSidebar({
             <Link
               key={item.id}
               href={item.href}
+              title={!isExpanded ? item.label : undefined}
               onClick={(e) => {
                 if (role === "super_admin") {
                   handleSuperAdminClick(e, item.id, item.href);
                 }
               }}
               className={cn(
-                "group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all duration-150 cursor-pointer",
+                "group relative flex items-center rounded-xl text-xs transition-all duration-150 cursor-pointer",
+                isExpanded ? "justify-between px-3 py-2.5" : "justify-center w-11 h-11 mx-auto",
                 item.isActive
                   ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 font-semibold border border-indigo-200/80 dark:border-indigo-800/80 shadow-2xs"
                   : "text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white"
               )}
             >
-              <div className="flex items-center gap-2.5 min-w-0">
+              <div className={cn("flex items-center min-w-0", isExpanded ? "gap-2.5 flex-1" : "justify-center")}>
                 <Icon
                   className={cn(
                     "w-4 h-4 shrink-0 transition-transform duration-150 group-hover:scale-110",
                     item.isActive ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 group-hover:text-indigo-600"
                   )}
                 />
-                <span className="truncate">{item.label}</span>
+                {isExpanded && <span className="truncate animate-in fade-in duration-200">{item.label}</span>}
               </div>
 
               {item.badge != null && (
-                <span
-                  className={cn(
-                    "px-1.5 py-0.5 rounded-full text-[9px] font-black",
-                    item.isActive
-                      ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200"
-                      : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
-                  )}
-                >
-                  {item.badge}
-                </span>
+                isExpanded ? (
+                  <span
+                    className={cn(
+                      "px-1.5 py-0.5 rounded-full text-[9px] font-black shrink-0 animate-in fade-in duration-200",
+                      item.isActive
+                        ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200"
+                        : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
+                    )}
+                  >
+                    {item.badge}
+                  </span>
+                ) : (
+                  <span
+                    className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-600 ring-2 ring-white dark:ring-slate-900 animate-pulse"
+                    title={`${item.badge}`}
+                  />
+                )
               )}
             </Link>
           );
@@ -428,32 +455,52 @@ export function DesktopSidebar({
       </nav>
 
       {/* 3. USER PROFILE & LOGOUT FOOTER */}
-      <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 space-y-2">
-        <div className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
-          <div className="min-w-0 flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-extrabold text-[11px] shrink-0">
+      <div className="p-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60">
+        {isExpanded ? (
+          <div className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 animate-in fade-in duration-200">
+            <div className="min-w-0 flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-extrabold text-[11px] shrink-0">
+                {fullName ? fullName[0].toUpperCase() : "U"}
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-black text-slate-900 dark:text-white truncate">
+                  {fullName}
+                </div>
+                <div className="text-[9.5px] text-slate-400 truncate">
+                  {roleLabels[role]}
+                </div>
+              </div>
+            </div>
+
+            <form action={signOutAction}>
+              <button
+                type="submit"
+                className="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 flex items-center justify-center transition active:scale-95 cursor-pointer"
+                title="Log Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2 py-1">
+            <div
+              className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-extrabold text-xs shadow-2xs"
+              title={`${fullName} (${roleLabels[role]})`}
+            >
               {fullName ? fullName[0].toUpperCase() : "U"}
             </div>
-            <div className="min-w-0">
-              <div className="text-xs font-black text-slate-900 dark:text-white truncate">
-                {fullName}
-              </div>
-              <div className="text-[9.5px] text-slate-400 truncate">
-                {roleLabels[role]}
-              </div>
-            </div>
+            <form action={signOutAction}>
+              <button
+                type="submit"
+                className="w-8 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 flex items-center justify-center transition active:scale-95 cursor-pointer"
+                title="Log Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </form>
           </div>
-
-          <form action={signOutAction}>
-            <button
-              type="submit"
-              className="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 flex items-center justify-center transition active:scale-95 cursor-pointer"
-              title="Log Out"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
-          </form>
-        </div>
+        )}
       </div>
     </aside>
   );
