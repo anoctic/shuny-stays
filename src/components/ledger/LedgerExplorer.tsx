@@ -119,60 +119,86 @@ export function LedgerExplorer({
       {/* ========================================================================= */}
       {isOwner ? (
         <>
-          {/* 1. Exactly 3 Clean KPI Cards (1 col mobile, 3 cols desktop) */}
-          <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-3 md:gap-4">
+          {/* 1. 4 Clean SaaS KPI Cards (2 cols mobile, 4 cols desktop) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-4">
             {/* KPI 1: Rent Collected */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex items-center justify-between">
-              <div>
-                <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
-                  Rent Revenue (Nov 2026)
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:border-emerald-300 transition">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Rent Collected
                 </div>
-                <div className="text-xl font-black text-emerald-600 tabular-nums mt-0.5">
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Settled
+                </span>
+              </div>
+              <div className="mt-2">
+                <div className="text-xl md:text-2xl font-black text-emerald-600 tabular-nums">
                   ₹{rentCollectedTotal.toLocaleString("en-IN")}
                 </div>
                 <div className="text-[10px] text-slate-400 mt-0.5">
-                  {settledPayments.length} Invoices Settled into Bank
+                  {settledPayments.length} Invoices Banked
                 </div>
               </div>
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Settled
-              </span>
             </div>
 
             {/* KPI 2: Pending Cash Handover from Admin */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex items-center justify-between">
-              <div>
-                <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
-                  Pending Cash Handover from Staff
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:border-amber-300 transition">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Staff Cash Handover
                 </div>
-                <div className="text-xl font-black text-amber-600 tabular-nums mt-0.5">
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
+                  Pending
+                </span>
+              </div>
+              <div className="mt-2">
+                <div className="text-xl md:text-2xl font-black text-amber-600 tabular-nums">
                   ₹{pendingHandoverTotal.toLocaleString("en-IN")}
                 </div>
                 <div className="text-[10px] text-slate-400 mt-0.5">
-                  {pendingHandovers.length} payments waiting for physical handover
+                  {pendingHandovers.length} Desk Collections
                 </div>
               </div>
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
-                Pending Handover
-              </span>
             </div>
 
             {/* KPI 3: Security Deposit Held — Refundable */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex items-center justify-between">
-              <div>
-                <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
-                  Security Deposit Held (Refundable)
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:border-indigo-300 transition">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Security Deposits Held
                 </div>
-                <div className="text-xl font-black text-[#4F46E5] tabular-nums mt-0.5">
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  Trust
+                </span>
+              </div>
+              <div className="mt-2">
+                <div className="text-xl md:text-2xl font-black text-indigo-600 tabular-nums">
                   ₹{totalSecurityDeposits.toLocaleString("en-IN")}
                 </div>
                 <div className="text-[10px] text-slate-400 mt-0.5">
-                  Strictly Held in Trust • Kept Separate from Profit
+                  100% Refundable Trust
                 </div>
               </div>
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                Trust Account
-              </span>
+            </div>
+
+            {/* KPI 4: Total Expected Pipeline */}
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:border-slate-300 transition">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Expected Month Total
+                </div>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200">
+                  Pipeline
+                </span>
+              </div>
+              <div className="mt-2">
+                <div className="text-xl md:text-2xl font-black text-slate-900 tabular-nums">
+                  ₹{(rentCollectedTotal + pendingHandoverTotal).toLocaleString("en-IN")}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">
+                  {rentPayments.length} Total Registered Payments
+                </div>
+              </div>
             </div>
           </div>
 
@@ -281,7 +307,8 @@ export function LedgerExplorer({
                   Settled Payments & Auto-Invoices ({settledPayments.length})
                 </h3>
 
-                <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-2 md:gap-3.5">
+                {/* Mobile View (< lg) */}
+                <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-2 md:gap-3.5 lg:hidden">
                   {settledPayments.map((inv) => (
                     <div
                       key={inv.id}
@@ -327,6 +354,68 @@ export function LedgerExplorer({
                     </div>
                   ))}
                 </div>
+
+                {/* Widescreen Desktop Table (>= lg) */}
+                <div className="hidden lg:block overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase text-[10px] font-extrabold tracking-wider">
+                        <tr>
+                          <th scope="col" className="px-4 py-3.5">Resident</th>
+                          <th scope="col" className="px-4 py-3.5">Room & Bed</th>
+                          <th scope="col" className="px-4 py-3.5">Payment Mode & ID</th>
+                          <th scope="col" className="px-4 py-3.5">Settled Date</th>
+                          <th scope="col" className="px-4 py-3.5">Status</th>
+                          <th scope="col" className="px-4 py-3.5 text-right">Amount</th>
+                          <th scope="col" className="px-4 py-3.5 text-right">Invoice PDF</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {settledPayments.map((inv) => (
+                          <tr key={inv.id} className="hover:bg-slate-50 transition">
+                            <td className="px-4 py-3.5">
+                              <span className="font-extrabold text-slate-900 block">{inv.tenantName}</span>
+                              <span className="text-[10px] text-slate-400 font-mono">ID: {inv.tenantId}</span>
+                            </td>
+                            <td className="px-4 py-3.5 font-bold text-slate-700">{inv.room}</td>
+                            <td className="px-4 py-3.5">
+                              <span className="font-semibold text-slate-800 uppercase text-[11px]">{inv.paymentMode}</span>
+                              <span className="text-[10px] text-slate-400 font-mono block">{inv.id}</span>
+                            </td>
+                            <td className="px-4 py-3.5 text-slate-500 text-[11px]">{inv.collectedAt}</td>
+                            <td className="px-4 py-3.5">
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Settled
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5 text-right font-black text-slate-900 tabular-nums text-xs">
+                              ₹{inv.amount.toLocaleString("en-IN")}
+                            </td>
+                            <td className="px-4 py-3.5 text-right">
+                              <RentReceiptModal
+                                pgName="Royal Stay PG"
+                                primaryColor="#4F46E5"
+                                tenantName={inv.tenantName}
+                                roomNumber={inv.room}
+                                invoiceNumber={inv.id}
+                                amount={`₹${inv.amount.toLocaleString("en-IN")}`}
+                                dueDate={inv.collectedAt}
+                                triggerButton={
+                                  <button
+                                    type="button"
+                                    className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-[#4F46E5] text-[10.5px] font-extrabold border border-indigo-200 transition cursor-pointer"
+                                  >
+                                    Invoice PDF
+                                  </button>
+                                }
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -341,7 +430,8 @@ export function LedgerExplorer({
                 <span className="text-[10px] text-indigo-600 font-bold">100% Refundable</span>
               </div>
 
-              <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 md:gap-3.5">
+              {/* Mobile View (< lg) */}
+              <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 md:gap-3.5 lg:hidden">
                 {deposits.map((dep) => (
                   <div
                     key={dep.id}
@@ -416,6 +506,87 @@ export function LedgerExplorer({
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* Widescreen Desktop Table (>= lg) */}
+              <div className="hidden lg:block overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase text-[10px] font-extrabold tracking-wider">
+                      <tr>
+                        <th scope="col" className="px-4 py-3.5">Resident</th>
+                        <th scope="col" className="px-4 py-3.5">Property & Bed</th>
+                        <th scope="col" className="px-4 py-3.5">Status</th>
+                        <th scope="col" className="px-4 py-3.5">Payment Mode & Collector</th>
+                        <th scope="col" className="px-4 py-3.5 text-right">Held Deposit</th>
+                        <th scope="col" className="px-4 py-3.5 text-right">Receipt</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {deposits.map((dep) => (
+                        <tr key={dep.id} className="hover:bg-slate-50 transition">
+                          <td className="px-4 py-3.5">
+                            <span className="font-extrabold text-slate-900 block">{dep.tenantName}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">#{dep.id}</span>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span className="font-bold text-slate-800">{dep.buildingName}</span>
+                            <span className="text-[10px] text-slate-400 block">Room {dep.roomNumber} ({dep.bedLabel})</span>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${
+                                dep.status === "paid"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : dep.status === "pending"
+                                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                                  : "bg-purple-50 text-purple-700 border border-purple-200"
+                              }`}
+                            >
+                              {dep.status === "paid"
+                                ? "Paid • Held Safely"
+                                : dep.status === "pending"
+                                ? "Deposit Pending"
+                                : "Refunded"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span className="font-semibold text-slate-800 uppercase">{dep.paymentMode}</span>
+                            <span className="text-[10px] text-slate-500 block">By {dep.collectedByName || "Staff"}</span>
+                          </td>
+                          <td className="px-4 py-3.5 text-right font-black text-slate-900 tabular-nums text-xs">
+                            ₹{(dep.paidAmount || dep.expectedAmount).toLocaleString("en-IN")}
+                          </td>
+                          <td className="px-4 py-3.5 text-right">
+                            <DepositReceiptModal
+                              pgName="Royal Stay PG"
+                              primaryColor="#4F46E5"
+                              tenantName={dep.tenantName}
+                              roomNumber={`Room ${dep.roomNumber}`}
+                              bedLabel={dep.bedLabel}
+                              receiptNumber={dep.id}
+                              amount={dep.paidAmount || dep.expectedAmount}
+                              paymentMode={dep.paymentMode}
+                              collectedByName={dep.collectedByName || "Staff Desk"}
+                              status={dep.status === "paid" ? "Paid • Held Safely" : "Refunded"}
+                              deductionAmount={dep.deductionAmount}
+                              deductionReason={dep.deductionReason}
+                              refundedAmount={dep.refundedAmount}
+                              triggerButton={
+                                <button
+                                  type="button"
+                                  className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-[#4F46E5] text-[10.5px] font-extrabold border border-indigo-200 transition cursor-pointer"
+                                >
+                                  Deposit Receipt
+                                </button>
+                              }
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}

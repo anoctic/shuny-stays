@@ -41,22 +41,22 @@ export function DesktopTopBar({
   const roleBadgeConfig = {
     super_admin: {
       label: "Super Admin",
-      className: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30",
+      className: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800",
       dot: "bg-indigo-600",
     },
     owner: {
       label: "PG Owner",
-      className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30",
+      className: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800",
       dot: "bg-emerald-600",
     },
     admin: {
       label: "Warden / Admin",
-      className: "bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40",
+      className: "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800",
       dot: "bg-amber-600",
     },
     tenant: {
       label: "Tenant Resident",
-      className: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30",
+      className: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800",
       dot: "bg-indigo-600",
     },
   };
@@ -64,7 +64,7 @@ export function DesktopTopBar({
   const badge = roleBadgeConfig[role] || roleBadgeConfig.tenant;
 
   return (
-    <header className="hidden lg:flex h-16 sticky top-0 z-30 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 lg:pl-64 px-8 transition-colors">
+    <header className="hidden lg:flex h-16 sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-800 lg:pl-64 px-8 transition-colors">
       <div className="w-full max-w-[1600px] mx-auto flex items-center justify-between gap-4">
       {/* LEFT: Context & Workspace Breadcrumb */}
       <div className="flex items-center gap-3 min-w-0">

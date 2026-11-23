@@ -375,17 +375,17 @@ export function DesktopSidebar({
                 }
               }}
               className={cn(
-                "group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer",
+                "group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all duration-150 cursor-pointer",
                 item.isActive
-                  ? "bg-indigo-600 text-white shadow-xs font-black shadow-indigo-600/20"
-                  : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
+                  ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 font-semibold border border-indigo-200/80 dark:border-indigo-800/80 shadow-2xs"
+                  : "text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white"
               )}
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <Icon
                   className={cn(
                     "w-4 h-4 shrink-0 transition-transform duration-150 group-hover:scale-110",
-                    item.isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600"
+                    item.isActive ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 group-hover:text-indigo-600"
                   )}
                 />
                 <span className="truncate">{item.label}</span>
@@ -396,7 +396,7 @@ export function DesktopSidebar({
                   className={cn(
                     "px-1.5 py-0.5 rounded-full text-[9px] font-black",
                     item.isActive
-                      ? "bg-white/20 text-white"
+                      ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200"
                       : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
                   )}
                 >

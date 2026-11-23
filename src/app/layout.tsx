@@ -56,8 +56,8 @@ export default function RootLayout({
         <meta name="apple-touch-fullscreen" content="yes" />
       </head>
       <body className="min-h-full bg-slate-50 flex justify-center text-[#0F172A] selection:bg-indigo-600 selection:text-white">
-        {/* Mobile-first PWA Container: max-w-[480px] on desktop, full width on mobile */}
-        <div className="w-full max-w-[480px] mx-auto min-h-screen bg-[#F8FAFC] shadow-2xl relative flex flex-col overflow-x-hidden border-x border-slate-200/80">
+        {/* Mobile-first PWA Container: max-w-[480px] on mobile (< lg), full width widescreen on desktop (>= lg) */}
+        <div className="w-full max-w-[480px] lg:max-w-none mx-auto min-h-screen bg-[#F8FAFC] shadow-2xl lg:shadow-none relative flex flex-col overflow-x-hidden border-x border-slate-200/80 lg:border-x-0">
           <StartupSplashScreen />
           <IOSSmartBanner />
           <main className="flex-1 flex flex-col">{children}</main>
