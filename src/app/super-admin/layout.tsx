@@ -6,6 +6,7 @@ import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { DesktopTopBar } from "@/components/layout/DesktopTopBar";
+import { DesktopLayoutShell } from "@/components/layout/DesktopLayoutShell";
 import { RealtimeSyncSubscriber } from "@/components/common/RealtimeSyncSubscriber";
 
 export const runtime = "edge";
@@ -39,29 +40,32 @@ export default async function SuperAdminLayout({
       <RealtimeSyncSubscriber
         tables={["pgs", "profiles", "buildings", "platform_broadcasts", "subscription_plans"]}
       />
-      <DesktopSidebar
-        role="super_admin"
-        fullName={session.full_name}
-      />
-      {/* Mobile Top Header (strictly lg:hidden) */}
-      <MobileTopHeader
-        fullName={session.full_name}
-        role="super_admin"
-        pgName="Shuny Stays Governance (All Hosted PGs)"
-        broadcasts={broadcasts}
-      />
-      {/* Desktop Top Utility Bar (strictly hidden lg:flex) */}
-      <DesktopTopBar
-        fullName={session.full_name}
-        role="super_admin"
-        pgName="Shuny Stays SaaS Governance (All Hosted PGs)"
-        broadcasts={broadcasts}
-      />
-      <main className="flex-1 p-4 pb-24 lg:pl-64 lg:p-8 lg:pb-12 overflow-y-auto">
-        <div className="w-full max-w-[1600px] mx-auto space-y-6">
-          {children}
-        </div>
-      </main>
+      <DesktopLayoutShell
+        sidebar={
+          <DesktopSidebar
+            role="super_admin"
+            fullName={session.full_name}
+          />
+        }
+        mobileHeader={
+          <MobileTopHeader
+            fullName={session.full_name}
+            role="super_admin"
+            pgName="Shuny Stays Governance (All Hosted PGs)"
+            broadcasts={broadcasts}
+          />
+        }
+        topBar={
+          <DesktopTopBar
+            fullName={session.full_name}
+            role="super_admin"
+            pgName="Shuny Stays SaaS Governance (All Hosted PGs)"
+            broadcasts={broadcasts}
+          />
+        }
+      >
+        {children}
+      </DesktopLayoutShell>
       <MobileBottomNav role="super_admin" />
     </div>
   );

@@ -24,11 +24,13 @@ import {
   LucideIcon,
   Crown,
   Lock,
+  Menu,
 } from "lucide-react";
 import { UserRole, Building } from "@/types/schema.types";
 import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
 import { signOutAction, switchDemoPersonaAction } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
+import { useSidebar } from "./SidebarContext";
 
 interface SidebarItem {
   id: string;
@@ -63,6 +65,7 @@ export function DesktopSidebar({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { isCollapsed, toggleSidebar } = useSidebar();
   const [activeTabOverride, setActiveTabOverride] = useState<string | null>(null);
 
   useEffect(() => {
@@ -325,12 +328,17 @@ export function DesktopSidebar({
 
   return (
     <aside
-      className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:left-0 z-50 bg-white dark:bg-slate-900 border-r border-slate-200/90 dark:border-slate-800 shadow-sm transition-colors"
+      className={cn(
+        "hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:left-0 z-50 bg-white dark:bg-slate-900 border-r border-slate-200/90 dark:border-slate-800 shadow-sm transition-all duration-300 ease-in-out",
+        isCollapsed
+          ? "-translate-x-full pointer-events-none opacity-0 invisible"
+          : "translate-x-0 pointer-events-auto opacity-100 visible"
+      )}
       aria-label="Desktop Sidebar Navigation"
     >
       {/* 1. BRAND HEADER */}
       <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2.5">
-        <Link href={role === "super_admin" ? "/super-admin" : role === "tenant" ? "/tenant" : "/dashboard"} className="flex items-center gap-2.5 min-w-0 group">
+        <Link href={role === "super_admin" ? "/super-admin" : role === "tenant" ? "/tenant" : "/dashboard"} className="flex items-center gap-2.5 min-w-0 group flex-1">
           <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs group-hover:scale-105 transition-transform">
             {role === "super_admin" ? (
               <Crown className="w-5 h-5 text-amber-300" />
@@ -355,6 +363,17 @@ export function DesktopSidebar({
             </div>
           </div>
         </Link>
+
+        {/* Collapse Sidebar Button (3 lines / toggle) */}
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          title="Collapse sidebar (Ctrl+B)"
+          className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95 cursor-pointer shrink-0"
+          aria-label="Collapse Sidebar"
+        >
+          <Menu className="w-4 h-4" />
+        </button>
       </div>
 
       {/* 2. NAVIGATION LINKS */}

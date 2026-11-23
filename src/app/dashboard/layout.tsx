@@ -7,6 +7,7 @@ import { MobileTopHeader } from "@/components/layout/MobileTopHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { DesktopTopBar } from "@/components/layout/DesktopTopBar";
+import { DesktopLayoutShell } from "@/components/layout/DesktopLayoutShell";
 import { Building } from "@/types/schema.types";
 import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 import { getPlatformBillingSettings } from "@/lib/data/billing-settings";
@@ -132,41 +133,43 @@ export default async function DashboardLayout({
         platformSettings={platformSettings}
         userRole={session.role as "owner" | "admin"}
       />
-      {/* Permanent Desktop Left Sidebar for PC/Screens (>= lg) */}
-      <DesktopSidebar
-        role={session.role}
-        fullName={session.full_name}
-        pgName={session.pg_name}
-        buildings={buildings}
-        activeBuildingId={activeBuildingId}
-        openComplaintsCount={2}
-        pendingPassesCount={1}
-        pendingDuesCount={3}
-      />
-      {/* Mobile Top Header (strictly lg:hidden) */}
-      <MobileTopHeader
-        fullName={session.full_name}
-        role={session.role}
-        pgName={session.pg_name}
-        buildings={buildings}
-        activeBuildingId={activeBuildingId}
-        broadcasts={broadcasts}
-      />
-      {/* Desktop Top Utility Bar (strictly hidden lg:flex) */}
-      <DesktopTopBar
-        fullName={session.full_name}
-        role={session.role}
-        pgName={session.pg_name}
-        buildings={buildings}
-        activeBuildingId={activeBuildingId}
-        broadcasts={broadcasts}
-      />
-      {/* Content Area: on mobile standard p-4 pb-24, on desktop wide container lg:pl-64 lg:p-8 */}
-      <main className="flex-1 p-4 pb-24 lg:pl-64 lg:p-8 lg:pb-12 overflow-y-auto">
-        <div className="w-full max-w-[1600px] mx-auto space-y-6">
-          {children}
-        </div>
-      </main>
+      {/* Responsive App Shell: Desktop Collapsible Sidebar + Desktop TopBar + Mobile TopHeader */}
+      <DesktopLayoutShell
+        sidebar={
+          <DesktopSidebar
+            role={session.role}
+            fullName={session.full_name}
+            pgName={session.pg_name}
+            buildings={buildings}
+            activeBuildingId={activeBuildingId}
+            openComplaintsCount={2}
+            pendingPassesCount={1}
+            pendingDuesCount={3}
+          />
+        }
+        mobileHeader={
+          <MobileTopHeader
+            fullName={session.full_name}
+            role={session.role}
+            pgName={session.pg_name}
+            buildings={buildings}
+            activeBuildingId={activeBuildingId}
+            broadcasts={broadcasts}
+          />
+        }
+        topBar={
+          <DesktopTopBar
+            fullName={session.full_name}
+            role={session.role}
+            pgName={session.pg_name}
+            buildings={buildings}
+            activeBuildingId={activeBuildingId}
+            broadcasts={broadcasts}
+          />
+        }
+      >
+        {children}
+      </DesktopLayoutShell>
       <MobileBottomNav role={session.role} openComplaintsCount={2} pendingDuesCount={3} />
     </div>
   );

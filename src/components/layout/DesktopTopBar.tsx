@@ -12,12 +12,15 @@ import {
   Shield,
   User,
   ExternalLink,
+  Menu,
 } from "lucide-react";
 import { UserRole, Building, PlatformBroadcast } from "@/types/schema.types";
 import { BuildingSwitcher } from "./BuildingSwitcher";
 import { NotificationCenter } from "./NotificationCenter";
 import { switchDemoPersonaAction, signOutAction } from "@/app/actions/auth";
 import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
+import { useSidebar } from "./SidebarContext";
+import { cn } from "@/lib/utils";
 
 interface DesktopTopBarProps {
   fullName: string;
@@ -37,6 +40,7 @@ export function DesktopTopBar({
   broadcasts = [],
 }: DesktopTopBarProps) {
   const [showPersonaMenu, setShowPersonaMenu] = useState(false);
+  const { isCollapsed, toggleSidebar } = useSidebar();
 
   const roleBadgeConfig = {
     super_admin: {
@@ -64,10 +68,29 @@ export function DesktopTopBar({
   const badge = roleBadgeConfig[role] || roleBadgeConfig.tenant;
 
   return (
-    <header className="hidden lg:flex h-16 sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-800 lg:pl-64 px-8 transition-colors">
+    <header
+      className={cn(
+        "hidden lg:flex h-16 sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-8 transition-[padding] duration-300 ease-in-out",
+        isCollapsed ? "lg:pl-8" : "lg:pl-64"
+      )}
+    >
       <div className="w-full max-w-[1600px] mx-auto flex items-center justify-between gap-4">
-      {/* LEFT: Context & Workspace Breadcrumb */}
+      {/* LEFT: 3-Lines Menu Button + Context & Workspace Breadcrumb */}
       <div className="flex items-center gap-3 min-w-0">
+        {/* 3-Lines Toggle Menu Button */}
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          title={isCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
+          className={cn(
+            "p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95 cursor-pointer flex items-center justify-center shrink-0 border border-slate-200/80 dark:border-slate-700 shadow-2xs",
+            isCollapsed && "bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800"
+          )}
+          aria-label="Toggle Sidebar Navigation"
+        >
+          <Menu className="w-4 h-4" />
+        </button>
+
         <div className="flex items-center gap-2">
           {role === "super_admin" ? (
             <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
