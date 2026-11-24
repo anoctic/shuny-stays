@@ -313,24 +313,8 @@ export async function onboardNewPg(data: {
  console.error("onboardNewPg pg_staff step 4 error:", staffErr.message);
  }
 
- // 5. Create default building for the new PG so owner dashboard has an operational property
- const defaultBuildingId = crypto.randomUUID();
- await (admin.from("buildings" as any) as any).insert({
- id: defaultBuildingId,
- pg_id: pgId,
- name: "Tower 1 - Main Wing",
- gender_type: "coliving",
- address: `${data.city || "Bengaluru"} Central`,
- city: data.city || "Bengaluru",
- state: "Karnataka",
- pincode: "560001",
- warden_name: data.owner_name,
- warden_phone: data.owner_phone,
- total_floors: 3,
- amenities: ["High-speed Wi-Fi", "24/7 Power Backup", "RO Water", "Daily Housekeeping"],
- } as any);
-
- return newPg;
+ // 5. Newly onboarded PGs start clean with 0 buildings as requested
+  return newPg;
 }
 
 /**

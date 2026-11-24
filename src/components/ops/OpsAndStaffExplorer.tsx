@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
  ShieldCheck,
+  Shield,
  Ticket,
  Utensils,
  AlertCircle,
@@ -34,23 +35,27 @@ import {
 import { CredentialsGeneratedCard } from "@/components/auth/CredentialsGeneratedCard";
 
 interface OpsAndStaffExplorerProps {
- staffList: StaffItem[];
- gatePasses: GatePass[];
- complaints: ComplaintItem[];
- auditLogs: AuditLogItem[];
- messMenu: MessMenu;
- userRole: "owner" | "admin" | "super_admin" | "tenant";
- initialSubTab?: "passes_staff" | "audit_mess" | "complaints";
+  staffList: StaffItem[];
+  gatePasses: GatePass[];
+  complaints: ComplaintItem[];
+  auditLogs: AuditLogItem[];
+  messMenu: MessMenu;
+  userRole: "owner" | "admin" | "super_admin" | "tenant";
+  initialSubTab?: "passes_staff" | "audit_mess" | "complaints";
+  pgId?: string;
+  pgName?: string;
 }
 
 export function OpsAndStaffExplorer({
- staffList,
- gatePasses,
- complaints,
- auditLogs,
- messMenu,
- userRole,
- initialSubTab = "passes_staff",
+  staffList,
+  gatePasses,
+  complaints,
+  auditLogs,
+  messMenu,
+  userRole,
+  initialSubTab = "passes_staff",
+  pgId,
+  pgName,
 }: OpsAndStaffExplorerProps) {
  const router = useRouter();
  const isOwner = userRole === "owner";
@@ -80,11 +85,12 @@ export function OpsAndStaffExplorer({
  method: "POST",
  headers: { "Content-Type": "application/json" },
  body: JSON.stringify({
- name: wardenName,
- phone: wardenPhone,
- role: "admin",
- pgName: "Royal Stay PG",
- }),
+          name: wardenName,
+          phone: wardenPhone,
+          role: "admin",
+          pgId: pgId || undefined,
+          pgName: pgName || "My PG",
+        }),
  });
  const data = await res.json();
  if (data.success) {
@@ -301,7 +307,13 @@ export function OpsAndStaffExplorer({
  </button>
  </div>
 
- {staffList.map((st) => (
+ {staffList.length === 0 ? (
+          <div className="p-6 text-center rounded-xl bg-slate-50 border border-slate-200/80">
+            <Shield className="w-8 h-8 text-indigo-400 mx-auto mb-2" />
+            <p className="text-xs font-bold text-slate-800">No Staff or Wardens Added Yet</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">Click "+ Add Warden" above to provision credentials for your first warden.</p>
+          </div>
+        ) : staffList.map((st) => (
  <div
  key={st.id}
  className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2"
@@ -337,9 +349,9 @@ export function OpsAndStaffExplorer({
  </div>
  </div>
  ))}
- </div>
- </div>
- )}
+        </div>
+      </div>
+    )}
 
  {/* SUB-TAB 2: AUDIT & MESS */}
  {subTab === "audit_mess" && (

@@ -86,13 +86,15 @@ export function SuperAdminDashboard({
  "pg_subscription_requests",
  ]);
 
- const tabFromQuery = searchParams?.get("tab") as
- | "overview"
- | "pgs"
- | "broadcast"
- | "billing"
- | "settings"
- | null;
+ const rawTab = searchParams?.get("tab");
+  const normalizedQueryTab = rawTab === "organizations" ? "pgs" : rawTab;
+  const tabFromQuery = normalizedQueryTab as
+    | "overview"
+    | "pgs"
+    | "broadcast"
+    | "billing"
+    | "settings"
+    | null;
 
  const currentTab = tabFromQuery || initialTab || "overview";
  const [activeTab, setActiveTab] = useState<
@@ -113,11 +115,24 @@ export function SuperAdminDashboard({
  const [selectedPgForDetails, setSelectedPgForDetails] = useState<PgDetailItem | null>(null);
 
  // Sync with searchParams / bottom navigation
- useEffect(() => {
- if (tabFromQuery && tabFromQuery !== activeTab) {
- setActiveTab(tabFromQuery);
- }
- }, [tabFromQuery]);
+  useEffect(() => {
+    if (tabFromQuery && tabFromQuery !== activeTab) {
+      setActiveTab(tabFromQuery);
+    }
+  }, [tabFromQuery]);
+
+  // Listen to cross-component tab switch events from DesktopSidebar
+  useEffect(() => {
+    const handleSwitch = (e: any) => {
+      const target = e.detail?.tab;
+      const mapped = target === "organizations" ? "pgs" : target;
+      if (mapped && ["overview", "pgs", "broadcast", "billing", "settings"].includes(mapped)) {
+        setActiveTab(mapped);
+      }
+    };
+    window.addEventListener("superadmin:switchtab", handleSwitch);
+    return () => window.removeEventListener("superadmin:switchtab", handleSwitch);
+  }, []);
 
  const handleTabChange = (
  newTab: "overview" | "pgs" | "broadcast" | "billing" | "settings"

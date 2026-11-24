@@ -376,14 +376,19 @@ export async function addAutoBuilding(data: {
  const bId = crypto.randomUUID();
 
  let targetPgId: string = data.pgId || "";
- if (!targetPgId) {
- const { data: firstPg } = await db(admin, "pgs")
- .select("id")
- .order("created_at", { ascending: false })
- .limit(1)
- .maybeSingle();
- targetPgId = firstPg?.id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
- }
+    let pgExists = false;
+    if (targetPgId) {
+      const { data: found } = await db(admin, "pgs").select("id").eq("id", targetPgId).maybeSingle();
+      if (found?.id) pgExists = true;
+    }
+    if (!pgExists) {
+      const { data: firstPg } = await db(admin, "pgs")
+        .select("id")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      targetPgId = firstPg?.id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
+    }
 
  let genderType: "boys" | "girls" | "coliving" = "coliving";
  const rawType = (data.type || "").toLowerCase();
@@ -1483,31 +1488,74 @@ export async function rejectUpiPayment(id: string) {
 
 // --- STAFF & OPS ---
 
-export async function getStaffList(): Promise<StaffItem[]> {
- try {
- const admin = createAdminClient();
- const { data } = await db(admin, "profiles")
- .select("id, full_name, phone, role")
- .in("role", ["admin", "owner"]);
- if (data && data.length > 0) {
- return (data as any[]).map((s: any) => ({
- id: s.id,
- name: s.full_name,
- phone: s.phone || "9876543210",
- assignedBuildingIds: ["a0000000-0000-0000-0000-000000000001", "a0000000-0000-0000-0000-000000000002"],
- permissions: {
- manage_tenants: true,
- collect_cash: true,
- resolve_complaints: true,
- manage_mess: true,
- issue_passes: true,
- },
- }));
- }
- } catch (err) {
- console.error("Error fetching staff list:", err);
- }
- return [];
+export async function getStaffList(pgId?: string): Promise<StaffItem[]> {
+  try {
+    const admin = createAdminClient();
+    if (pgId) {
+      // 1. Fetch staff explicitly linked to this PG via pg_staff
+      const { data: staffRows } = await db(admin, "pg_staff")
+        .select("id, user_id, assigned_building_ids, permissions, designation, is_active")
+        .eq("pg_id", pgId)
+        .eq("is_active", true);
+
+      if (staffRows && staffRows.length > 0) {
+        const userIds = staffRows.map((s: any) => s.user_id);
+        const { data: profiles } = await db(admin, "profiles")
+          .select("id, full_name, phone, role")
+          .in("id", userIds);
+        const profileMap = new Map<string, any>((profiles || []).map((p: any) => [p.id, p]));
+
+        return staffRows.map((s: any) => {
+          const prof = profileMap.get(s.user_id);
+          const perms = Array.isArray(s.permissions) ? s.permissions : [];
+          return {
+            id: s.id,
+            name: prof?.full_name || "Staff Member",
+            phone: prof?.phone || "9876543210",
+            assignedBuildingIds: s.assigned_building_ids || [],
+            permissions: {
+              manage_tenants: perms.includes("manage_tenants") || perms.includes("ALL"),
+              collect_cash: perms.includes("collect_cash") || perms.includes("ALL"),
+              resolve_complaints: perms.includes("resolve_complaints") || perms.includes("ALL"),
+              manage_mess: perms.includes("manage_mess") || perms.includes("ALL"),
+              issue_passes: perms.includes("issue_passes") || perms.includes("ALL"),
+            },
+          };
+        });
+      }
+
+      // 2. Also check if profiles directly have this pg_id with role 'admin'
+      const { data: directProfiles } = await db(admin, "profiles")
+        .select("id, full_name, phone, role")
+        .eq("pg_id", pgId)
+        .eq("role", "admin");
+
+      if (directProfiles && directProfiles.length > 0) {
+        return (directProfiles as any[]).map((s: any) => ({
+          id: s.id,
+          name: s.full_name,
+          phone: s.phone || "9876543210",
+          assignedBuildingIds: [],
+          permissions: {
+            manage_tenants: true,
+            collect_cash: true,
+            resolve_complaints: true,
+            manage_mess: true,
+            issue_passes: true,
+          },
+        }));
+      }
+
+      // Newly onboarded PG starts with 0 staff!
+      return [];
+    }
+
+    // Default safety: return empty array to prevent data leak across tenants
+    return [];
+  } catch (err) {
+    console.error("Error fetching staff list:", err);
+    return [];
+  }
 }
 
 export async function toggleStaffPermission(staffId: string, permKey: string) {

@@ -65,9 +65,8 @@ export function DesktopSidebar({
  const router = useRouter();
  const pathname = usePathname();
  const searchParams = useSearchParams();
- const { isCollapsed, toggleSidebar } = useSidebar();
- const [isHovered, setIsHovered] = useState(false);
- const isExpanded = !isCollapsed || isHovered;
+ const { isCollapsed } = useSidebar();
+  const isExpanded = !isCollapsed;
  const [activeTabOverride, setActiveTabOverride] = useState<string | null>(null);
 
  useEffect(() => {
@@ -105,13 +104,14 @@ export function DesktopSidebar({
  isActive: pathname === "/super-admin" && superAdminCurrentTab === "overview",
  },
  {
- id: "organizations",
- label: "Hosted PG Brands",
- href: "/super-admin?tab=organizations",
- icon: Crown,
- isActive:
- (pathname === "/super-admin" && superAdminCurrentTab === "organizations") ||
- pathname.startsWith("/super-admin/organizations"),
+ id: "pgs",
+      label: "Hosted PG Brands",
+      href: "/super-admin?tab=pgs",
+      icon: Crown,
+      isActive:
+        (pathname === "/super-admin" &&
+          (superAdminCurrentTab === "pgs" || superAdminCurrentTab === "organizations")) ||
+        pathname.startsWith("/super-admin/organizations"),
  },
  {
  id: "billing",
@@ -330,17 +330,10 @@ export function DesktopSidebar({
 
  return (
  <aside
- onMouseEnter={() => {
- if (isCollapsed) setIsHovered(true);
- }}
- onMouseLeave={() => {
- if (isCollapsed) setIsHovered(false);
- }}
- className={cn(
- "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 z-50 bg-white border-r border-slate-200 shadow-sm transition-[width,box-shadow] duration-300 ease-in-out select-none overflow-x-hidden",
- isExpanded ? "lg:w-64" : "lg:w-[72px]",
- isCollapsed && isHovered && "shadow-2xl ring-1 ring-slate-900/10"
- )}
+      className={cn(
+        "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 z-50 bg-white border-r border-slate-200 shadow-sm transition-[width] duration-200 ease-in-out select-none overflow-x-hidden",
+        isExpanded ? "lg:w-64" : "lg:w-[72px]"
+      )}
  aria-label="Desktop Sidebar Navigation"
  >
  {/* 1. BRAND HEADER */}
@@ -377,17 +370,7 @@ export function DesktopSidebar({
  )}
  </Link>
 
- {isExpanded && (
- <button
- type="button"
- onClick={toggleSidebar}
- title={isCollapsed ? "Pin sidebar open" : "Shrink sidebar to icons (Ctrl+B)"}
- className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition active:scale-95 cursor-pointer shrink-0 animate-in fade-in duration-200"
- aria-label="Toggle Sidebar Shrink"
- >
- <Menu className="w-4 h-4" />
- </button>
- )}
+ 
  </div>
 
  {/* 2. NAVIGATION LINKS */}
@@ -430,8 +413,19 @@ export function DesktopSidebar({
  {isExpanded && <span className="truncate animate-in fade-in duration-200">{item.label}</span>}
  </div>
 
- {item.badge != null && (
- isExpanded ? (
+ {!isExpanded && (
+              <div className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                {item.label}
+                {item.badge != null && Number(item.badge) > 0 && (
+                  <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-indigo-500 text-white font-bold">
+                    {item.badge}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {item.badge != null && (
+              isExpanded ? (
  <span
  className={cn(
  "px-1.5 py-0.5 rounded-full text-[9px] font-black shrink-0 animate-in fade-in duration-200",
@@ -484,22 +478,29 @@ export function DesktopSidebar({
  </div>
  ) : (
  <div className="flex flex-col items-center gap-2 py-1">
- <div
- className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-extrabold text-xs shadow-2xs"
- title={`${fullName} (${roleLabels[role]})`}
- >
- {fullName ? fullName[0].toUpperCase() : "U"}
- </div>
- <form action={signOutAction}>
- <button
- type="submit"
- className="w-8 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition active:scale-95 cursor-pointer"
- title="Log Out"
- >
- <LogOut className="w-3.5 h-3.5" />
- </button>
- </form>
- </div>
+            <div className="group relative">
+              <div
+                className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-extrabold text-xs shadow-2xs cursor-default"
+              >
+                {fullName ? fullName[0].toUpperCase() : "U"}
+              </div>
+              <div className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                {fullName} • {roleLabels[role]}
+              </div>
+            </div>
+            <form action={signOutAction} className="group relative">
+              <button
+                type="submit"
+                className="w-8 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition active:scale-95 cursor-pointer"
+                aria-label="Log Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+              <div className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                Log Out
+              </div>
+            </form>
+          </div>
  )}
  </div>
  </aside>

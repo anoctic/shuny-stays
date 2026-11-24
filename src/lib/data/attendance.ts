@@ -74,9 +74,13 @@ export async function getTodayAttendanceSheet(options?: {
  )`
  );
 
- if (options?.buildingId && options.buildingId !== "all") {
- bldgQuery = bldgQuery.eq("id", options.buildingId);
- }
+ if (options?.pgId) {
+    bldgQuery = bldgQuery.eq("pg_id", options.pgId);
+  }
+
+  if (options?.buildingId && options.buildingId !== "all") {
+    bldgQuery = bldgQuery.eq("id", options.buildingId);
+  }
 
  const { data: dbBuildings, error: bldErr } = await (bldgQuery as any);
 

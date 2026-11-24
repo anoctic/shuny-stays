@@ -14,7 +14,7 @@ export const revalidate = 0;
 
 export default async function StaffPage() {
  const session = await getCurrentUserSession();
- const staffList = await getStaffList();
+ const staffList = await getStaffList(session.pg_id || undefined);
  const complaints = await getComplaints();
  const auditLogs = await getAuditLogs();
  const messMenu = await getMessMenu();
@@ -22,13 +22,15 @@ export default async function StaffPage() {
 
  return (
  <OpsAndStaffExplorer
- staffList={staffList}
- gatePasses={passes}
- complaints={complaints}
- auditLogs={auditLogs}
- messMenu={messMenu}
- userRole={session.role}
- initialSubTab="passes_staff"
- />
+      staffList={staffList}
+      gatePasses={passes}
+      complaints={complaints}
+      auditLogs={auditLogs}
+      messMenu={messMenu}
+      userRole={session.role}
+      initialSubTab="passes_staff"
+      pgId={session.pg_id || undefined}
+      pgName={session.pg_name || undefined}
+    />
  );
 }

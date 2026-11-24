@@ -41,7 +41,7 @@ export function RoomsExplorer({
  activePasses = [],
 }: RoomsExplorerProps) {
  const router = useRouter();
- useRealtimeSync(["rooms", "beds", "tenants", "payments", "complaints", "pgs"]);
+ useRealtimeSync(["buildings", "floors", "rooms", "beds", "tenants", "payments", "complaints", "pgs"]);
 
  const isOwner = userRole === "owner" || userRole === "super_admin";
  const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
