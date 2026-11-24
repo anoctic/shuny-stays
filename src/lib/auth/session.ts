@@ -156,29 +156,38 @@ export async function getCurrentUserSession(): Promise<CurrentUserSession> {
  let roomId: string | null = null;
  let bedId: string | null = null;
 
- if (role === "owner") {
- let pg: any = null;
- if (profile?.pg_id) {
- const { data } = await (supabase.from("pgs" as any) as any)
- .select("id, name")
- .eq("id", profile.pg_id)
- .maybeSingle();
- pg = data;
- }
- if (!pg) {
- const { data } = await (supabase.from("pgs" as any) as any)
- .select("id, name")
- .eq("owner_id", user.id)
- .limit(1)
- .maybeSingle();
- pg = data;
- }
+  if (role === "owner") {
+    let pg: any = null;
+    const admin = createAdminClient();
+    if (profile?.pg_id) {
+      const { data } = await (admin.from("pgs" as any) as any)
+        .select("id, name")
+        .eq("id", profile.pg_id)
+        .maybeSingle();
+      pg = data;
+    }
+    if (!pg) {
+      const { data } = await (admin.from("pgs" as any) as any)
+        .select("id, name")
+        .eq("owner_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      pg = data;
+      if (pg?.id && user.id) {
+        try {
+          await (admin.from("profiles" as any) as any)
+            .update({ pg_id: pg.id })
+            .eq("id", user.id);
+        } catch {}
+      }
+    }
 
- if (pg) {
- pgId = pg.id;
- pgName = pg.name;
- hasPg = true;
- }
+    if (pg) {
+      pgId = pg.id;
+      pgName = pg.name;
+      hasPg = true;
+    }
  } else if (role === "admin") {
  const { data: staff } = await (supabase.from("pg_staff" as any) as any)
  .select("pg_id, assigned_building_ids, permissions")

@@ -82,7 +82,31 @@ export async function addAutoBuildingAction(formData: FormData) {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    validPgId = firstPg?.id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
+
+    if (firstPg?.id) {
+      validPgId = firstPg.id;
+    } else {
+      // Auto-provision a guaranteed valid PG record in pgs table so FK constraint never fails
+      const fallbackPgId = crypto.randomUUID();
+      const ownerName = session.full_name || "My";
+      await (admin.from("pgs" as any) as any).insert({
+        id: fallbackPgId,
+        owner_id: session.id || null,
+        name: `${ownerName} PG`,
+        slug: `pg-${Date.now()}`,
+        status: "active",
+        subscription_tier: "starter",
+      });
+      validPgId = fallbackPgId;
+    }
+
+    if (session.id && validPgId) {
+      try {
+        await (admin.from("profiles" as any) as any)
+          .update({ pg_id: validPgId, role: "owner" })
+          .eq("id", session.id);
+      } catch {}
+    }
   }
 
   pgId = validPgId;

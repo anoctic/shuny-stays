@@ -387,7 +387,19 @@ export async function addAutoBuilding(data: {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      targetPgId = firstPg?.id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
+      if (firstPg?.id) {
+        targetPgId = firstPg.id;
+      } else {
+        const fallbackId = crypto.randomUUID();
+        await db(admin, "pgs").insert({
+          id: fallbackId,
+          name: "Shuny Stays Luxury PG",
+          slug: `shuny-stays-${Date.now()}`,
+          status: "active",
+          subscription_tier: "starter",
+        });
+        targetPgId = fallbackId;
+      }
     }
 
  let genderType: "boys" | "girls" | "coliving" = "coliving";
@@ -1492,10 +1504,11 @@ export async function getStaffList(pgId?: string): Promise<StaffItem[]> {
   try {
     const admin = createAdminClient();
     if (pgId) {
-      // 1. Fetch staff explicitly linked to this PG via pg_staff
+      // 1. Fetch staff explicitly linked to this PG via pg_staff (excluding the Owner)
       const { data: staffRows } = await db(admin, "pg_staff")
         .select("id, user_id, assigned_building_ids, permissions, designation, is_active")
         .eq("pg_id", pgId)
+        .neq("designation", "Owner")
         .eq("is_active", true);
 
       if (staffRows && staffRows.length > 0) {

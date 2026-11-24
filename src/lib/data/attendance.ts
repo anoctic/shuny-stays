@@ -75,7 +75,9 @@ export async function getTodayAttendanceSheet(options?: {
  );
 
  if (options?.pgId) {
-    bldgQuery = bldgQuery.eq("pg_id", options.pgId);
+    bldgQuery = bldgQuery.eq('pg_id', options.pgId);
+  } else if (options?.userRole !== 'super_admin') {
+    return [];
   }
 
   if (options?.buildingId && options.buildingId !== "all") {

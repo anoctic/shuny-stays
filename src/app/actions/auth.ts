@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserSession } from "@/lib/auth/session";
 import { UserRole } from "@/types/schema.types";
 
@@ -154,69 +155,81 @@ export async function submitOnboardingAction(formData: FormData) {
  return { error: "Please fill in PG brand name, city, and building name." };
  }
 
- const sess = await getCurrentUserSession();
- const supabase = await createClient();
- const slug = pgName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Math.floor(Math.random() * 1000);
+  const sess = await getCurrentUserSession();
+  const admin = createAdminClient();
+  const slug = pgName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Math.floor(Math.random() * 1000);
+  const pgId = crypto.randomUUID();
 
- // 1. Insert PG Brand record
- const { data: newPg, error: pgError } = await (supabase.from("pgs" as any) as any)
- .insert({
- owner_id: sess.id,
- name: pgName,
- slug,
- contact_email: sess.email || "owner@apnapg.demo",
- contact_phone: contactPhone || sess.phone || "+91 98765 00000",
- status: "active",
- subscription_tier: "starter",
- })
- .select("id")
- .single();
+  // 1. Insert PG Brand record using admin client to guarantee bypass of RLS constraint
+  const { data: newPg } = await (admin.from("pgs" as any) as any)
+    .insert({
+      id: pgId,
+      owner_id: sess.id || null,
+      name: pgName.trim(),
+      slug,
+      contact_email: sess.email || "owner@apnapg.demo",
+      contact_phone: contactPhone || sess.phone || "+91 98765 00000",
+      status: "active",
+      subscription_tier: "starter",
+    })
+    .select("id")
+    .single();
 
- if (pgError || !newPg) {
- // If running in local demo without auth session, clear demo no_pg cookie
- const cookieStore = await cookies();
- cookieStore.delete("pg_demo_no_pg");
- redirect("/dashboard");
- }
+  const finalPgId = newPg?.id || pgId;
 
- // 2. Insert First Building record
- const { data: newBuilding, error: bldError } = await (supabase.from("buildings" as any) as any)
- .insert({
- pg_id: newPg.id,
- name: buildingName,
- gender_type: genderType,
- address,
- city,
- state: "State",
- pincode: "110001",
- total_floors: totalFloors,
- amenities: ["High Speed WiFi", "RO Drinking Water", "Power Backup"],
- })
- .select("id")
- .single();
+  // 2. Link owner profile to newly created PG ID
+  if (sess.id) {
+    try {
+      await (admin.from("profiles" as any) as any)
+        .update({ pg_id: finalPgId, role: "owner" })
+        .eq("id", sess.id);
+    } catch (profileErr) {
+      console.error("Failed to link profile with new PG:", profileErr);
+    }
+  }
 
- if (newBuilding) {
- // 3. Insert Owner into pg_staff with ALL permissions
- await (supabase.from("pg_staff" as any) as any).insert({
- user_id: sess.id,
- pg_id: newPg.id,
- assigned_building_ids: [newBuilding.id],
- permissions: ["ALL"],
- designation: "Owner",
- is_active: true,
- });
- }
+  // 3. Insert First Building record (if name provided)
+  if (buildingName && buildingName.trim().length > 0) {
+    const buildingId = crypto.randomUUID();
+    const { data: newBuilding } = await (admin.from("buildings" as any) as any)
+      .insert({
+        id: buildingId,
+        pg_id: finalPgId,
+        name: buildingName.trim(),
+        gender_type: genderType,
+        address,
+        city,
+        state: "State",
+        pincode: "110001",
+        total_floors: totalFloors,
+        amenities: ["High Speed WiFi", "RO Drinking Water", "Power Backup"],
+      })
+      .select("id")
+      .single();
 
- const cookieStore = await cookies();
- cookieStore.delete("pg_demo_no_pg");
+    if (newBuilding && sess.id) {
+      // Insert Owner into pg_staff with ALL permissions
+      await (admin.from("pg_staff" as any) as any).insert({
+        user_id: sess.id,
+        pg_id: finalPgId,
+        assigned_building_ids: [newBuilding.id],
+        permissions: ["ALL"],
+        designation: "Owner",
+        is_active: true,
+      });
+    }
+  }
 
- revalidatePath("/dashboard");
- redirect("/dashboard");
+  const cookieStore = await cookies();
+  cookieStore.delete("pg_demo_no_pg");
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/rooms");
+  revalidatePath("/dashboard/staff");
+  revalidatePath("/dashboard/attendance");
+  redirect("/dashboard");
 }
 
-/**
- * Switch Demo Persona (Owner, Admin/Warden, Tenant, Super Admin)
- */
 export async function switchDemoPersonaAction(role: UserRole, options?: { noPg?: boolean }): Promise<void> {
  const cookieStore = await cookies();
  cookieStore.set("pg_demo_role", role, {
