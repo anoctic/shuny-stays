@@ -18,6 +18,7 @@ import {
   Building2,
   Megaphone,
   CreditCard,
+  Utensils,
   LucideIcon,
 } from "lucide-react";
 import { UserRole } from "@/types/schema.types";
@@ -93,7 +94,7 @@ function MobileBottomNavInner({
     return null;
   }
 
-  // Four destinations of equal importance per role
+  // Destinations per role (5 tabs for Owner, Admin, Super Admin; 4 tabs for Tenant)
   const ownerTabs: NavTab[] = [
     {
       id: "rooms",
@@ -108,6 +109,15 @@ function MobileBottomNavInner({
       href: "/dashboard/attendance",
       icon: ClipboardCheck,
       isActive: pathname.startsWith("/dashboard/attendance"),
+    },
+    {
+      id: "mess",
+      label: "Mess",
+      href: "/dashboard/meal-poll",
+      icon: Utensils,
+      isActive:
+        pathname.startsWith("/dashboard/meal-poll") ||
+        pathname.startsWith("/dashboard/mess"),
     },
     {
       id: "ledger",
@@ -144,6 +154,15 @@ function MobileBottomNavInner({
       href: "/dashboard/attendance",
       icon: ClipboardCheck,
       isActive: pathname.startsWith("/dashboard/attendance"),
+    },
+    {
+      id: "mess",
+      label: "Mess",
+      href: "/dashboard/meal-poll",
+      icon: Utensils,
+      isActive:
+        pathname.startsWith("/dashboard/meal-poll") ||
+        pathname.startsWith("/dashboard/mess"),
     },
     {
       id: "passes_help",
@@ -234,6 +253,15 @@ function MobileBottomNavInner({
         (pathname === "/super-admin" && superAdminCurrentTab === "billing") ||
         pathname.startsWith("/super-admin/subscriptions"),
     },
+    {
+      id: "settings",
+      label: "Security",
+      href: "/super-admin?tab=settings",
+      icon: ShieldCheck,
+      isActive:
+        (pathname === "/super-admin" && superAdminCurrentTab === "settings") ||
+        pathname.startsWith("/super-admin/settings"),
+    },
   ];
 
   const tabs: NavTab[] =
@@ -253,7 +281,12 @@ function MobileBottomNavInner({
       }}
       className="fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] select-none lg:hidden"
     >
-      <div className="max-w-md mx-auto grid grid-cols-4 items-center h-14 px-1.5">
+      <div
+        className={cn(
+          "max-w-md mx-auto grid items-center h-14 px-1.5",
+          tabs.length === 5 ? "grid-cols-5" : "grid-cols-4"
+        )}
+      >
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
