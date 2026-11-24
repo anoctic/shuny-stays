@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { UserRole } from "@/types/schema.types";
 
+// Cloudflare Pages Edge Runtime configuration
 export const runtime = "edge";
 
 export async function GET(request: NextRequest) {
