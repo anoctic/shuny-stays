@@ -331,13 +331,13 @@ export function DesktopSidebar({
  return (
  <aside
       className={cn(
-        "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 z-50 bg-white border-r border-slate-200 shadow-sm transition-[width] duration-200 ease-in-out select-none overflow-x-hidden",
+        "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 z-50 bg-white/85 backdrop-blur-2xl border-r border-slate-200/80 shadow-xs transition-[width] duration-200 ease-in-out select-none overflow-x-hidden",
         isExpanded ? "lg:w-64" : "lg:w-[72px]"
       )}
  aria-label="Desktop Sidebar Navigation"
  >
  {/* 1. BRAND HEADER */}
- <div className="p-3.5 border-b border-slate-100 flex items-center justify-between gap-2 min-h-[64px]">
+ <div className="p-3.5 border-b border-slate-200/60 bg-white/40 backdrop-blur-md flex items-center justify-between gap-2 min-h-[64px]">
  <Link
  href={role === "super_admin" ? "/super-admin" : role === "tenant" ? "/tenant" : "/dashboard"}
  className="flex items-center gap-2.5 min-w-0 group flex-1 overflow-hidden"
@@ -397,17 +397,17 @@ export function DesktopSidebar({
  }}
  className={cn(
  "group relative flex items-center rounded-xl text-xs transition-all duration-150 cursor-pointer",
- isExpanded ? "justify-between px-3 py-2.5" : "justify-center w-11 h-11 mx-auto",
- item.isActive
- ? "bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200/80 shadow-2xs"
- : "text-slate-600 font-medium hover:bg-slate-50 hover:text-slate-900"
+ isExpanded ? "justify-between px-3 py-2 rounded-lg" : "justify-center w-10 h-10 rounded-lg mx-auto",
+                item.isActive
+                  ? "bg-indigo-600 text-white font-semibold shadow-xs"
+                  : "text-slate-600 font-medium hover:bg-slate-200/60 hover:text-slate-900"
  )}
  >
  <div className={cn("flex items-center min-w-0", isExpanded ? "gap-2.5 flex-1" : "justify-center")}>
  <Icon
  className={cn(
  "w-4 h-4 shrink-0 transition-transform duration-150 group-hover:scale-110",
- item.isActive ? "text-indigo-600" : "text-slate-400 group-hover:text-indigo-600"
+ item.isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600"
  )}
  />
  {isExpanded && <span className="truncate animate-in fade-in duration-200">{item.label}</span>}
@@ -430,8 +430,8 @@ export function DesktopSidebar({
  className={cn(
  "px-1.5 py-0.5 rounded-full text-[9px] font-black shrink-0 animate-in fade-in duration-200",
  item.isActive
- ? "bg-indigo-100 text-indigo-800"
- : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                          ? "bg-white/20 text-white"
+                          : "bg-indigo-50 text-indigo-700 border border-indigo-200"
  )}
  >
  {item.badge}
@@ -449,7 +449,7 @@ export function DesktopSidebar({
  </nav>
 
  {/* 3. USER PROFILE & LOGOUT FOOTER */}
- <div className="p-2.5 border-t border-slate-100 bg-slate-50/70">
+ <div className="p-2.5 border-t border-slate-200/60 bg-white/50 backdrop-blur-md">
  {isExpanded ? (
  <div className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs animate-in fade-in duration-200">
  <div className="min-w-0 flex items-center gap-2">
