@@ -53,7 +53,9 @@ export default async function SuperAdminLayout({
  role="super_admin"
  pgName="Shuny Stays Governance (All Hosted PGs)"
  broadcasts={broadcasts}
- />
+ 
+            userId={session.id}
+          />
  }
  topBar={
  <DesktopTopBar
@@ -61,7 +63,9 @@ export default async function SuperAdminLayout({
  role="super_admin"
  pgName="Shuny Stays SaaS Governance (All Hosted PGs)"
  broadcasts={broadcasts}
- />
+ 
+            userId={session.id}
+          />
  }
  >
  {children}

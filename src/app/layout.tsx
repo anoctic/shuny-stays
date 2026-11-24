@@ -54,6 +54,38 @@ export default function RootLayout({
  <head>
  <meta name="mobile-web-app-capable" content="yes" />
  <meta name="apple-touch-fullscreen" content="yes" />
+ <script
+ dangerouslySetInnerHTML={{
+ __html: `
+ (function() {
+ try {
+ var cookies = document.cookie.split(';');
+ var theme = null;
+ for (var i = 0; i < cookies.length; i++) {
+ var c = cookies[i].trim();
+ if (c.indexOf('shuny_theme_') === 0 || c.indexOf('shuny_theme=') === 0) {
+ theme = c.split('=')[1];
+ break;
+ }
+ }
+ if (!theme) {
+ for (var k in localStorage) {
+ if (k.indexOf('shuny_theme') === 0) {
+ theme = localStorage.getItem(k);
+ if (theme) break;
+ }
+ }
+ }
+ if (theme === 'dark') {
+ document.documentElement.classList.add('dark');
+ } else {
+ document.documentElement.classList.remove('dark');
+ }
+ } catch (e) {}
+ })();
+ `,
+ }}
+ />
  </head>
  <body className="min-h-full bg-slate-50 flex justify-center text-[#0F172A] selection:bg-indigo-600 selection:text-white">
  {/* Mobile-first PWA Container: max-w-[480px] on mobile (< lg), full width widescreen on desktop (>= lg) */}

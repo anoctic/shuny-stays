@@ -155,7 +155,9 @@ export default async function DashboardLayout({
  buildings={buildings}
  activeBuildingId={activeBuildingId}
  broadcasts={broadcasts}
- />
+ 
+            userId={session.id}
+          />
  }
  topBar={
  <DesktopTopBar
@@ -165,7 +167,9 @@ export default async function DashboardLayout({
  buildings={buildings}
  activeBuildingId={activeBuildingId}
  broadcasts={broadcasts}
- />
+ 
+            userId={session.id}
+          />
  }
  >
  {children}

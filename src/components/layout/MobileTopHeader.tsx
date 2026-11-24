@@ -1,3 +1,4 @@
+import { ThemeToggle } from "@/components/common/ThemeToggle";
 "use client";
 
 import { useState } from "react";
@@ -16,6 +17,7 @@ interface MobileTopHeaderProps {
  buildings?: Building[];
  activeBuildingId?: string | null;
  broadcasts?: PlatformBroadcast[];
+  userId?: string;
 }
 
 export function MobileTopHeader({
