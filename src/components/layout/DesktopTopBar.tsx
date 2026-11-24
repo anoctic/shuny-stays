@@ -40,7 +40,7 @@ export function DesktopTopBar({
  broadcasts = [],
 }: DesktopTopBarProps) {
  const [showPersonaMenu, setShowPersonaMenu] = useState(false);
- const { isCollapsed, toggleSidebar } = useSidebar();
+ const { isCollapsed, toggleSidebar, effectiveWidth, isDragging } = useSidebar();
 
  const roleBadgeConfig = {
  super_admin: {
@@ -69,11 +69,12 @@ export function DesktopTopBar({
 
  return (
  <header
- className={cn(
- "hidden lg:flex h-16 sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 pr-8 transition-[padding] duration-300 ease-in-out shadow-xs",
- isCollapsed ? "lg:pl-[92px]" : "lg:pl-[280px]"
- )}
- >
+      style={{ ["--sidebar-w" as any]: `${effectiveWidth + 16}px` }}
+      className={cn(
+        "hidden lg:flex h-16 sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 pr-8 shadow-xs lg:pl-[var(--sidebar-w)]",
+        isDragging ? "transition-none" : "transition-[padding] duration-200 ease-in-out"
+      )}
+    >
  <div className="w-full max-w-[1600px] mx-auto flex items-center justify-between gap-4">
  {/* LEFT: 3-Lines Menu Toggle + Context Breadcrumb */}
  <div className="flex items-center gap-3 min-w-0">

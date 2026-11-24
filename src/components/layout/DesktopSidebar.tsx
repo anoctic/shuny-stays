@@ -65,7 +65,7 @@ export function DesktopSidebar({
  const router = useRouter();
  const pathname = usePathname();
  const searchParams = useSearchParams();
- const { isCollapsed } = useSidebar();
+ const { isCollapsed, toggleSidebar, effectiveWidth, isDragging, startDragging } = useSidebar();
   const isExpanded = !isCollapsed;
  const [activeTabOverride, setActiveTabOverride] = useState<string | null>(null);
 
@@ -330,12 +330,13 @@ export function DesktopSidebar({
 
  return (
  <aside
+      style={{ width: `${effectiveWidth}px` }}
       className={cn(
-        "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 z-50 bg-white/85 backdrop-blur-2xl border-r border-slate-200/80 shadow-xs transition-[width] duration-200 ease-in-out select-none overflow-x-hidden",
-        isExpanded ? "lg:w-64" : "lg:w-[72px]"
+        "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 z-50 bg-white/90 backdrop-blur-2xl border-r border-slate-200/80 shadow-xs select-none overflow-x-hidden no-scrollbar",
+        isDragging ? "transition-none select-none" : "transition-[width] duration-200 ease-in-out"
       )}
- aria-label="Desktop Sidebar Navigation"
- >
+      aria-label="Desktop Sidebar Navigation"
+    >
  {/* 1. BRAND HEADER */}
  <div className="p-3.5 border-b border-slate-200/60 bg-white/40 backdrop-blur-md flex items-center justify-between gap-2 min-h-[64px]">
  <Link
@@ -374,7 +375,7 @@ export function DesktopSidebar({
  </div>
 
  {/* 2. NAVIGATION LINKS */}
- <nav className="flex-1 px-2.5 py-4 space-y-1.5 overflow-y-auto phone-scroll overflow-x-hidden">
+ <nav className="flex-1 px-2.5 py-4 space-y-1.5 overflow-y-auto no-scrollbar overflow-x-hidden">
  {isExpanded ? (
  <div className="text-[9.5px] font-extrabold uppercase tracking-widest text-slate-400 px-3 pb-1 truncate animate-in fade-in duration-200">
  Menu & Operations
@@ -503,6 +504,26 @@ export function DesktopSidebar({
           </div>
  )}
  </div>
- </aside>
+
+      {/* DRAGGABLE SPLIT VIEW DIVIDER (NSSplitView Divider Handle) */}
+      <div
+        onMouseDown={startDragging}
+        onDoubleClick={toggleSidebar}
+        title="Drag to resize pane • Double-click to collapse/expand"
+        className={cn(
+          "hidden lg:flex absolute top-0 bottom-0 -right-1 w-2.5 cursor-col-resize z-50 items-center justify-center group select-none",
+          isDragging && "cursor-col-resize select-none"
+        )}
+      >
+        <div
+          className={cn(
+            "w-[1px] h-full transition-colors duration-150",
+            isDragging
+              ? "bg-indigo-600 w-[2px]"
+              : "bg-transparent group-hover:bg-indigo-500 group-hover:w-[2px]"
+          )}
+        />
+      </div>
+    </aside>
  );
 }
