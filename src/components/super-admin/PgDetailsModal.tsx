@@ -231,7 +231,7 @@ export function PgDetailsModal({
 
  return (
  <div
- className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150 overflow-y-auto"
+ className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150 overflow-y-auto"
  onClick={onClose}
  >
  <div

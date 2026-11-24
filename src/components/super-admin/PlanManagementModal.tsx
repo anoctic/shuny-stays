@@ -137,7 +137,7 @@ export function PlanManagementModal({
  )}
 
  {isOpen && (
- <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+ <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
  <div className="bg-white w-full max-w-lg rounded-2xl border border-slate-200 shadow-2xl p-5 space-y-4 max-h-[92vh] overflow-y-auto">
  {/* Header */}
  <div className="flex items-center justify-between pb-3 border-b border-slate-100">

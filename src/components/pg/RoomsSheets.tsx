@@ -84,7 +84,7 @@ export function WalkInSheet({
 
  return (
  <div
- className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
+ className="fixed inset-0 z-[100] bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
  onClick={handleClose}
  >
  <div
@@ -313,7 +313,7 @@ export function AutoBuildingSheet({
 
  return (
  <div
- className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
+ className="fixed inset-0 z-[100] bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
  onClick={handleClose}
  >
  <div
@@ -473,7 +473,7 @@ export function AddFloorSheet({
 
  return (
  <div
- className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
+ className="fixed inset-0 z-[100] bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
  onClick={handleClose}
  >
  <div
@@ -596,7 +596,7 @@ export function AddRoomSheet({
 
  return (
  <div
- className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
+ className="fixed inset-0 z-[100] bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
  onClick={handleClose}
  >
  <div
@@ -773,7 +773,7 @@ export function AddBedSheet({
 
  return (
  <div
- className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
+ className="fixed inset-0 z-[100] bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in"
  onClick={handleClose}
  >
  <div
@@ -837,7 +837,7 @@ export function CsvImportModal({
 
  return (
  <div
- className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
+ className="fixed inset-0 z-[100] bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
  onClick={onClose}
  >
  <div

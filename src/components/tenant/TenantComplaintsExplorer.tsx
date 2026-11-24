@@ -117,7 +117,7 @@ export function TenantComplaintsExplorer({ initialTickets }: TenantComplaintsExp
 
  {/* Raise Ticket Modal */}
  {isModalOpen && (
- <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+ <div className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
  <div className="bg-white w-full max-w-[420px] rounded-3xl border border-slate-200 p-4 space-y-3.5 shadow-2xl">
  <div className="flex items-center justify-between">
  <h3 className="text-sm font-extrabold text-slate-900">

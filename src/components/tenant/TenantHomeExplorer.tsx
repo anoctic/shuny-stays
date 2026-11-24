@@ -694,7 +694,7 @@ export function TenantHomeExplorer({
 
  {/* KYC Upload Modal */}
  {isKycModalOpen && (
- <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+ <div className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
  <div className="bg-white w-full max-w-[420px] rounded-3xl border border-slate-200 p-4 space-y-3.5 shadow-2xl">
  <div className="flex items-center justify-between">
  <div className="flex items-center gap-2">

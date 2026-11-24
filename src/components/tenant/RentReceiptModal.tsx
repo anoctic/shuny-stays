@@ -60,7 +60,7 @@ export function RentReceiptModal({
  )}
 
  {isOpen && (
- <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 print:p-0 print:bg-white">
+ <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 print:p-0 print:bg-white">
  <div className="bg-white w-full max-w-[480px] rounded-3xl border border-slate-200 shadow-2xl overflow-hidden print:border-none print:shadow-none print:max-w-full">
  {/* Modal Top Control Bar (Hidden when printing) */}
  <div className="flex items-center justify-between p-3.5 border-b border-slate-100 print:hidden bg-slate-50">

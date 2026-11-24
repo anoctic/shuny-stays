@@ -27,7 +27,7 @@ function DesktopLayoutShellInner({
       <main
         style={{ ["--sidebar-w" as any]: `${effectiveWidth}px` }}
         className={cn(
-          "flex-1 p-4 pb-24 lg:p-8 lg:pb-12 overflow-y-auto lg:pl-[var(--sidebar-w)]",
+          "flex-1 p-4 pb-32 lg:p-8 lg:pb-12 overflow-y-auto lg:pl-[var(--sidebar-w)]",
           isDragging ? "transition-none" : "transition-[padding] duration-200 ease-in-out"
         )}
       >

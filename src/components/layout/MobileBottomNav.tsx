@@ -279,7 +279,7 @@ function MobileBottomNavInner({
       style={{
         bottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
       }}
-      className="fixed inset-x-3 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[440px] z-50 select-none lg:hidden pointer-events-auto"
+      className="fixed inset-x-3 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[440px] z-40 select-none lg:hidden pointer-events-auto transition-all duration-300"
     >
       <div className="apple-liquid-glass-tabbar p-1.5 shadow-2xl">
         <div

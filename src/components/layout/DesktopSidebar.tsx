@@ -375,7 +375,7 @@ export function DesktopSidebar({
  </div>
 
  {/* 2. NAVIGATION LINKS */}
- <nav className="flex-1 px-2.5 py-4 space-y-1.5 overflow-y-auto no-scrollbar overflow-x-hidden">
+ <nav className={cn("flex-1 px-2.5 py-4 space-y-1.5 no-scrollbar overflow-x-hidden", isExpanded ? "overflow-y-auto" : "overflow-y-hidden")}>
  {isExpanded ? (
  <div className="text-[9.5px] font-extrabold uppercase tracking-widest text-slate-400 px-3 pb-1 truncate animate-in fade-in duration-200">
  Menu & Operations

@@ -452,7 +452,7 @@ export function OpsAndStaffExplorer({
  {/* Edit Mess Menu Sheet */}
  {isEditMessOpen && (
  <div
- className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
+ className="fixed inset-0 z-[100] bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
  onClick={() => setIsEditMessOpen(false)}
  >
  <div
@@ -524,7 +524,7 @@ export function OpsAndStaffExplorer({
  {/* Add Warden Sheet */}
  {isAddWardenOpen && (
  <div
- className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
+ className="fixed inset-0 z-[100] bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
  onClick={() => setIsAddWardenOpen(false)}
  >
  <div

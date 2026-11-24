@@ -102,17 +102,54 @@ body {
 .no-scrollbar::-webkit-scrollbar,
 aside::-webkit-scrollbar,
 aside *::-webkit-scrollbar,
+nav::-webkit-scrollbar,
+nav *::-webkit-scrollbar,
 nav[aria-label="Mobile Bottom Navigation"]::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
+  background: transparent !important;
 }
 .no-scrollbar,
 aside,
 aside *,
+nav,
+nav *,
 nav[aria-label="Mobile Bottom Navigation"] {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
+}
+
+/* =========================================================================
+   Universal Modal / Sheet / Dialog Overlay Layering & Bottom Nav Auto-Hide
+   - ALL Modals, bottom sheets, and dialogs MUST sit at z-[100] (above nav bar)
+   - When any modal or dialog is open, smoothly hide the floating bottom nav
+     so buttons NEVER get blocked or hidden under the nav bar!
+   ========================================================================= */
+
+/* Ensure all modals, sheets, dialogs, and fixed overlays ALWAYS render at z-[100] */
+[role="dialog"],
+div[class*="fixed inset-0 z-"],
+div[class*="fixed inset-0 bg-black"],
+div[class*="fixed inset-0 flex"] {
+  z-index: 100 !important;
+}
+
+/* When ANY modal, drawer, or dialog is active, smoothly hide the floating bottom nav bar */
+body:has([role="dialog"]) nav[aria-label="Mobile Bottom Navigation"],
+body:has(div[class*="fixed inset-0"][class*="bg-black"]) nav[aria-label="Mobile Bottom Navigation"],
+body:has(div[class*="fixed inset-0"][class*="z-"]) nav[aria-label="Mobile Bottom Navigation"],
+body:has(div[class*="fixed inset-0"][class*="backdrop-blur"]) nav[aria-label="Mobile Bottom Navigation"] {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(200%) !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease !important;
+}
+
+/* Ensure mobile bottom sheets have generous bottom clearance so action buttons never get cut off by screen bottom */
+div[class*="fixed inset-0"] div[class*="justify-end"] > div,
+div[class*="fixed inset-0"] > div[class*="rounded-t-"] {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 32px) !important;
 }
 
 /* Clean Custom Scrollbars */

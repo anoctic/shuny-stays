@@ -884,7 +884,7 @@ export function SuperAdminDashboard({
 
  {/* Delete PG Confirmation Modal */}
  {pgToDelete && (
- <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+ <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
  <div className="bg-white w-full max-w-md rounded-2xl border border-rose-200 shadow-2xl p-5 space-y-4">
  <div className="flex items-center gap-3">
  <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold shrink-0 border border-rose-200">

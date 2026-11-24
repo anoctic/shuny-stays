@@ -94,7 +94,7 @@ export function BroadcastCreatorModal({ initialBroadcasts }: BroadcastCreatorMod
 
  {/* Modal Backdrop & Dialog */}
  {isOpen && (
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+ <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
  <div className="bg-white border border-slate-200 rounded-3xl max-w-[460px] w-full p-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
  {/* Header */}
  <div className="flex items-center justify-between pb-3 border-b border-slate-100">

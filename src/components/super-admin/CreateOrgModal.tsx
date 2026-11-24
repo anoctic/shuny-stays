@@ -41,7 +41,7 @@ export function CreateOrgModal() {
  </button>
 
  {isOpen && (
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+ <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
  <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
  <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
  <div className="flex items-center gap-2.5">

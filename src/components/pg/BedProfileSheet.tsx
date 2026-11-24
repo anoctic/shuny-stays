@@ -1057,7 +1057,7 @@ export function BedProfileSheet({
 
  return (
  <div
- className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in lg:hidden"
+ className="fixed inset-0 z-[100] bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end md:justify-center md:items-center p-0 md:p-6 animate-fade-in lg:hidden"
  onClick={onClose}
  >
  <div

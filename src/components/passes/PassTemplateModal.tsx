@@ -94,7 +94,7 @@ export function PassTemplateModal({ pgId }: PassTemplateModalProps) {
 
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
           onClick={() => setIsOpen(false)}
         >
           <div
