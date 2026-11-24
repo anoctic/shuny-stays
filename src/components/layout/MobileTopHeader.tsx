@@ -65,7 +65,7 @@ export function MobileTopHeader({
  : "U";
 
  return (
- <header className="sticky top-0 z-[40] bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-3.5 py-2.5 shadow-xs transition-colors lg:hidden">
+ <header className="sticky top-0 z-[40] apple-liquid-glass-toolbar px-3.5 py-2.5 shadow-xs transition-colors lg:hidden select-none">
  <div className="flex items-center justify-between gap-2.5">
  {/* Left: Role-Specific Monogram & Brand / Identity */}
  <div className="flex items-center gap-2 min-w-0">
@@ -140,7 +140,7 @@ export function MobileTopHeader({
  : "/dashboard/settings"
  }
  title="Account & Login Security Settings"
- className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-colors"
+ className="p-1.5 text-slate-600 hover:text-indigo-600 rounded-full apple-liquid-glass-pill transition-all cursor-pointer flex items-center justify-center focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-600"
  >
  <KeyRound className="w-3.5 h-3.5" />
  </Link>
@@ -149,7 +149,7 @@ export function MobileTopHeader({
  <button
  onClick={() => setShowPersonaMenu(!showPersonaMenu)}
  title="Click to test other role personas"
- className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-extrabold border transition-all active:scale-95 shadow-xs ${badge.className}`}
+ className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-extrabold transition-all active:scale-95 shadow-xs cursor-pointer apple-liquid-glass-pill focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-600 ${badge.className}`}
  >
  <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${badge.dot}`} />
  <span>{badge.label}</span>

@@ -26,11 +26,11 @@ export function BuildingSwitcher({ buildings, activeBuildingId }: BuildingSwitch
 
  return (
  <div className="relative">
- {/* Trigger Button styled with Fintech subtle pill */}
+ {/* Trigger Button styled with Apple Liquid Glass capsule pill */}
  <button
  onClick={() => setIsOpen(!isOpen)}
  disabled={isPending}
- className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#F1F5F9] hover:bg-[#E2E8F0] active:bg-[#CBD5E1] border border-[#E2E8F0] text-[11px] font-extrabold text-[#0F172A] transition-all shadow-xs max-w-[155px]"
+ className="flex items-center gap-1.5 px-3 py-1.5 rounded-full apple-liquid-glass-pill text-[11px] font-bold text-slate-800 transition-all shadow-xs max-w-[170px] cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-600"
  aria-label="Switch PG Building Scope"
  >
  <Building2 className="w-3.5 h-3.5 text-[#4F46E5] shrink-0" />

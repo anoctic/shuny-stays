@@ -264,6 +264,39 @@ export default function LoginPage() {
  {isLoading ? "Authenticating..." : "Sign In to Portal"}
  <ArrowRight className="w-4 h-4" />
  </button>
+
+          {/* Quick Demo Test Personas for Localhost */}
+          <div className="pt-2 border-t border-slate-100 space-y-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-center">
+              1-Tap Test Personas (Localhost)
+            </p>
+            <div className="grid grid-cols-2 gap-1.5 text-[11px] font-bold">
+              <a
+                href="/api/auth/demo?role=owner"
+                className="py-1.5 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-center border border-emerald-200 transition active:scale-95"
+              >
+                🏢 PG Owner
+              </a>
+              <a
+                href="/api/auth/demo?role=admin"
+                className="py-1.5 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-center border border-amber-200 transition active:scale-95"
+              >
+                🛡️ PG Warden
+              </a>
+              <a
+                href="/api/auth/demo?role=tenant"
+                className="py-1.5 px-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-center border border-indigo-200 transition active:scale-95"
+              >
+                🏠 Tenant
+              </a>
+              <a
+                href="/api/auth/demo?role=super_admin"
+                className="py-1.5 px-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-center border border-purple-200 transition active:scale-95"
+              >
+                👑 Super Admin
+              </a>
+            </div>
+          </div>
  </form>
  </div>
 

@@ -277,68 +277,70 @@ function MobileBottomNavInner({
     <nav
       aria-label="Mobile Bottom Navigation"
       style={{
-        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 8px)",
+        bottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
       }}
-      className="fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] select-none lg:hidden"
+      className="fixed inset-x-3 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[440px] z-50 select-none lg:hidden pointer-events-auto"
     >
-      <div
-        className={cn(
-          "max-w-md mx-auto grid items-center h-14 px-1.5",
-          tabs.length === 5 ? "grid-cols-5" : "grid-cols-4"
-        )}
-      >
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <Link
-              key={tab.id}
-              href={tab.href}
-              aria-current={tab.isActive ? "page" : undefined}
-              onClick={(e) => handleTabClick(e, tab)}
-              className={cn(
-                "relative flex flex-col items-center justify-center h-full gap-0.5 rounded-xl transition-all duration-150 active:scale-95 touch-manipulation cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
-                tab.isActive
-                  ? "text-indigo-600 font-extrabold"
-                  : "text-slate-400 hover:text-slate-700 font-medium"
-              )}
-            >
-              {/* Icon Container with Badge */}
-              <div className="relative flex items-center justify-center">
-                <Icon
-                  className={cn(
-                    "w-5 h-5 transition-transform duration-150",
-                    tab.isActive
-                      ? "stroke-[2.25] text-indigo-600 scale-105"
-                      : "stroke-[1.75] text-slate-400 group-hover:text-slate-600"
-                  )}
-                  aria-hidden="true"
-                />
-
-                {/* Count Badge */}
-                {tab.badge != null && tab.badge > 0 && (
-                  <span
-                    aria-label={`${tab.badge} pending items`}
-                    className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-black bg-rose-600 text-white flex items-center justify-center shadow-xs ring-2 ring-white animate-in zoom-in-75"
-                  >
-                    {tab.badge > 99 ? "99+" : tab.badge}
-                  </span>
-                )}
-              </div>
-
-              {/* Short Label */}
-              <span
+      <div className="apple-liquid-glass-tabbar p-1.5 shadow-2xl">
+        <div
+          className={cn(
+            "grid items-center h-12 w-full gap-1",
+            tabs.length === 5 ? "grid-cols-5" : "grid-cols-4"
+          )}
+        >
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <Link
+                key={tab.id}
+                href={tab.href}
+                aria-current={tab.isActive ? "page" : undefined}
+                onClick={(e) => handleTabClick(e, tab)}
                 className={cn(
-                  "text-[10px] tracking-tight leading-none text-center transition-colors duration-150",
+                  "relative flex flex-col items-center justify-center h-full rounded-full transition-all duration-200 active:scale-95 touch-manipulation cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1 select-none",
                   tab.isActive
-                    ? "font-bold text-indigo-600"
-                    : "font-medium text-slate-500"
+                    ? "bg-indigo-600/12 text-indigo-700 shadow-2xs font-extrabold"
+                    : "text-slate-600 hover:text-slate-950 hover:bg-black/5 font-semibold"
                 )}
               >
-                {tab.label}
-              </span>
-            </Link>
-          );
-        })}
+                {/* Icon Container with Badge */}
+                <div className="relative flex items-center justify-center">
+                  <Icon
+                    className={cn(
+                      "w-[19px] h-[19px] transition-transform duration-150",
+                      tab.isActive
+                        ? "stroke-[2.35] text-indigo-600 scale-105"
+                        : "stroke-[1.8] text-slate-600"
+                    )}
+                    aria-hidden="true"
+                  />
+
+                  {/* Count Badge */}
+                  {tab.badge != null && tab.badge > 0 && (
+                    <span
+                      aria-label={`${tab.badge} pending items`}
+                      className="absolute -top-1.5 -right-2.5 min-w-[17px] h-[17px] px-1 rounded-full text-[9.5px] font-black bg-rose-600 text-white flex items-center justify-center shadow-xs ring-2 ring-white/95 animate-in zoom-in-75"
+                    >
+                      {tab.badge > 99 ? "99+" : tab.badge}
+                    </span>
+                  )}
+                </div>
+
+                {/* Short Label */}
+                <span
+                  className={cn(
+                    "text-[9.5px] tracking-tight leading-none text-center transition-colors duration-150 mt-0.5",
+                    tab.isActive
+                      ? "font-extrabold text-indigo-700"
+                      : "font-semibold text-slate-600"
+                  )}
+                >
+                  {tab.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );

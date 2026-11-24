@@ -71,7 +71,7 @@ export function DesktopTopBar({
  <header
       style={{ ["--sidebar-w" as any]: `${effectiveWidth + 16}px` }}
       className={cn(
-        "hidden lg:flex h-16 sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 pr-8 shadow-xs lg:pl-[var(--sidebar-w)]",
+        "hidden lg:flex h-16 sticky top-0 z-30 apple-liquid-glass-toolbar pr-8 lg:pl-[var(--sidebar-w)] select-none",
         isDragging ? "transition-none" : "transition-[padding] duration-200 ease-in-out"
       )}
     >
@@ -83,8 +83,8 @@ export function DesktopTopBar({
  onClick={toggleSidebar}
  title={isCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
  className={cn(
- "p-2 rounded-xl text-slate-700 hover:text-indigo-600 hover:bg-slate-100 transition active:scale-95 cursor-pointer flex items-center justify-center shrink-0 border border-slate-200 shadow-2xs",
- isCollapsed && "bg-indigo-50 text-indigo-600 border-indigo-200"
+        "p-2 rounded-full apple-liquid-glass-pill text-slate-700 hover:text-indigo-600 transition active:scale-95 cursor-pointer flex items-center justify-center shrink-0 shadow-2xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-600",
+ isCollapsed && "bg-indigo-50/80 text-indigo-600 border-indigo-200"
  )}
  aria-label="Toggle Sidebar Navigation"
  >
@@ -126,7 +126,7 @@ export function DesktopTopBar({
  <div className="flex items-center gap-2.5">
  {/* Building Switcher for Owner & Admin with multiple buildings */}
  {(role === "owner" || role === "admin") && buildings.length > 0 && (
- <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200 text-slate-800">
+ <div className="flex items-center gap-1.5 px-3 py-1 rounded-full apple-liquid-glass-pill text-slate-800">
  <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
  <BuildingSwitcher buildings={buildings} activeBuildingId={activeBuildingId} />
  </div>
@@ -145,7 +145,7 @@ export function DesktopTopBar({
  : "/dashboard/settings"
  }
  title="Account & Security Settings"
- className="p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+ className="p-2 text-slate-600 hover:text-indigo-600 rounded-full apple-liquid-glass-pill transition-all cursor-pointer flex items-center justify-center focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-600"
  >
  <KeyRound className="w-4 h-4" />
  </Link>
@@ -156,7 +156,10 @@ export function DesktopTopBar({
  type="button"
  onClick={() => setShowPersonaMenu(!showPersonaMenu)}
  title="Click to switch live persona"
- className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-black border transition-all hover:scale-105 active:scale-95 shadow-xs cursor-pointer ${badge.className}`}
+ className={cn(
+        "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-black transition-all hover:scale-105 active:scale-95 shadow-xs cursor-pointer apple-liquid-glass-pill focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-600",
+        badge.className
+      )}
  >
  <span className={`w-2 h-2 rounded-full animate-pulse ${badge.dot}`} />
  <span>{badge.label}</span>

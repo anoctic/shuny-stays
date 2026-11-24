@@ -93,7 +93,7 @@ export function NotificationCenter({
  onClick={() => setIsOpen((prev) => !prev)}
  aria-label="Open notifications"
  title="Notices & Broadcasts"
- className="relative z-[75] p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition active:scale-95 flex items-center justify-center"
+ className="relative z-[75] p-2 rounded-full apple-liquid-glass-pill text-slate-700 hover:text-slate-900 transition active:scale-95 flex items-center justify-center cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-600"
  >
  <Bell className="w-4 h-4" />
  {unreadCount > 0 && (
