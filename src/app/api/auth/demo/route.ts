@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { UserRole } from "@/types/schema.types";
 
+export const runtime = "edge";
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const role = (searchParams.get("role") || "owner") as UserRole;
