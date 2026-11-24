@@ -45,7 +45,9 @@ export default async function SuperAdminLayout({
  <DesktopSidebar
  role="super_admin"
  fullName={session.full_name}
- />
+ 
+            userId={session.id}
+          />
  }
  mobileHeader={
  <MobileTopHeader

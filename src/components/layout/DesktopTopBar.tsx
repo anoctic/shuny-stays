@@ -1,5 +1,6 @@
-import { ThemeToggle } from "@/components/common/ThemeToggle";
 "use client";
+
+import { ThemeToggle } from "@/components/common/ThemeToggle";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -40,6 +41,7 @@ export function DesktopTopBar({
  buildings = [],
  activeBuildingId,
  broadcasts = [],
+	userId,
 }: DesktopTopBarProps) {
  const [showPersonaMenu, setShowPersonaMenu] = useState(false);
  const { isCollapsed, toggleSidebar } = useSidebar();
@@ -135,6 +137,9 @@ export function DesktopTopBar({
 
  {/* Real-time Notification Center */}
  <NotificationCenter broadcasts={broadcasts} userRole={role} />
+
+				{/* Theme Toggle (Light / Dark Switcher) */}
+				<ThemeToggle userId={userId} />
 
  {/* Security & Settings shortcut */}
  <Link

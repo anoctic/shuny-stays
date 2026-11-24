@@ -1,5 +1,6 @@
-import { ThemeToggle } from "@/components/common/ThemeToggle";
 "use client";
+
+import { ThemeToggle } from "@/components/common/ThemeToggle";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -27,6 +28,7 @@ export function MobileTopHeader({
  buildings = [],
  activeBuildingId,
  broadcasts = [],
+	userId,
 }: MobileTopHeaderProps) {
  const [showPersonaMenu, setShowPersonaMenu] = useState(false);
 
@@ -131,6 +133,9 @@ export function MobileTopHeader({
 
  {/* Top Navigation Notification Bell */}
  <NotificationCenter broadcasts={broadcasts} userRole={role} />
+
+				{/* Theme Toggle (Light / Dark Switcher) */}
+				<ThemeToggle userId={userId} compact />
 
  {/* Account Security & Credentials Settings */}
  <Link

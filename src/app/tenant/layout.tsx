@@ -54,7 +54,9 @@ export default async function TenantLayout({
  fullName={session.full_name}
  pgName={session.pg_name || "Shuny Stays Luxury PG"}
  pendingDuesCount={1}
- />
+ 
+            userId={session.id}
+          />
  }
  mobileHeader={
  <MobileTopHeader

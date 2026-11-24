@@ -11,36 +11,31 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ userId, className, compact = false }: ThemeToggleProps) {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [mounted, setMounted] = useState(false);
+  const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    // 1. Check user-specific localStorage first, then general
+    // 1. Check user-specific localStorage first, then general, then html class
     const userKey = userId ? `shuny_theme_${userId}` : null;
-    let stored: string | null = null;
-    if (userKey) {
-      stored = localStorage.getItem(userKey);
-    }
+    let stored = userKey ? localStorage.getItem(userKey) : null;
     if (!stored) {
       stored = localStorage.getItem("shuny_theme");
     }
 
-    if (
+    const isDarkMode =
       stored === "dark" ||
-      (!stored && document.documentElement.classList.contains("dark"))
-    ) {
-      setTheme("dark");
+      (!stored && document.documentElement.classList.contains("dark"));
+
+    setIsDark(isDarkMode);
+    if (isDarkMode) {
       document.documentElement.classList.add("dark");
     } else {
-      setTheme("light");
       document.documentElement.classList.remove("dark");
     }
 
     const handleThemeChange = (e: Event) => {
       const customEvent = e as CustomEvent<{ theme: "light" | "dark"; userId?: string }>;
       if (customEvent.detail?.theme) {
-        setTheme(customEvent.detail.theme);
+        setIsDark(customEvent.detail.theme === "dark");
       }
     };
 
@@ -51,17 +46,16 @@ export function ThemeToggle({ userId, className, compact = false }: ThemeToggleP
   }, [userId]);
 
   const toggleTheme = () => {
-    const nextTheme = theme === "light" ? "dark" : "light";
-    setTheme(nextTheme);
+    const nextDark = !isDark;
+    const nextTheme = nextDark ? "dark" : "light";
+    setIsDark(nextDark);
 
-    // Apply or remove dark class on <html>
-    if (nextTheme === "dark") {
+    if (nextDark) {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
 
-    // Save to user-specific localStorage and cookie for persistence
     const userKey = userId ? `shuny_theme_${userId}` : "shuny_theme";
     try {
       localStorage.setItem(userKey, nextTheme);
@@ -72,27 +66,12 @@ export function ThemeToggle({ userId, className, compact = false }: ThemeToggleP
       console.warn("Theme storage error:", e);
     }
 
-    // Broadcast change across tabs / components
     window.dispatchEvent(
       new CustomEvent("shuny:themechange", {
         detail: { theme: nextTheme, userId },
       })
     );
   };
-
-  if (!mounted) {
-    return (
-      <div
-        className={cn(
-          "rounded-xl border border-slate-200 bg-slate-50 transition opacity-0",
-          compact ? "p-1.5 w-7 h-7" : "p-2 w-8 h-8",
-          className
-        )}
-      />
-    );
-  }
-
-  const isDark = theme === "dark";
 
   return (
     <button
@@ -101,18 +80,18 @@ export function ThemeToggle({ userId, className, compact = false }: ThemeToggleP
       title={isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
       aria-label={isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
       className={cn(
-        "relative rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer",
+        "relative rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer shrink-0",
         isDark
           ? "bg-slate-800 text-amber-300 hover:text-amber-200 hover:bg-slate-700 border border-slate-700 shadow-2xs"
           : "bg-slate-50 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 border border-slate-200 shadow-2xs",
-        compact ? "p-1.5 w-7 h-7" : "p-2 w-8 h-8",
+        compact ? "p-1.5 w-8 h-8" : "p-2 w-9 h-9",
         className
       )}
     >
       {isDark ? (
-        <Sun className={cn(compact ? "w-3.5 h-3.5" : "w-4 h-4", "animate-in spin-in-90 duration-200")} />
+        <Sun className={cn(compact ? "w-4 h-4" : "w-4 h-4", "text-amber-400")} />
       ) : (
-        <Moon className={cn(compact ? "w-3.5 h-3.5" : "w-4 h-4", "animate-in -rotate-90 duration-200")} />
+        <Moon className={cn(compact ? "w-4 h-4" : "w-4 h-4", "text-slate-600")} />
       )}
     </button>
   );

@@ -145,7 +145,9 @@ export default async function DashboardLayout({
  openComplaintsCount={2}
  pendingPassesCount={1}
  pendingDuesCount={3}
- />
+ 
+            userId={session.id}
+          />
  }
  mobileHeader={
  <MobileTopHeader
