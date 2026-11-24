@@ -1,7 +1,5 @@
 "use client";
 
-import { ThemeToggle } from "@/components/common/ThemeToggle";
-
 import { useState } from "react";
 import Link from "next/link";
 import { LogOut, Sparkles, Building2, Ticket, PhoneCall, ChevronDown, KeyRound } from "lucide-react";
@@ -18,7 +16,6 @@ interface MobileTopHeaderProps {
  buildings?: Building[];
  activeBuildingId?: string | null;
  broadcasts?: PlatformBroadcast[];
-  userId?: string;
 }
 
 export function MobileTopHeader({
@@ -28,7 +25,6 @@ export function MobileTopHeader({
  buildings = [],
  activeBuildingId,
  broadcasts = [],
-	userId,
 }: MobileTopHeaderProps) {
  const [showPersonaMenu, setShowPersonaMenu] = useState(false);
 
@@ -133,9 +129,6 @@ export function MobileTopHeader({
 
  {/* Top Navigation Notification Bell */}
  <NotificationCenter broadcasts={broadcasts} userRole={role} />
-
-				{/* Theme Toggle (Light / Dark Switcher) */}
-				<ThemeToggle userId={userId} compact />
 
  {/* Account Security & Credentials Settings */}
  <Link

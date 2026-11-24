@@ -54,9 +54,7 @@ export default async function TenantLayout({
  fullName={session.full_name}
  pgName={session.pg_name || "Shuny Stays Luxury PG"}
  pendingDuesCount={1}
- 
-            userId={session.id}
-          />
+ />
  }
  mobileHeader={
  <MobileTopHeader
@@ -64,9 +62,7 @@ export default async function TenantLayout({
  role="tenant"
  pgName={session.pg_name || "Shuny Stays Luxury PG"}
  broadcasts={broadcasts}
- 
-            userId={session.id}
-          />
+ />
  }
  topBar={
  <DesktopTopBar
@@ -74,9 +70,7 @@ export default async function TenantLayout({
  role="tenant"
  pgName={session.pg_name || "Shuny Stays Luxury PG"}
  broadcasts={broadcasts}
- 
-            userId={session.id}
-          />
+ />
  }
  >
  {children}

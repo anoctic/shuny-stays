@@ -1,7 +1,5 @@
 "use client";
 
-import { ThemeToggle } from "@/components/common/ThemeToggle";
-
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
@@ -52,7 +50,6 @@ interface DesktopSidebarProps {
  openComplaintsCount?: number;
  pendingPassesCount?: number;
  pendingDuesCount?: number;
-	userId?: string;
 }
 
 export function DesktopSidebar({
@@ -64,7 +61,6 @@ export function DesktopSidebar({
  openComplaintsCount = 0,
  pendingPassesCount = 0,
  pendingDuesCount = 0,
-	userId,
 }: DesktopSidebarProps) {
  const router = useRouter();
  const pathname = usePathname();
@@ -476,9 +472,7 @@ export function DesktopSidebar({
  </div>
  </div>
 
-						<div className="flex items-center gap-1.5 shrink-0">
-							<ThemeToggle userId={userId} compact />
-							<form action={signOutAction}>
+ <form action={signOutAction}>
  <button
  type="submit"
  className="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition active:scale-95 cursor-pointer"
@@ -486,8 +480,7 @@ export function DesktopSidebar({
  >
  <LogOut className="w-3.5 h-3.5" />
  </button>
-							</form>
-						</div>
+ </form>
  </div>
  ) : (
  <div className="flex flex-col items-center gap-2 py-1">
@@ -497,7 +490,6 @@ export function DesktopSidebar({
  >
  {fullName ? fullName[0].toUpperCase() : "U"}
  </div>
-						<ThemeToggle userId={userId} compact />
  <form action={signOutAction}>
  <button
  type="submit"

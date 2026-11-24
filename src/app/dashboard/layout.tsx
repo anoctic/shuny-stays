@@ -145,9 +145,7 @@ export default async function DashboardLayout({
  openComplaintsCount={2}
  pendingPassesCount={1}
  pendingDuesCount={3}
- 
-            userId={session.id}
-          />
+ />
  }
  mobileHeader={
  <MobileTopHeader
@@ -157,9 +155,7 @@ export default async function DashboardLayout({
  buildings={buildings}
  activeBuildingId={activeBuildingId}
  broadcasts={broadcasts}
- 
-            userId={session.id}
-          />
+ />
  }
  topBar={
  <DesktopTopBar
@@ -169,9 +165,7 @@ export default async function DashboardLayout({
  buildings={buildings}
  activeBuildingId={activeBuildingId}
  broadcasts={broadcasts}
- 
-            userId={session.id}
-          />
+ />
  }
  >
  {children}
