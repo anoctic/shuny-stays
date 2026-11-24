@@ -2,42 +2,42 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
+ let supabaseResponse = NextResponse.next({
+ request,
+ });
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project.supabase.co";
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
+ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project.supabase.co";
+ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
 
-  const supabase = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({
-            request,
-          });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
+ const supabase = createServerClient(
+ supabaseUrl,
+ supabaseAnonKey,
+ {
+ cookies: {
+ getAll() {
+ return request.cookies.getAll();
+ },
+ setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
+ cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+ supabaseResponse = NextResponse.next({
+ request,
+ });
+ cookiesToSet.forEach(({ name, value, options }) =>
+ supabaseResponse.cookies.set(name, value, options)
+ );
+ },
+ },
+ }
+ );
 
-  // Refresh user session if present and valid URL configured
-  if (!supabaseUrl.includes("placeholder")) {
-    try {
-      await supabase.auth.getUser();
-    } catch {
-      // Ignore network timeouts for unconfigured development environments
-    }
-  }
+ // Refresh user session if present and valid URL configured
+ if (!supabaseUrl.includes("placeholder")) {
+ try {
+ await supabase.auth.getUser();
+ } catch {
+ // Ignore network timeouts for unconfigured development environments
+ }
+ }
 
-  return supabaseResponse;
+ return supabaseResponse;
 }

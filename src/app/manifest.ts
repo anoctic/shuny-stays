@@ -3,35 +3,35 @@ import { MetadataRoute } from "next";
 export const runtime = "edge";
 
 export default function manifest(): MetadataRoute.Manifest {
-  return {
-    name: "Shuny Stays",
-    short_name: "Shuny Stays",
-    description: "Cloud-native PG, hostel & co-living property management operating system.",
-    start_url: "/login",
-    display: "standalone",
-    orientation: "any",
-    categories: ["business", "productivity", "utilities"],
-    background_color: "#4F46E5",
-    theme_color: "#4F46E5",
-    icons: [
-      {
-        src: "/icons/icon-192.png",
-        sizes: "192x192",
-        type: "image/png",
-        purpose: "any",
-      },
-      {
-        src: "/icons/icon-512.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "any",
-      },
-      {
-        src: "/icons/icon-maskable-512.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "maskable",
-      },
-    ],
-  };
+ return {
+ name: "Shuny Stays",
+ short_name: "Shuny Stays",
+ description: "Cloud-native PG, hostel & co-living property management operating system.",
+ start_url: "/login",
+ display: "standalone",
+ orientation: "any",
+ categories: ["business", "productivity", "utilities"],
+ background_color: "#4F46E5",
+ theme_color: "#4F46E5",
+ icons: [
+ {
+ src: "/icons/icon-192.png",
+ sizes: "192x192",
+ type: "image/png",
+ purpose: "any",
+ },
+ {
+ src: "/icons/icon-512.png",
+ sizes: "512x512",
+ type: "image/png",
+ purpose: "any",
+ },
+ {
+ src: "/icons/icon-maskable-512.png",
+ sizes: "512x512",
+ type: "image/png",
+ purpose: "maskable",
+ },
+ ],
+ };
 }

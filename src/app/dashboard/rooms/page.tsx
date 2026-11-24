@@ -10,28 +10,28 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function RoomsPage() {
-  const session = await getCurrentUserSession();
-  const buildings = await getAllBuildings();
-  const passes = await getPassesForManagement({ pgId: session.pg_id || undefined });
-  const broadcasts = await getActiveBroadcastsForRole(session.role);
+ const session = await getCurrentUserSession();
+ const buildings = await getAllBuildings();
+ const passes = await getPassesForManagement({ pgId: session.pg_id || undefined });
+ const broadcasts = await getActiveBroadcastsForRole(session.role);
 
-  const activePasses = passes.map((p) => ({
-    tenantId: p.tenant_id,
-    passType: p.pass_type,
-    status: p.approval_status,
-  }));
+ const activePasses = passes.map((p) => ({
+ tenantId: p.tenant_id,
+ passType: p.pass_type,
+ status: p.approval_status,
+ }));
 
-  return (
-    <div className="space-y-3.5">
-      {/* Targeted Platform Broadcast Banner */}
-      <ActiveBroadcastBanner broadcasts={broadcasts} userRole={session.role} />
+ return (
+ <div className="space-y-3.5">
+ {/* Targeted Platform Broadcast Banner */}
+ <ActiveBroadcastBanner broadcasts={broadcasts} userRole={session.role} />
 
-      {/* 5-Level Rooms & Beds Explorer */}
-      <RoomsExplorer
-        initialBuildings={buildings}
-        userRole={session.role}
-        activePasses={activePasses}
-      />
-    </div>
-  );
+ {/* 5-Level Rooms & Beds Explorer */}
+ <RoomsExplorer
+ initialBuildings={buildings}
+ userRole={session.role}
+ activePasses={activePasses}
+ />
+ </div>
+ );
 }

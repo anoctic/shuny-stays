@@ -7,17 +7,17 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function TenantComplaintsPage() {
-  const session = await getCurrentUserSession();
-  const allComplaints = await getComplaints();
+ const session = await getCurrentUserSession();
+ const allComplaints = await getComplaints();
 
-  // Scope to the tenant's complaints (or all if not filtered)
-  const tenantComplaints = allComplaints.filter(
-    (c) => c.tenantId === session.id || c.tenantName?.toLowerCase().includes(session.full_name.toLowerCase())
-  );
+ // Scope to the tenant's complaints (or all if not filtered)
+ const tenantComplaints = allComplaints.filter(
+ (c) => c.tenantId === session.id || c.tenantName?.toLowerCase().includes(session.full_name.toLowerCase())
+ );
 
-  return (
-    <TenantComplaintsExplorer
-      initialTickets={tenantComplaints.length > 0 ? tenantComplaints : allComplaints}
-    />
-  );
+ return (
+ <TenantComplaintsExplorer
+ initialTickets={tenantComplaints.length > 0 ? tenantComplaints : allComplaints}
+ />
+ );
 }

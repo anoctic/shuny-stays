@@ -16,125 +16,125 @@ import { UserRole } from "@/types/schema.types";
  * - tenant -> /tenant
  */
 export async function signInAction(formData: FormData) {
-  const loginIdentifier = (formData.get("username") || formData.get("login") || formData.get("email") || formData.get("identifier")) as string;
-  const password = formData.get("password") as string;
+ const loginIdentifier = (formData.get("username") || formData.get("login") || formData.get("email") || formData.get("identifier")) as string;
+ const password = formData.get("password") as string;
 
-  if (!loginIdentifier || !password) {
-    return { error: "Please enter your Phone Number or Email, and Password." };
-  }
+ if (!loginIdentifier || !password) {
+ return { error: "Please enter your Phone Number or Email, and Password." };
+ }
 
-  // Normalize phone or email:
-  // If input contains '@', treat as email with phone fallback
-  // Otherwise, extract 10 digits and use ${cleanPhone}@login.shunystays.app
-  let emailToUse = loginIdentifier.trim().toLowerCase();
-  let cleanPhone = "";
+ // Normalize phone or email:
+ // If input contains '@', treat as email with phone fallback
+ // Otherwise, extract 10 digits and use ${cleanPhone}@login.shunystays.app
+ let emailToUse = loginIdentifier.trim().toLowerCase();
+ let cleanPhone = "";
 
-  const supabase = await createClient();
-  let authData: any = null;
-  let authError: any = null;
+ const supabase = await createClient();
+ let authData: any = null;
+ let authError: any = null;
 
-  if (emailToUse.includes("@")) {
-    // 1. Direct email sign-in attempt
-    const directRes = await supabase.auth.signInWithPassword({
-      email: emailToUse,
-      password,
-    });
+ if (emailToUse.includes("@")) {
+ // 1. Direct email sign-in attempt
+ const directRes = await supabase.auth.signInWithPassword({
+ email: emailToUse,
+ password,
+ });
 
-    if (!directRes.error) {
-      authData = directRes.data;
-    } else {
-      // 2. Fallback: check if an account was provisioned under phone-first format
-      // where contact email is stored in profiles table
-      try {
-        const { data: profile } = await (supabase.from("profiles" as any) as any)
-          .select("phone")
-          .eq("email", emailToUse)
-          .maybeSingle();
+ if (!directRes.error) {
+ authData = directRes.data;
+ } else {
+ // 2. Fallback: check if an account was provisioned under phone-first format
+ // where contact email is stored in profiles table
+ try {
+ const { data: profile } = await (supabase.from("profiles" as any) as any)
+ .select("phone")
+ .eq("email", emailToUse)
+ .maybeSingle();
 
-        const profileData = profile as { phone?: string | null } | null;
-        if (profileData?.phone) {
-          const profilePhone = profileData.phone.replace(/\D/g, "").slice(-10);
-          if (profilePhone.length >= 10) {
-            const phoneEmail = `${profilePhone}@login.shunystays.app`;
-            const retryRes = await supabase.auth.signInWithPassword({
-              email: phoneEmail,
-              password,
-            });
-            if (!retryRes.error) {
-              authData = retryRes.data;
-            } else {
-              authError = directRes.error;
-            }
-          } else {
-            authError = directRes.error;
-          }
-        } else {
-          authError = directRes.error;
-        }
-      } catch {
-        authError = directRes.error;
-      }
-    }
-  } else {
-    // 10-digit phone sign-in
-    cleanPhone = emailToUse.replace(/\D/g, "").slice(-10);
-    if (cleanPhone.length < 10) {
-      return { error: "Please enter a valid 10-digit mobile number or email address." };
-    }
-    emailToUse = `${cleanPhone}@login.shunystays.app`;
+ const profileData = profile as { phone?: string | null } | null;
+ if (profileData?.phone) {
+ const profilePhone = profileData.phone.replace(/\D/g, "").slice(-10);
+ if (profilePhone.length >= 10) {
+ const phoneEmail = `${profilePhone}@login.shunystays.app`;
+ const retryRes = await supabase.auth.signInWithPassword({
+ email: phoneEmail,
+ password,
+ });
+ if (!retryRes.error) {
+ authData = retryRes.data;
+ } else {
+ authError = directRes.error;
+ }
+ } else {
+ authError = directRes.error;
+ }
+ } else {
+ authError = directRes.error;
+ }
+ } catch {
+ authError = directRes.error;
+ }
+ }
+ } else {
+ // 10-digit phone sign-in
+ cleanPhone = emailToUse.replace(/\D/g, "").slice(-10);
+ if (cleanPhone.length < 10) {
+ return { error: "Please enter a valid 10-digit mobile number or email address." };
+ }
+ emailToUse = `${cleanPhone}@login.shunystays.app`;
 
-    const phoneRes = await supabase.auth.signInWithPassword({
-      email: emailToUse,
-      password,
-    });
-    authData = phoneRes.data;
-    authError = phoneRes.error;
-  }
+ const phoneRes = await supabase.auth.signInWithPassword({
+ email: emailToUse,
+ password,
+ });
+ authData = phoneRes.data;
+ authError = phoneRes.error;
+ }
 
-  if (authError || !authData?.user) {
-    // Demo persona fallback for testing offline or without live Supabase credentials
-    const cleanPhoneDigits = loginIdentifier.replace(/\D/g, "").slice(-10);
-    if (loginIdentifier.includes("superadmin") || cleanPhoneDigits === "9999900001") {
-      return await switchDemoPersonaAction("super_admin");
-    } else if (loginIdentifier.includes("owner") || cleanPhoneDigits === "9876543210") {
-      return await switchDemoPersonaAction("owner");
-    } else if (loginIdentifier.includes("warden") || cleanPhoneDigits === "9876512345") {
-      return await switchDemoPersonaAction("admin");
-    } else if (loginIdentifier.includes("student") || cleanPhoneDigits === "9123456789") {
-      return await switchDemoPersonaAction("tenant");
-    }
+ if (authError || !authData?.user) {
+ // Demo persona fallback for testing offline or without live Supabase credentials
+ const cleanPhoneDigits = loginIdentifier.replace(/\D/g, "").slice(-10);
+ if (loginIdentifier.includes("superadmin") || cleanPhoneDigits === "9999900001") {
+ return await switchDemoPersonaAction("super_admin");
+ } else if (loginIdentifier.includes("owner") || cleanPhoneDigits === "9876543210") {
+ return await switchDemoPersonaAction("owner");
+ } else if (loginIdentifier.includes("warden") || cleanPhoneDigits === "9876512345") {
+ return await switchDemoPersonaAction("admin");
+ } else if (loginIdentifier.includes("student") || cleanPhoneDigits === "9123456789") {
+ return await switchDemoPersonaAction("tenant");
+ }
 
-    return { error: authError?.message || "Invalid phone number/email or password." };
-  }
+ return { error: authError?.message || "Invalid phone number/email or password." };
+ }
 
-  const data = authData;
+ const data = authData;
 
-  // Clear demo cookies upon real sign-in
-  const cookieStore = await cookies();
-  cookieStore.delete("pg_demo_role");
-  cookieStore.delete("pg_demo_no_pg");
+ // Clear demo cookies upon real sign-in
+ const cookieStore = await cookies();
+ cookieStore.delete("pg_demo_role");
+ cookieStore.delete("pg_demo_no_pg");
 
-  // Determine user role from profiles table and redirect
-  let role: UserRole = (data.user?.user_metadata?.role as UserRole) || "tenant";
-  try {
-    const { data: profile } = await (supabase.from("profiles" as any) as any)
-      .select("role")
-      .eq("id", data.user.id)
-      .single();
-    if (profile?.role) {
-      role = profile.role as UserRole;
-    }
-  } catch {}
+ // Determine user role from profiles table and redirect
+ let role: UserRole = (data.user?.user_metadata?.role as UserRole) || "tenant";
+ try {
+ const { data: profile } = await (supabase.from("profiles" as any) as any)
+ .select("role")
+ .eq("id", data.user.id)
+ .single();
+ if (profile?.role) {
+ role = profile.role as UserRole;
+ }
+ } catch {}
 
-  if (role === "super_admin") {
-    redirect("/super-admin");
-  } else if (role === "owner") {
-    redirect("/dashboard");
-  } else if (role === "admin") {
-    redirect("/dashboard");
-  } else {
-    redirect("/tenant");
-  }
+ if (role === "super_admin") {
+ redirect("/super-admin");
+ } else if (role === "owner") {
+ redirect("/dashboard");
+ } else if (role === "admin") {
+ redirect("/dashboard");
+ } else {
+ redirect("/tenant");
+ }
 }
 
 /**
@@ -142,169 +142,169 @@ export async function signInAction(formData: FormData) {
  * Creates pgs record, first building record, and assigns owner in pg_staff
  */
 export async function submitOnboardingAction(formData: FormData) {
-  const pgName = formData.get("pg_name") as string;
-  const city = formData.get("city") as string;
-  const contactPhone = formData.get("contact_phone") as string;
-  const buildingName = formData.get("building_name") as string;
-  const genderType = (formData.get("gender_type") as "boys" | "girls" | "coliving") || "coliving";
-  const address = (formData.get("address") as string) || `${city}, India`;
-  const totalFloors = parseInt((formData.get("total_floors") as string) || "2", 10);
+ const pgName = formData.get("pg_name") as string;
+ const city = formData.get("city") as string;
+ const contactPhone = formData.get("contact_phone") as string;
+ const buildingName = formData.get("building_name") as string;
+ const genderType = (formData.get("gender_type") as "boys" | "girls" | "coliving") || "coliving";
+ const address = (formData.get("address") as string) || `${city}, India`;
+ const totalFloors = parseInt((formData.get("total_floors") as string) || "2", 10);
 
-  if (!pgName || !city || !buildingName) {
-    return { error: "Please fill in PG brand name, city, and building name." };
-  }
+ if (!pgName || !city || !buildingName) {
+ return { error: "Please fill in PG brand name, city, and building name." };
+ }
 
-  const sess = await getCurrentUserSession();
-  const supabase = await createClient();
-  const slug = pgName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Math.floor(Math.random() * 1000);
+ const sess = await getCurrentUserSession();
+ const supabase = await createClient();
+ const slug = pgName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Math.floor(Math.random() * 1000);
 
-  // 1. Insert PG Brand record
-  const { data: newPg, error: pgError } = await (supabase.from("pgs" as any) as any)
-    .insert({
-      owner_id: sess.id,
-      name: pgName,
-      slug,
-      contact_email: sess.email || "owner@apnapg.demo",
-      contact_phone: contactPhone || sess.phone || "+91 98765 00000",
-      status: "active",
-      subscription_tier: "starter",
-    })
-    .select("id")
-    .single();
+ // 1. Insert PG Brand record
+ const { data: newPg, error: pgError } = await (supabase.from("pgs" as any) as any)
+ .insert({
+ owner_id: sess.id,
+ name: pgName,
+ slug,
+ contact_email: sess.email || "owner@apnapg.demo",
+ contact_phone: contactPhone || sess.phone || "+91 98765 00000",
+ status: "active",
+ subscription_tier: "starter",
+ })
+ .select("id")
+ .single();
 
-  if (pgError || !newPg) {
-    // If running in local demo without auth session, clear demo no_pg cookie
-    const cookieStore = await cookies();
-    cookieStore.delete("pg_demo_no_pg");
-    redirect("/dashboard");
-  }
+ if (pgError || !newPg) {
+ // If running in local demo without auth session, clear demo no_pg cookie
+ const cookieStore = await cookies();
+ cookieStore.delete("pg_demo_no_pg");
+ redirect("/dashboard");
+ }
 
-  // 2. Insert First Building record
-  const { data: newBuilding, error: bldError } = await (supabase.from("buildings" as any) as any)
-    .insert({
-      pg_id: newPg.id,
-      name: buildingName,
-      gender_type: genderType,
-      address,
-      city,
-      state: "State",
-      pincode: "110001",
-      total_floors: totalFloors,
-      amenities: ["High Speed WiFi", "RO Drinking Water", "Power Backup"],
-    })
-    .select("id")
-    .single();
+ // 2. Insert First Building record
+ const { data: newBuilding, error: bldError } = await (supabase.from("buildings" as any) as any)
+ .insert({
+ pg_id: newPg.id,
+ name: buildingName,
+ gender_type: genderType,
+ address,
+ city,
+ state: "State",
+ pincode: "110001",
+ total_floors: totalFloors,
+ amenities: ["High Speed WiFi", "RO Drinking Water", "Power Backup"],
+ })
+ .select("id")
+ .single();
 
-  if (newBuilding) {
-    // 3. Insert Owner into pg_staff with ALL permissions
-    await (supabase.from("pg_staff" as any) as any).insert({
-      user_id: sess.id,
-      pg_id: newPg.id,
-      assigned_building_ids: [newBuilding.id],
-      permissions: ["ALL"],
-      designation: "Owner",
-      is_active: true,
-    });
-  }
+ if (newBuilding) {
+ // 3. Insert Owner into pg_staff with ALL permissions
+ await (supabase.from("pg_staff" as any) as any).insert({
+ user_id: sess.id,
+ pg_id: newPg.id,
+ assigned_building_ids: [newBuilding.id],
+ permissions: ["ALL"],
+ designation: "Owner",
+ is_active: true,
+ });
+ }
 
-  const cookieStore = await cookies();
-  cookieStore.delete("pg_demo_no_pg");
+ const cookieStore = await cookies();
+ cookieStore.delete("pg_demo_no_pg");
 
-  revalidatePath("/dashboard");
-  redirect("/dashboard");
+ revalidatePath("/dashboard");
+ redirect("/dashboard");
 }
 
 /**
  * Switch Demo Persona (Owner, Admin/Warden, Tenant, Super Admin)
  */
 export async function switchDemoPersonaAction(role: UserRole, options?: { noPg?: boolean }): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.set("pg_demo_role", role, {
-    path: "/",
-    httpOnly: true,
-    sameSite: "lax",
-  });
+ const cookieStore = await cookies();
+ cookieStore.set("pg_demo_role", role, {
+ path: "/",
+ httpOnly: true,
+ sameSite: "lax",
+ });
 
-  if (options?.noPg) {
-    cookieStore.set("pg_demo_no_pg", "true", { path: "/" });
-    redirect("/onboarding");
-  } else {
-    cookieStore.delete("pg_demo_no_pg");
-  }
+ if (options?.noPg) {
+ cookieStore.set("pg_demo_no_pg", "true", { path: "/" });
+ redirect("/onboarding");
+ } else {
+ cookieStore.delete("pg_demo_no_pg");
+ }
 
-  if (role === "super_admin") {
-    redirect("/super-admin");
-  } else if (role === "owner" || role === "admin") {
-    redirect("/dashboard");
-  } else {
-    redirect("/tenant");
-  }
+ if (role === "super_admin") {
+ redirect("/super-admin");
+ } else if (role === "owner" || role === "admin") {
+ redirect("/dashboard");
+ } else {
+ redirect("/tenant");
+ }
 }
 
 /**
  * Switch Active Building Filter for Owner Dropdown
  */
 export async function switchActiveBuildingAction(buildingId: string | null): Promise<void> {
-  const cookieStore = await cookies();
-  if (!buildingId || buildingId === "all") {
-    cookieStore.delete("pg_active_building_id");
-  } else {
-    cookieStore.set("pg_active_building_id", buildingId, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "lax",
-    });
-  }
-  revalidatePath("/dashboard");
+ const cookieStore = await cookies();
+ if (!buildingId || buildingId === "all") {
+ cookieStore.delete("pg_active_building_id");
+ } else {
+ cookieStore.set("pg_active_building_id", buildingId, {
+ path: "/",
+ httpOnly: true,
+ sameSite: "lax",
+ });
+ }
+ revalidatePath("/dashboard");
 }
 
 /**
  * View as Organization Mode for Super Admin
  */
 export async function enterViewAsOrgAction(formData: FormData): Promise<void> {
-  const orgId = formData.get("organization_id") as string;
-  const cookieStore = await cookies();
-  if (orgId) {
-    cookieStore.set("pg_active_tenant_id", orgId, { path: "/", httpOnly: true, sameSite: "lax" });
-  }
-  redirect("/dashboard");
+ const orgId = formData.get("organization_id") as string;
+ const cookieStore = await cookies();
+ if (orgId) {
+ cookieStore.set("pg_active_tenant_id", orgId, { path: "/", httpOnly: true, sameSite: "lax" });
+ }
+ redirect("/dashboard");
 }
 
 export async function exitViewAsOrgAction(): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.delete("pg_active_tenant_id");
-  redirect("/super-admin/organizations");
+ const cookieStore = await cookies();
+ cookieStore.delete("pg_active_tenant_id");
+ redirect("/super-admin/organizations");
 }
 
 export async function switchOrganizationAction(orgId: string): Promise<void> {
-  const cookieStore = await cookies();
-  if (orgId) {
-    cookieStore.set("pg_active_tenant_id", orgId, { path: "/", httpOnly: true, sameSite: "lax" });
-  }
-  revalidatePath("/dashboard");
+ const cookieStore = await cookies();
+ if (orgId) {
+ cookieStore.set("pg_active_tenant_id", orgId, { path: "/", httpOnly: true, sameSite: "lax" });
+ }
+ revalidatePath("/dashboard");
 }
 
 export async function createOrganizationAction(formData: FormData): Promise<any> {
-  const name = formData.get("name") as string;
-  const slug = formData.get("slug") as string;
-  const city = formData.get("city") as string;
-  const contactEmail = formData.get("contact_email") as string;
-  const contactPhone = formData.get("contact_phone") as string;
+ const name = formData.get("name") as string;
+ const slug = formData.get("slug") as string;
+ const city = formData.get("city") as string;
+ const contactEmail = formData.get("contact_email") as string;
+ const contactPhone = formData.get("contact_phone") as string;
 
-  return { success: true, message: `Organization ${name} created.` };
+ return { success: true, message: `Organization ${name} created.` };
 }
 
 /**
  * Sign Out Action
  */
 export async function signOutAction(): Promise<void> {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+ const supabase = await createClient();
+ await supabase.auth.signOut();
 
-  const cookieStore = await cookies();
-  cookieStore.delete("pg_demo_role");
-  cookieStore.delete("pg_demo_no_pg");
-  cookieStore.delete("pg_active_building_id");
+ const cookieStore = await cookies();
+ cookieStore.delete("pg_demo_role");
+ cookieStore.delete("pg_demo_no_pg");
+ cookieStore.delete("pg_active_building_id");
 
-  redirect("/login");
+ redirect("/login");
 }

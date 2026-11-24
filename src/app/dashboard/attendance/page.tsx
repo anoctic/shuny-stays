@@ -8,23 +8,23 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function AttendancePage() {
-  const session = await getCurrentUserSession();
-  const cookieStore = await cookies();
-  const activeBuildingId = cookieStore.get("pg_active_building_id")?.value;
+ const session = await getCurrentUserSession();
+ const cookieStore = await cookies();
+ const activeBuildingId = cookieStore.get("pg_active_building_id")?.value;
 
-  const buildingsData = await getTodayAttendanceSheet({
-    pgId: session.pg_id || undefined,
-    buildingId: activeBuildingId || undefined,
-    userRole: session.role,
-    assignedBuildingIds: session.assigned_building_ids || [],
-  });
+ const buildingsData = await getTodayAttendanceSheet({
+ pgId: session.pg_id || undefined,
+ buildingId: activeBuildingId || undefined,
+ userRole: session.role,
+ assignedBuildingIds: session.assigned_building_ids || [],
+ });
 
-  return (
-    <AttendanceSheet
-      initialBuildings={buildingsData}
-      userRole={session.role}
-      userName={session.full_name}
-      assignedBuildingIds={session.assigned_building_ids || []}
-    />
-  );
+ return (
+ <AttendanceSheet
+ initialBuildings={buildingsData}
+ userRole={session.role}
+ userName={session.full_name}
+ assignedBuildingIds={session.assigned_building_ids || []}
+ />
+ );
 }
