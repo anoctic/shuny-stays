@@ -88,6 +88,14 @@ interface TenantHomeExplorerProps {
  canVote: boolean;
  statusMessage: string;
  } | null;
+ dinnerPollStatus?: {
+ poll: MealPoll | null;
+ isCutoffPassed: boolean;
+ scheduleStatus?: "upcoming" | "open" | "closed";
+ tenantVote: "yes" | "no" | null;
+ canVote: boolean;
+ statusMessage: string;
+ } | null;
 }
 
 export function TenantHomeExplorer({
@@ -109,6 +117,7 @@ export function TenantHomeExplorer({
  wifiPass = "StayRoyal@2026",
  broadcasts = [],
  mealPollStatus,
+ dinnerPollStatus = null,
 }: TenantHomeExplorerProps) {
  const router = useRouter();
  useRealtimeSync(["tenants", "payments", "complaints", "rooms", "attendance_logs"]);
@@ -346,15 +355,19 @@ export function TenantHomeExplorer({
  )}
  </div>
 
- {/* Mobile-only Lunch Poll Card (< lg) */}
- {mealPollStatus?.poll && (
+ {/* Mobile-only Meal Poll Card (< lg) */}
+ {(mealPollStatus?.poll || dinnerPollStatus?.poll) && (
  <div className="lg:hidden">
  <TenantMealPollCard
- poll={mealPollStatus.poll}
- isCutoffPassed={mealPollStatus.isCutoffPassed}
- initialVote={mealPollStatus.tenantVote}
+ poll={mealPollStatus?.poll || null}
+ dinnerPoll={dinnerPollStatus?.poll || null}
+ isCutoffPassed={mealPollStatus?.isCutoffPassed ?? false}
+ dinnerIsCutoffPassed={dinnerPollStatus?.isCutoffPassed ?? false}
+ initialVote={mealPollStatus?.tenantVote || null}
+ dinnerInitialVote={dinnerPollStatus?.tenantVote || null}
  tenantId={session.id}
- scheduleStatus={mealPollStatus.scheduleStatus}
+ scheduleStatus={mealPollStatus?.scheduleStatus}
+ dinnerScheduleStatus={dinnerPollStatus?.scheduleStatus}
  />
  </div>
  )}
@@ -565,15 +578,19 @@ export function TenantHomeExplorer({
 
  {/* COLUMN 3: Lunch Poll, Outing Passes & Quick Support */}
  <div className="space-y-3.5">
- {/* Desktop-only Lunch Poll Card (>= lg) */}
- {mealPollStatus?.poll && (
+ {/* Desktop-only Meal Poll Card (>= lg) */}
+ {(mealPollStatus?.poll || dinnerPollStatus?.poll) && (
  <div className="hidden lg:block">
  <TenantMealPollCard
- poll={mealPollStatus.poll}
- isCutoffPassed={mealPollStatus.isCutoffPassed}
- initialVote={mealPollStatus.tenantVote}
+ poll={mealPollStatus?.poll || null}
+ dinnerPoll={dinnerPollStatus?.poll || null}
+ isCutoffPassed={mealPollStatus?.isCutoffPassed ?? false}
+ dinnerIsCutoffPassed={dinnerPollStatus?.isCutoffPassed ?? false}
+ initialVote={mealPollStatus?.tenantVote || null}
+ dinnerInitialVote={dinnerPollStatus?.tenantVote || null}
  tenantId={session.id}
- scheduleStatus={mealPollStatus.scheduleStatus}
+ scheduleStatus={mealPollStatus?.scheduleStatus}
+ dinnerScheduleStatus={dinnerPollStatus?.scheduleStatus}
  />
  </div>
  )}

@@ -12,9 +12,10 @@ export default async function TenantMessPage() {
  const session = await getCurrentUserSession();
  const pgId = session.pg_id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
 
- const [menuData, pollStatus] = await Promise.all([
+ const [menuData, lunchPollStatus, dinnerPollStatus] = await Promise.all([
  getMessMenu(),
  getTenantMealPollStatus(pgId, session.id, "lunch"),
+ getTenantMealPollStatus(pgId, session.id, "dinner"),
  ]);
 
  const meals = [
@@ -28,17 +29,21 @@ export default async function TenantMessPage() {
  <div className="space-y-4">
  <div>
  <h1 className="text-lg font-black text-slate-900">Mess & Dining</h1>
- <p className="text-xs text-slate-400">Vote for lunch and view today's meal schedule</p>
+ <p className="text-xs text-slate-400">Vote for lunch and dinner, and view today&apos;s meal schedule</p>
  </div>
 
- {/* TENANT LUNCH HEADCOUNT POLL CARD */}
- {pollStatus.poll && (
+ {/* TENANT MEAL HEADCOUNT POLL CARD (LUNCH & DINNER) */}
+ {(lunchPollStatus.poll || dinnerPollStatus.poll) && (
  <TenantMealPollCard
- poll={pollStatus.poll}
- isCutoffPassed={pollStatus.isCutoffPassed}
- initialVote={pollStatus.tenantVote}
+ poll={lunchPollStatus.poll || null}
+ dinnerPoll={dinnerPollStatus.poll || null}
+ isCutoffPassed={lunchPollStatus.isCutoffPassed}
+ dinnerIsCutoffPassed={dinnerPollStatus.isCutoffPassed}
+ initialVote={lunchPollStatus.tenantVote}
+ dinnerInitialVote={dinnerPollStatus.tenantVote}
  tenantId={session.id}
- scheduleStatus={pollStatus.scheduleStatus}
+ scheduleStatus={lunchPollStatus.scheduleStatus}
+ dinnerScheduleStatus={dinnerPollStatus.scheduleStatus}
  />
  )}
 

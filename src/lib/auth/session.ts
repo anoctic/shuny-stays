@@ -95,7 +95,20 @@ export const getCurrentUserSession = cache(async (): Promise<CurrentUserSession>
  has_pg: false,
  };
  }
- return DEMO_USERS[demoRole];
+    const base = { ...DEMO_USERS[demoRole] };
+    try {
+      const admin = createAdminClient();
+      if (base.pg_id) {
+        const { data: pgData } = await (admin.from("pgs" as any) as any)
+          .select("name")
+          .eq("id", base.pg_id)
+          .maybeSingle();
+        if (pgData?.name) {
+          base.pg_name = pgData.name;
+        }
+      }
+    } catch {}
+    return base;
  }
 
  // 2. Real Supabase Auth Session
@@ -219,6 +232,22 @@ export const getCurrentUserSession = cache(async (): Promise<CurrentUserSession>
  } else if (role === "super_admin") {
  hasPg = true;
  }
+
+    // Resolve dynamic PG name from database if not yet populated
+    if (pgId && !pgName) {
+      try {
+        const admin = createAdminClient();
+        const { data: pgData } = await (admin.from("pgs" as any) as any)
+          .select("name")
+          .eq("id", pgId)
+          .maybeSingle();
+        if (pgData?.name) {
+          pgName = pgData.name;
+        }
+      } catch (err) {
+        console.warn("Failed to lookup PG name in session:", err);
+      }
+    }
 
  return {
  id: user.id,

@@ -33,6 +33,7 @@ import {
  Crown,
  Utensils,
  Power,
+  Ticket,
 } from "lucide-react";
 import { PgDetailItem } from "@/lib/data/pgs";
 import {
@@ -42,6 +43,7 @@ import {
 import { updatePgPlanDetailsAction } from "@/app/actions/billing";
 import { switchDemoPersonaAction } from "@/app/actions/auth";
 import { togglePgMealPollFacilityAction } from "@/app/actions/meal-polls";
+import { togglePgGatePassFacilityAction } from "@/app/actions/passes-and-broadcasts";
 
 interface PgDetailsModalProps {
  pg: PgDetailItem;
@@ -93,6 +95,13 @@ export function PgDetailsModal({
  const [isTogglingFacility, setIsTogglingFacility] = useState(false);
  const [facilityToast, setFacilityToast] = useState<string | null>(null);
 
+  // Gate Pass / Outpass Facility Master Switch state
+  const [gatePassEnabled, setGatePassEnabled] = useState<boolean>(
+    pg.gate_pass_enabled !== false
+  );
+  const [isTogglingGatePass, setIsTogglingGatePass] = useState(false);
+  const [gatePassToast, setGatePassToast] = useState<string | null>(null);
+
  if (!isOpen) return null;
 
  const handleToggleMealFacility = async () => {
@@ -118,6 +127,30 @@ export function PgDetailsModal({
  setTimeout(() => setFacilityToast(null), 3500);
  }
  };
+
+  const handleToggleGatePassFacility = async () => {
+    setIsTogglingGatePass(true);
+    const nextState = !gatePassEnabled;
+    try {
+      const res = await togglePgGatePassFacilityAction(pg.id, nextState);
+      if (res?.error) {
+        setGatePassToast(`Error: ${res.error}`);
+      } else {
+        setGatePassEnabled(nextState);
+        setGatePassToast(
+          nextState
+            ? "✅ Resident Outpass & Gate Pass Facility Activated!"
+            : "❌ Resident Outpass & Gate Pass Facility Disabled."
+        );
+        router.refresh();
+      }
+    } catch (err: any) {
+      setGatePassToast(`Error: ${err?.message || "Failed to update facility"}`);
+    } finally {
+      setIsTogglingGatePass(false);
+      setTimeout(() => setGatePassToast(null), 3500);
+    }
+  };
 
  const handleCopy = (text: string, fieldName: string) => {
  navigator.clipboard.writeText(text);
@@ -594,7 +627,67 @@ export function PgDetailsModal({
  </div>
  </div>
 
- {/* SECTION 3: SUBSCRIPTION PLAN & EDIT PLAN */}
+ 
+        {/* SECTION 2.6: OUTPASS & GATE PASS FACILITY SWITCH */}
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold shrink-0">
+                <Ticket className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-xs font-black text-slate-900 truncate">
+                  Resident Outpass & Gate Pass (Master Switch)
+                </h3>
+                <p className="text-[10px] text-slate-400 truncate">
+                  Allow residents and wardens of this PG to issue & manage Day/Night Passes
+                </p>
+              </div>
+            </div>
+
+            {/* Master Switch Button */}
+            <button
+              type="button"
+              onClick={handleToggleGatePassFacility}
+              disabled={isTogglingGatePass}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition active:scale-95 shadow-2xs ${
+                gatePassEnabled
+                  ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20"
+                  : "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+              }`}
+            >
+              <Power className="w-3.5 h-3.5" />
+              <span>
+                {isTogglingGatePass
+                  ? "Updating..."
+                  : gatePassEnabled
+                  ? "Outpass: Enabled"
+                  : "Outpass: Disabled"}
+              </span>
+            </button>
+          </div>
+
+          {gatePassToast && (
+            <div className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 font-bold text-[11px] flex items-center gap-1.5 animate-in fade-in">
+              <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span>{gatePassToast}</span>
+            </div>
+          )}
+
+          <div className="p-2.5 bg-white rounded-xl border border-slate-200/90 flex items-center justify-between text-[11px]">
+            <span className="text-slate-600">
+              Current Outpass Status:{" "}
+              <strong className={gatePassEnabled ? "text-emerald-600" : "text-rose-600"}>
+                {gatePassEnabled ? "Active (Residents Can Request Day & Night Passes)" : "Access Revoked (Passes Disabled for this PG)"}
+              </strong>
+            </span>
+            <span className="text-[10px] font-bold text-slate-400">
+              {gatePassEnabled ? "Gate Security Active" : "No Passes Allowed"}
+            </span>
+          </div>
+        </div>
+
+        {/* SECTION 3: SUBSCRIPTION PLAN & EDIT PLAN */}
  <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3">
  <div className="flex items-center justify-between gap-2">
  <div className="flex items-center gap-2 min-w-0">

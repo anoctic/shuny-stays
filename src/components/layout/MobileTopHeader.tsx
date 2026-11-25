@@ -70,7 +70,7 @@ export function MobileTopHeader({
  {/* Left: Role-Specific Monogram & Brand / Identity */}
  <div className="flex items-center gap-2 min-w-0">
  {role === "owner" && (
- pgName && pgName !== "Shuny Stays Properties" ? (
+ pgName ? (
  <div className="w-8 h-8 rounded-xl bg-[#4F46E5] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
  {pgName.slice(0, 2).toUpperCase()}
  </div>
@@ -85,7 +85,7 @@ export function MobileTopHeader({
  )}
  {role === "tenant" && (
  <div className="w-8 h-8 rounded-xl bg-[#4F46E5] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
- {pgName ? pgName.slice(0, 2).toUpperCase() : "RS"}
+ {pgName ? pgName.slice(0, 2).toUpperCase() : "PG"}
  </div>
  )}
  {role === "super_admin" && (
@@ -99,11 +99,11 @@ export function MobileTopHeader({
  Shuny<span className="text-[#4F46E5]">Stays</span> Super Admin
  </span>
  ) : role === "tenant" ? (
- pgName || "Royal Stay PG"
+ pgName || "My PG Stay"
  ) : role === "admin" ? (
  `Warden ${fullName}`
  ) : (
- pgName || "Shuny Stays Properties"
+ pgName || "My Property Stay"
  )}
  </div>
  <div className="text-[10px] font-semibold text-[#64748B] truncate">

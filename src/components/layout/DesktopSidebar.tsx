@@ -356,12 +356,12 @@ export function DesktopSidebar({
  <Link
  href={role === "super_admin" ? "/super-admin" : role === "tenant" ? "/tenant" : "/dashboard"}
  className="flex items-center gap-2.5 min-w-0 group flex-1 overflow-hidden"
- title={role === "super_admin" ? "ShunyStays Admin" : pgName || "Shuny Stays PG"}
+ title={role === "super_admin" ? "ShunyStays Admin" : pgName || "My PG Stay"}
  >
  <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs group-hover:scale-105 transition-transform mx-auto">
  {role === "super_admin" ? (
  <Crown className="w-5 h-5 text-amber-300" />
- ) : pgName && pgName !== "Shuny Stays Properties" ? (
+ ) : pgName ? (
  pgName.slice(0, 2).toUpperCase()
  ) : (
  <ShunyStaysEmblem className="w-7 h-7" />
@@ -373,7 +373,7 @@ export function DesktopSidebar({
  {role === "super_admin" ? (
  <span>Shuny<span className="text-indigo-600">Stays</span> Admin</span>
  ) : (
- pgName || "Shuny Stays PG"
+ pgName || "My PG Stay"
  )}
  </div>
  <div className="flex items-center gap-1.5 mt-0.5">

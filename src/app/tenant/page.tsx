@@ -49,7 +49,10 @@ export default async function TenantDashboardPage() {
  contact_phone: "+91 98222 33441",
  };
 
- const mealPollStatus = await getTenantMealPollStatus(pg.id, session.id, "lunch");
+ const [lunchPollStatus, dinnerPollStatus] = await Promise.all([
+ getTenantMealPollStatus(pg.id, session.id, "lunch"),
+ getTenantMealPollStatus(pg.id, session.id, "dinner"),
+ ]);
 
  // Security Deposit for this tenant
  const depositDetails = dbDeposit || {
@@ -123,7 +126,8 @@ export default async function TenantDashboardPage() {
  wifiName="ROYAL_5G_RESIDENT"
  wifiPass="StayRoyal@2026"
  broadcasts={broadcasts}
- mealPollStatus={mealPollStatus}
+ mealPollStatus={lunchPollStatus}
+ dinnerPollStatus={dinnerPollStatus}
  />
  );
 }

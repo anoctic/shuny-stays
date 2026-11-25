@@ -162,9 +162,14 @@ export async function getTodayMealPoll(
  console.error("getTodayMealPoll query error:", error);
  }
 
+ const isDinner = mealType === "dinner";
+ const defaultTitle = isDinner ? "Raat Ka Khana (Dinner Poll)" : "Dopahar Ka Khana (Lunch Poll)";
+ const defaultStartTime = isDinner ? "16:00" : (settings.defaultStartTime || "06:00");
+ const defaultCutoffTime = isDinner ? "19:00" : (settings.defaultCutoffTime || "10:00");
+
  if (data) {
- const startTime = data.start_time || settings.defaultStartTime || "06:00";
- const cutoffTime = data.cutoff_time || settings.defaultCutoffTime || "10:00";
+ const startTime = data.start_time || defaultStartTime;
+ const cutoffTime = data.cutoff_time || defaultCutoffTime;
  const { isCutoffPassed } = getPollScheduleStatus(data.poll_date, startTime, cutoffTime);
 
  return {
@@ -172,7 +177,7 @@ export async function getTodayMealPoll(
  pg_id: data.pg_id,
  poll_date: data.poll_date,
  meal_type: data.meal_type,
- title: data.title || "Dopahar Ka Khana (Lunch Poll)",
+ title: data.title || defaultTitle,
  start_time: startTime,
  cutoff_time: cutoffTime,
  is_active: data.is_active,
@@ -188,9 +193,9 @@ export async function getTodayMealPoll(
  pg_id: pgId,
  poll_date: today,
  meal_type: mealType,
- title: "Dopahar Ka Khana (Lunch Poll)",
- start_time: settings.defaultStartTime,
- cutoff_time: settings.defaultCutoffTime,
+ title: defaultTitle,
+ start_time: defaultStartTime,
+ cutoff_time: defaultCutoffTime,
  is_active: true,
  updated_at: new Date().toISOString(),
  };
@@ -203,17 +208,17 @@ export async function getTodayMealPoll(
  if (createErr || !createdPoll) {
  const { isCutoffPassed } = getPollScheduleStatus(
  today,
- settings.defaultStartTime,
- settings.defaultCutoffTime
+ defaultStartTime,
+ defaultCutoffTime
  );
  return {
- id: `auto-${pgId}-${today}`,
+ id: `auto-${pgId}-${today}-${mealType}`,
  pg_id: pgId,
  poll_date: today,
  meal_type: mealType,
- title: "Dopahar Ka Khana (Lunch Poll)",
- start_time: settings.defaultStartTime,
- cutoff_time: settings.defaultCutoffTime,
+ title: defaultTitle,
+ start_time: defaultStartTime,
+ cutoff_time: defaultCutoffTime,
  is_active: true,
  created_at: new Date().toISOString(),
  updated_at: new Date().toISOString(),
@@ -223,8 +228,8 @@ export async function getTodayMealPoll(
 
  const { isCutoffPassed } = getPollScheduleStatus(
  createdPoll.poll_date,
- createdPoll.start_time || settings.defaultStartTime,
- createdPoll.cutoff_time || settings.defaultCutoffTime
+ createdPoll.start_time || defaultStartTime,
+ createdPoll.cutoff_time || defaultCutoffTime
  );
 
  return {

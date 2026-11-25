@@ -295,6 +295,10 @@ export interface GatePass {
  expected_return_date: string;
  departure_time?: string | null;
  expected_return_time?: string | null;
+  actual_entry_time?: string | null;
+  actual_entry_date?: string | null;
+  is_late?: boolean;
+  entry_recorded_by?: string | null;
  reason: string;
  destination?: string | null;
  emergency_phone?: string | null;

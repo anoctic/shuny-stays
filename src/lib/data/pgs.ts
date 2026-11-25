@@ -26,6 +26,7 @@ export interface PgDetailItem {
  upi_id?: string | null;
  owner_initial_password?: string | null;
  meal_poll_enabled?: boolean;
+  gate_pass_enabled?: boolean;
 }
 
 /**
@@ -53,6 +54,7 @@ export const getAllPgs = cache(async (): Promise<PgDetailItem[]> => {
  owner_initial_password,
  city,
  meal_poll_enabled,
+  gate_pass_enabled,
  created_at
  `)
  .order("created_at", { ascending: false });
@@ -147,6 +149,7 @@ export const getAllPgs = cache(async (): Promise<PgDetailItem[]> => {
  created_at: d.created_at,
  owner_initial_password: d.owner_initial_password || null,
  meal_poll_enabled: d.meal_poll_enabled !== false,
+        gate_pass_enabled: d.gate_pass_enabled !== false,
  };
  });
 

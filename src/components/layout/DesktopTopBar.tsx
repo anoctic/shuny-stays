@@ -105,7 +105,7 @@ export function DesktopTopBar({
  ) : role === "tenant" ? (
  <div className="flex items-center gap-2 min-w-0">
  <span className="text-xs font-black text-slate-900 truncate">
- {pgName || "Shuny Stays PG"}
+ {pgName || "My PG Stay"}
  </span>
  <span className="text-xs text-slate-300">•</span>
  <span className="text-xs font-medium text-slate-500">Resident Portal</span>
@@ -113,7 +113,7 @@ export function DesktopTopBar({
  ) : (
  <div className="flex items-center gap-2 min-w-0">
  <span className="text-xs font-black text-slate-900 truncate">
- {pgName || "Shuny Stays PG Network"}
+ {pgName || "My Property"}
  </span>
  <span className="text-[10px] text-slate-400 hidden md:inline">
  ({role === "owner" ? "Owner View" : "Warden View"})

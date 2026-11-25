@@ -52,7 +52,7 @@ export default async function TenantLayout({
  <DesktopSidebar
  role="tenant"
  fullName={session.full_name}
- pgName={session.pg_name || "Shuny Stays Luxury PG"}
+ pgName={session.pg_name || "My PG Stay"}
  pendingDuesCount={1}
  />
  }
@@ -60,7 +60,7 @@ export default async function TenantLayout({
  <MobileTopHeader
  fullName={session.full_name}
  role="tenant"
- pgName={session.pg_name || "Shuny Stays Luxury PG"}
+ pgName={session.pg_name || "My PG Stay"}
  broadcasts={broadcasts}
  />
  }
@@ -68,7 +68,7 @@ export default async function TenantLayout({
  <DesktopTopBar
  fullName={session.full_name}
  role="tenant"
- pgName={session.pg_name || "Shuny Stays Luxury PG"}
+ pgName={session.pg_name || "My PG Stay"}
  broadcasts={broadcasts}
  />
  }

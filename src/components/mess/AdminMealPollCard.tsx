@@ -33,59 +33,73 @@ import {
 } from "@/app/actions/meal-polls";
 
 interface AdminMealPollCardProps {
- summary: MealPollSummary;
- history?: MealPollHistoryItem[];
- pgId: string;
+  summary: MealPollSummary;
+  dinnerSummary?: MealPollSummary | null;
+  history?: MealPollHistoryItem[];
+  pgId: string;
 }
 
 export function AdminMealPollCard({
- summary: initialSummary,
- history = [],
- pgId,
+  summary: initialLunchSummary,
+  dinnerSummary = null,
+  history = [],
+  pgId,
 }: AdminMealPollCardProps) {
- const router = useRouter();
- const [summary, setSummary] = useState<MealPollSummary>(initialSummary);
- const [mainView, setMainView] = useState<"live" | "history">("live");
- const [activeTab, setActiveTab] = useState<"yes" | "no" | "not_answered">("yes");
- const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
- const [historySubTab, setHistorySubTab] = useState<"yes" | "no" | "not_answered">("yes");
- const [isUpdating, setIsUpdating] = useState(false);
- const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const router = useRouter();
+  const [selectedMeal, setSelectedMeal] = useState<"lunch" | "dinner">(() => {
+    return new Date().getHours() >= 12 && dinnerSummary ? "dinner" : "lunch";
+  });
+  const [mainView, setMainView] = useState<"live" | "history">("live");
+  const [activeTab, setActiveTab] = useState<"yes" | "no" | "not_answered">("yes");
+  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
+  const [historySubTab, setHistorySubTab] = useState<"yes" | "no" | "not_answered">("yes");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
- const poll = summary.poll;
- const isPollActive = poll?.is_active ?? true;
- const isExpired = summary.isCutoffPassed;
- const startTime = poll?.start_time || summary.startTime || "06:00";
- const cutoffTime = poll?.cutoff_time || summary.cutoffTime || "10:00";
- const scheduleStatus = summary.scheduleStatus || (isExpired ? "closed" : "open");
+  const summary = selectedMeal === "dinner" ? (dinnerSummary || initialLunchSummary) : initialLunchSummary;
+  const isDinner = selectedMeal === "dinner";
 
- const showToast = (msg: string) => {
- setToastMessage(msg);
- setTimeout(() => setToastMessage(null), 3500);
- };
+  const poll = summary.poll;
+  const isPollActive = poll?.is_active ?? true;
+  const isExpired = summary.isCutoffPassed;
+  const startTime = poll?.start_time || summary.startTime || (isDinner ? "16:00" : "06:00");
+  const cutoffTime = poll?.cutoff_time || summary.cutoffTime || (isDinner ? "19:00" : "10:00");
+  const scheduleStatus = summary.scheduleStatus || (isExpired ? "closed" : "open");
 
- const handleTogglePoll = async () => {
- setIsUpdating(true);
- const nextActive = !isPollActive;
+  const formatDisplayTime = (timeStr: string) => {
+    const [h, m] = (timeStr || "10:00").split(":").map(Number);
+    const suffix = h >= 12 ? "PM" : "AM";
+    const displayH = h % 12 === 0 ? 12 : h % 12;
+    return `${displayH}:${m < 10 ? "0" + m : m} ${suffix}`;
+  };
 
- try {
- const res = await toggleMealPollAction(pgId, nextActive, startTime, cutoffTime);
- if (res.error) {
- showToast(`Failed: ${res.error}`);
- } else {
- showToast(
- nextActive
- ? `Lunch Poll Active! (${startTime} AM - ${cutoffTime} AM)`
- : "Lunch Poll Paused for today"
- );
- router.refresh();
- }
- } catch (err: any) {
- showToast(`Error: ${err?.message || "Failed to toggle poll"}`);
- } finally {
- setIsUpdating(false);
- }
- };
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleTogglePoll = async () => {
+    setIsUpdating(true);
+    const nextActive = !isPollActive;
+
+    try {
+      const res = await toggleMealPollAction(pgId, nextActive, startTime, cutoffTime, selectedMeal);
+      if (res.error) {
+        showToast(`Failed: ${res.error}`);
+      } else {
+        showToast(
+          nextActive
+            ? `${isDinner ? "Dinner" : "Lunch"} Poll Active! (${formatDisplayTime(startTime)} - ${formatDisplayTime(cutoffTime)})`
+            : `${isDinner ? "Dinner" : "Lunch"} Poll Paused for today`
+        );
+        router.refresh();
+      }
+    } catch (err: any) {
+      showToast(`Error: ${err?.message || "Failed to toggle poll"}`);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
  const handleChangeStartTime = async (newStart: string) => {
  setIsUpdating(true);
@@ -154,6 +168,32 @@ export function AdminMealPollCard({
 
  return (
  <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-5 shadow-sm space-y-4">
+ {/* MEAL SELECTOR TABS: LUNCH vs DINNER */}
+ <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl w-full sm:w-auto">
+ <button
+ type="button"
+ onClick={() => setSelectedMeal("lunch")}
+ className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 ${
+ selectedMeal === "lunch"
+ ? "bg-amber-500 text-white shadow-xs"
+ : "text-slate-600 hover:text-slate-900"
+ }`}
+ >
+ <span>☀️ Lunch Headcount</span>
+ </button>
+ <button
+ type="button"
+ onClick={() => setSelectedMeal("dinner")}
+ className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 ${
+ selectedMeal === "dinner"
+ ? "bg-indigo-600 text-white shadow-xs"
+ : "text-slate-600 hover:text-slate-900"
+ }`}
+ >
+ <span>🌙 Dinner Headcount (4–7 PM)</span>
+ </button>
+ </div>
+
  {/* TOP BAR: VIEW TOGGLE (TODAY'S POLL vs HISTORY) */}
  <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
  <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl">
@@ -167,7 +207,7 @@ export function AdminMealPollCard({
  }`}
  >
  <Utensils className="w-3.5 h-3.5 text-amber-500" />
- <span>Today&apos;s Live Poll</span>
+ <span>Today&apos;s Live {isDinner ? "Dinner" : "Lunch"}</span>
  </button>
 
  <button
@@ -200,10 +240,10 @@ export function AdminMealPollCard({
  {!isPollActive
  ? "Paused"
  : scheduleStatus === "upcoming"
- ? `Opens at ${startTime} AM`
+ ? `Opens at ${formatDisplayTime(startTime)}`
  : scheduleStatus === "open"
  ? "🟢 Live Voting Active"
- : `Closed (${cutoffTime} AM passed)`}
+ : `Closed (${formatDisplayTime(cutoffTime)} passed)`}
  </span>
  )}
  </div>
@@ -222,12 +262,12 @@ export function AdminMealPollCard({
  <div className="flex items-center justify-between gap-3 flex-wrap">
  <div className="space-y-0.5">
  <h2 className="text-sm sm:text-base font-black text-slate-900">
- Dopahar Ka Khana (Lunch Headcount)
+ {isDinner ? "Raat Ka Khana (Dinner Headcount)" : "Dopahar Ka Khana (Lunch Headcount)"}
  </h2>
  <p className="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
  <span className="flex items-center gap-1 font-semibold text-slate-600">
  <Clock className="w-3.5 h-3.5 text-indigo-500" />
- Auto-Schedule: <strong>{startTime} AM to {cutoffTime} AM IST</strong>
+ Auto-Schedule: <strong>{formatDisplayTime(startTime)} to {formatDisplayTime(cutoffTime)} IST</strong>
  </span>
  <span>•</span>
  <span className="text-amber-600 font-bold flex items-center gap-0.5">
