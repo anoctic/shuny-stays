@@ -371,6 +371,26 @@ export function TenantHomeExplorer({
  />
  </div>
  )}
+        {/* Quick Link to Today's Menu & Full 7-Day Timetable (Mobile) */}
+        <Link
+          href="/tenant/mess"
+          className="lg:hidden p-3.5 rounded-2xl bg-gradient-to-r from-orange-50/90 via-amber-50/80 to-white border border-orange-200/80 flex items-center justify-between gap-2 shadow-2xs hover:shadow-xs transition active:scale-98 group block"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-orange-600 text-white flex items-center justify-center font-bold shrink-0 shadow-xs">
+              <Utensils className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-xs font-black text-slate-900 group-hover:text-orange-700 transition-colors truncate">
+                Aaj Ka Menu & 7-Day Timetable
+              </h4>
+              <p className="text-[10px] text-slate-500 truncate">
+                Breakfast, Lunch, Snacks & Dinner for the whole week
+              </p>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-orange-600 group-hover:translate-x-0.5 transition-transform shrink-0" />
+        </Link>
 
  {/* Resident Account & Login Security on Desktop (Column 1 bottom) */}
  <div className="hidden lg:block pt-1">
@@ -594,6 +614,26 @@ export function TenantHomeExplorer({
  />
  </div>
  )}
+        {/* Quick Link to Today's Menu & Full 7-Day Timetable (Desktop) */}
+        <Link
+          href="/tenant/mess"
+          className="hidden lg:flex p-3.5 rounded-2xl bg-gradient-to-r from-orange-50/90 via-amber-50/80 to-white border border-orange-200/80 items-center justify-between gap-2 shadow-2xs hover:shadow-xs transition active:scale-98 group"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-orange-600 text-white flex items-center justify-center font-bold shrink-0 shadow-xs">
+              <Utensils className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-xs font-black text-slate-900 group-hover:text-orange-700 transition-colors truncate">
+                Aaj Ka Menu & 7-Day Timetable
+              </h4>
+              <p className="text-[10px] text-slate-500 truncate">
+                Breakfast, Lunch, Snacks & Dinner for the whole week
+              </p>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-orange-600 group-hover:translate-x-0.5 transition-transform shrink-0" />
+        </Link>
 
  {/* 6. Day/Night Gate Pass Cards (Yellow when issued by Warden, Green when approved by Owner) */}
  <div className="space-y-2.5">
