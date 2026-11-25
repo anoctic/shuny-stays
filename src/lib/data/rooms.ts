@@ -1,4 +1,5 @@
 // Connects directly to Supabase tables with 100% Live Database Persistence (Zero Mock Data)
+import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserSession } from "@/lib/auth/session";
 
@@ -187,7 +188,7 @@ const dinnerPollState: Record<string, "Yes" | "No"> = {};
 
 // --- LIVE DATA ACCESS FUNCTIONS (100% SUPABASE) ---
 
-export async function getAllBuildings(selectedBuildingId?: string | null): Promise<BuildingItem[]> {
+export const getAllBuildings = cache(async (selectedBuildingId?: string | null): Promise<BuildingItem[]> => {
  try {
  const session = await getCurrentUserSession();
  const admin = createAdminClient();
@@ -291,7 +292,7 @@ export async function getAllBuildings(selectedBuildingId?: string | null): Promi
  }
 
  return [];
-}
+});
 
 export async function computePropertyStats(selectedBuildingId?: string | null) {
  const bldgs = await getAllBuildings(selectedBuildingId);

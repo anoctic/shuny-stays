@@ -68,18 +68,30 @@ export function DesktopSidebar({
  const { isCollapsed, toggleSidebar, effectiveWidth, isDragging, startDragging } = useSidebar();
   const isExpanded = !isCollapsed;
  const [activeTabOverride, setActiveTabOverride] = useState<string | null>(null);
+ const [pendingItemId, setPendingItemId] = useState<string | null>(null);
 
  useEffect(() => {
  setActiveTabOverride(null);
+ setPendingItemId(null);
  }, [pathname, searchParams]);
 
  const superAdminCurrentTab =
  activeTabOverride || searchParams?.get("tab") || "overview";
 
+ const handleItemPointerDown = (item: SidebarItem) => {
+ try {
+ router.prefetch(item.href);
+ } catch {}
+ if (!item.isActive) {
+ setPendingItemId(item.id);
+ }
+ };
+
  const handleSuperAdminClick = (e: React.MouseEvent, tabId: string, href: string) => {
  if (role === "super_admin") {
  e.preventDefault();
  setActiveTabOverride(tabId);
+ setPendingItemId(tabId);
  window.dispatchEvent(
  new CustomEvent("superadmin:switchtab", { detail: { tab: tabId } })
  );
@@ -88,6 +100,8 @@ export function DesktopSidebar({
  } else {
  router.push(href);
  }
+ } else {
+ setPendingItemId(tabId);
  }
  };
 
@@ -386,20 +400,21 @@ export function DesktopSidebar({
 
  {navItems.map((item) => {
  const Icon = item.icon;
+ const isSelected = pendingItemId ? pendingItemId === item.id : item.isActive;
  return (
  <Link
  key={item.id}
  href={item.href}
+ prefetch={true}
  title={!isExpanded ? item.label : undefined}
+ onPointerDown={() => handleItemPointerDown(item)}
  onClick={(e) => {
- if (role === "super_admin") {
  handleSuperAdminClick(e, item.id, item.href);
- }
  }}
  className={cn(
  "group relative flex items-center rounded-xl text-xs transition-all duration-150 cursor-pointer",
  isExpanded ? "justify-between px-3 py-2 rounded-lg" : "justify-center w-10 h-10 rounded-lg mx-auto",
-                item.isActive
+                isSelected
                   ? "bg-indigo-600 text-white font-semibold shadow-xs"
                   : "text-slate-600 font-medium hover:bg-slate-200/60 hover:text-slate-900"
  )}
@@ -408,7 +423,7 @@ export function DesktopSidebar({
  <Icon
  className={cn(
  "w-4 h-4 shrink-0 transition-transform duration-150 group-hover:scale-110",
- item.isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600"
+ isSelected ? "text-white" : "text-slate-400 group-hover:text-indigo-600"
  )}
  />
  {isExpanded && <span className="truncate animate-in fade-in duration-200">{item.label}</span>}

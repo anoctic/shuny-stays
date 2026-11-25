@@ -13,8 +13,10 @@ export const revalidate = 0;
 
 export default async function DashboardPassesPage() {
   const session = await getCurrentUserSession();
-  const passes = await getPassesForManagement({ pgId: session.pg_id || undefined });
-  const broadcasts = await getAllBroadcasts();
+  const [passes, broadcasts] = await Promise.all([
+    getPassesForManagement({ pgId: session.pg_id || undefined }),
+    getAllBroadcasts(),
+  ]);
 
   return (
     <div className="space-y-4">

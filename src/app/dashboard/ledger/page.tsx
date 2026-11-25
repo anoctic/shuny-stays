@@ -16,11 +16,13 @@ export default async function LedgerPage() {
  const session = await getCurrentUserSession();
  const effectivePgId = session.role === "super_admin" ? undefined : (session.pg_id || undefined);
 
- const buildings = await getAllBuildings();
- const expenses = await getExpenses(effectivePgId);
- const upiApprovals = await getUpiApprovals(effectivePgId);
- const deposits = await getAllSecurityDeposits(effectivePgId);
- const rentPayments = await getAllRentPayments(effectivePgId);
+ const [buildings, expenses, upiApprovals, deposits, rentPayments] = await Promise.all([
+ getAllBuildings(),
+ getExpenses(effectivePgId),
+ getUpiApprovals(effectivePgId),
+ getAllSecurityDeposits(effectivePgId),
+ getAllRentPayments(effectivePgId),
+ ]);
 
  return (
  <LedgerExplorer

@@ -1,10 +1,11 @@
+import { cache } from "react";
 import { PlatformBroadcast, UserRole, BroadcastPriority } from "@/types/schema.types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Get all active broadcasts targeting a specific user role from Supabase
  */
-export async function getActiveBroadcastsForRole(role: UserRole): Promise<PlatformBroadcast[]> {
+export const getActiveBroadcastsForRole = cache(async (role: UserRole): Promise<PlatformBroadcast[]> => {
  try {
  const admin = createAdminClient();
  const { data, error } = await (admin.from("platform_broadcasts" as any) as any)
@@ -29,12 +30,12 @@ export async function getActiveBroadcastsForRole(role: UserRole): Promise<Platfo
  }
 
  return [];
-}
+});
 
 /**
  * Get all broadcasts for Super Admin and management portals from Supabase
  */
-export async function getAllBroadcasts(): Promise<PlatformBroadcast[]> {
+export const getAllBroadcasts = cache(async (): Promise<PlatformBroadcast[]> => {
  try {
  const admin = createAdminClient();
  const { data, error } = await (admin.from("platform_broadcasts" as any) as any)
@@ -51,7 +52,7 @@ export async function getAllBroadcasts(): Promise<PlatformBroadcast[]> {
  console.error("getAllBroadcasts critical error:", err);
  return [];
  }
-}
+});
 
 /**
  * Create a new platform broadcast persisted strictly in Supabase

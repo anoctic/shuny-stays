@@ -11,9 +11,11 @@ export const revalidate = 0;
 
 export default async function RoomsPage() {
  const session = await getCurrentUserSession();
- const buildings = await getAllBuildings();
- const passes = await getPassesForManagement({ pgId: session.pg_id || undefined });
- const broadcasts = await getActiveBroadcastsForRole(session.role);
+ const [buildings, passes, broadcasts] = await Promise.all([
+ getAllBuildings(),
+ getPassesForManagement({ pgId: session.pg_id || undefined }),
+ getActiveBroadcastsForRole(session.role),
+ ]);
 
  const activePasses = passes.map((p) => ({
  tenantId: p.tenant_id,

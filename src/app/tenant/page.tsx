@@ -18,10 +18,28 @@ export const revalidate = 0;
 
 export default async function TenantDashboardPage() {
  const session = await getCurrentUserSession();
- const broadcasts = await getActiveBroadcastsForRole("tenant");
- const passes = await getPassesForTenant(session.id);
- const attendance = await getTenantAttendanceStatus(session.id);
- const pg = (await getPgById(session.pg_id || "00000000-0000-0000-0000-000000000001")) || {
+
+ const [
+ broadcasts,
+ passes,
+ attendance,
+ dbPg,
+ messMenu,
+ dinnerPoll,
+ dbDeposit,
+ invoices,
+ ] = await Promise.all([
+ getActiveBroadcastsForRole("tenant"),
+ getPassesForTenant(session.id),
+ getTenantAttendanceStatus(session.id),
+ getPgById(session.pg_id || "00000000-0000-0000-0000-000000000001"),
+ getMessMenu(),
+ getTenantDinnerPoll(session.id),
+ getSecurityDepositForTenant(session.id),
+ getRentPaymentsForTenant(session.id),
+ ]);
+
+ const pg = dbPg || {
  id: "00000000-0000-0000-0000-000000000001",
  name: "Royal Stay PG",
  slug: "royal-stay",
@@ -31,12 +49,9 @@ export default async function TenantDashboardPage() {
  contact_phone: "+91 98222 33441",
  };
 
- const messMenu = await getMessMenu();
- const dinnerPoll = await getTenantDinnerPoll(session.id);
  const mealPollStatus = await getTenantMealPollStatus(pg.id, session.id, "lunch");
 
  // Security Deposit for this tenant
- const dbDeposit = await getSecurityDepositForTenant(session.id);
  const depositDetails = dbDeposit || {
  id: "DEP-PENDING",
  pgId: pg.id,
@@ -58,8 +73,6 @@ export default async function TenantDashboardPage() {
  };
 
  // Rent Payments & Invoices for this tenant
- const invoices = await getRentPaymentsForTenant(session.id);
-
  const rentPaid = invoices.some(
  (inv) =>
  inv.billingMonth.includes("November 2026") ||

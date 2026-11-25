@@ -50,10 +50,14 @@ function MobileBottomNavInner({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [activeTabOverride, setActiveTabOverride] = useState<string | null>(null);
+  const [pendingTabId, setPendingTabId] = useState<string | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
 
-  // Sync activeTabOverride with route changes
+  // Sync overrides and pending navigation with route changes
   useEffect(() => {
     setActiveTabOverride(null);
+    setPendingTabId(null);
+    setIsNavigating(false);
   }, [pathname, searchParams]);
 
   // Listen to external tab switch events from SuperAdminDashboard
@@ -62,6 +66,7 @@ function MobileBottomNavInner({
       const customEvent = e as CustomEvent<{ tab: string }>;
       if (customEvent.detail?.tab) {
         setActiveTabOverride(customEvent.detail.tab);
+        setPendingTabId(customEvent.detail.tab);
       }
     };
 
@@ -74,10 +79,21 @@ function MobileBottomNavInner({
   const superAdminCurrentTab =
     activeTabOverride || searchParams?.get("tab") || "overview";
 
+  const handleTabPointerDown = (tab: NavTab) => {
+    try {
+      router.prefetch(tab.href);
+    } catch {}
+    if (!tab.isActive) {
+      setPendingTabId(tab.id);
+      setIsNavigating(true);
+    }
+  };
+
   const handleTabClick = (e: React.MouseEvent, tab: NavTab) => {
     if (role === "super_admin") {
       e.preventDefault();
       setActiveTabOverride(tab.id);
+      setPendingTabId(tab.id);
       window.dispatchEvent(
         new CustomEvent("superadmin:switchtab", { detail: { tab: tab.id } })
       );
@@ -86,6 +102,9 @@ function MobileBottomNavInner({
       } else {
         router.push(tab.href);
       }
+    } else {
+      setPendingTabId(tab.id);
+      setIsNavigating(true);
     }
   };
 
@@ -274,75 +293,89 @@ function MobileBottomNavInner({
       : tenantTabs;
 
   return (
-    <nav
-      aria-label="Mobile Bottom Navigation"
-      style={{
-        bottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
-      }}
-      className="fixed inset-x-3 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[440px] z-40 select-none lg:hidden pointer-events-auto transition-all duration-300"
-    >
-      <div className="apple-liquid-glass-tabbar p-1.5 shadow-2xl">
+    <>
+      {/* Top Instant Micro-Progress Bar for Navigation Feedback */}
+      {isNavigating && (
         <div
-          className={cn(
-            "grid items-center h-12 w-full gap-1",
-            tabs.length === 5 ? "grid-cols-5" : "grid-cols-4"
-          )}
-        >
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <Link
-                key={tab.id}
-                href={tab.href}
-                aria-current={tab.isActive ? "page" : undefined}
-                onClick={(e) => handleTabClick(e, tab)}
-                className={cn(
-                  "relative flex flex-col items-center justify-center h-full rounded-full transition-all duration-200 active:scale-95 touch-manipulation cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1 select-none",
-                  tab.isActive
-                    ? "bg-indigo-600/12 text-indigo-700 shadow-2xs font-extrabold"
-                    : "text-slate-600 hover:text-slate-950 hover:bg-black/5 font-semibold"
-                )}
-              >
-                {/* Icon Container with Badge */}
-                <div className="relative flex items-center justify-center">
-                  <Icon
-                    className={cn(
-                      "w-[19px] h-[19px] transition-transform duration-150",
-                      tab.isActive
-                        ? "stroke-[2.35] text-indigo-600 scale-105"
-                        : "stroke-[1.8] text-slate-600"
-                    )}
-                    aria-hidden="true"
-                  />
+          aria-hidden="true"
+          className="fixed top-0 inset-x-0 h-[2.5px] z-[99999] bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 shadow-[0_0_8px_rgba(99,102,241,0.8)] animate-pulse pointer-events-none"
+        />
+      )}
 
-                  {/* Count Badge */}
-                  {tab.badge != null && tab.badge > 0 && (
-                    <span
-                      aria-label={`${tab.badge} pending items`}
-                      className="absolute -top-1.5 -right-2.5 min-w-[17px] h-[17px] px-1 rounded-full text-[9.5px] font-black bg-rose-600 text-white flex items-center justify-center shadow-xs ring-2 ring-white/95 animate-in zoom-in-75"
-                    >
-                      {tab.badge > 99 ? "99+" : tab.badge}
-                    </span>
-                  )}
-                </div>
-
-                {/* Short Label */}
-                <span
+      <nav
+        aria-label="Mobile Bottom Navigation"
+        style={{
+          bottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+        }}
+        className="fixed inset-x-3 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[440px] z-40 select-none lg:hidden pointer-events-auto transition-all duration-300"
+      >
+        <div className="apple-liquid-glass-tabbar p-1.5 shadow-2xl">
+          <div
+            className={cn(
+              "grid items-center h-12 w-full gap-1",
+              tabs.length === 5 ? "grid-cols-5" : "grid-cols-4"
+            )}
+          >
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isSelected = pendingTabId ? pendingTabId === tab.id : tab.isActive;
+              return (
+                <Link
+                  key={tab.id}
+                  href={tab.href}
+                  prefetch={true}
+                  aria-current={isSelected ? "page" : undefined}
+                  onTouchStart={() => handleTabPointerDown(tab)}
+                  onPointerDown={() => handleTabPointerDown(tab)}
+                  onClick={(e) => handleTabClick(e, tab)}
                   className={cn(
-                    "text-[9.5px] tracking-tight leading-none text-center transition-colors duration-150 mt-0.5",
-                    tab.isActive
-                      ? "font-extrabold text-indigo-700"
-                      : "font-semibold text-slate-600"
+                    "relative flex flex-col items-center justify-center h-full rounded-full transition-all duration-150 active:scale-95 touch-manipulation cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1 select-none",
+                    isSelected
+                      ? "bg-indigo-600/12 text-indigo-700 shadow-2xs font-extrabold"
+                      : "text-slate-600 hover:text-slate-950 hover:bg-black/5 font-semibold"
                   )}
                 >
-                  {tab.label}
-                </span>
-              </Link>
-            );
-          })}
+                  {/* Icon Container with Badge */}
+                  <div className="relative flex items-center justify-center">
+                    <Icon
+                      className={cn(
+                        "w-[19px] h-[19px] transition-transform duration-150",
+                        isSelected
+                          ? "stroke-[2.35] text-indigo-600 scale-105"
+                          : "stroke-[1.8] text-slate-600"
+                      )}
+                      aria-hidden="true"
+                    />
+
+                    {/* Count Badge */}
+                    {tab.badge != null && tab.badge > 0 && (
+                      <span
+                        aria-label={`${tab.badge} pending items`}
+                        className="absolute -top-1.5 -right-2.5 min-w-[17px] h-[17px] px-1 rounded-full text-[9.5px] font-black bg-rose-600 text-white flex items-center justify-center shadow-xs ring-2 ring-white/95 animate-in zoom-in-75"
+                      >
+                        {tab.badge > 99 ? "99+" : tab.badge}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Short Label */}
+                  <span
+                    className={cn(
+                      "text-[9.5px] tracking-tight leading-none text-center transition-colors duration-150 mt-0.5",
+                      isSelected
+                        ? "font-extrabold text-indigo-700"
+                        : "font-semibold text-slate-600"
+                    )}
+                  >
+                    {tab.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+    </>
   );
 }
 

@@ -9,7 +9,12 @@ export const revalidate = 0;
 
 export default async function TenantDuesPage() {
  const session = await getCurrentUserSession();
- const pg = (await getPgById(session.pg_id || "23594b9e-da90-4884-95aa-5f978d91a0d2")) || {
+ const [dbPg, payments] = await Promise.all([
+ getPgById(session.pg_id || "23594b9e-da90-4884-95aa-5f978d91a0d2"),
+ getRentPaymentsForTenant(session.id),
+ ]);
+
+ const pg = dbPg || {
  id: "23594b9e-da90-4884-95aa-5f978d91a0d2",
  name: "Shuny Stays Luxury PG",
  slug: "shuny-stays-luxury",
@@ -17,8 +22,6 @@ export default async function TenantDuesPage() {
  primary_color: "#4F46E5",
  upi_id: "anoctic@oksbi",
  };
-
- const payments = await getRentPaymentsForTenant(session.id);
 
  const receipts: ReceiptItem[] = payments.map((p) => ({
  id: p.id,

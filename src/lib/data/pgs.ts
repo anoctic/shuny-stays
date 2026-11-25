@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { UserRole } from "@/types/schema.types";
 
@@ -30,7 +31,7 @@ export interface PgDetailItem {
 /**
  * Fetch all registered PGs directly from Supabase with live counts
  */
-export async function getAllPgs(): Promise<PgDetailItem[]> {
+export const getAllPgs = cache(async (): Promise<PgDetailItem[]> => {
  try {
  const admin = createAdminClient();
  const { data, error } = await (admin.from("pgs" as any) as any)
@@ -154,26 +155,26 @@ export async function getAllPgs(): Promise<PgDetailItem[]> {
  console.error("getAllPgs database critical error:", err);
  return [];
  }
-}
+});
 
 /**
  * Get PG by slug (case-insensitive) for white-label routing
  */
-export async function getPgBySlug(slug: string): Promise<PgDetailItem | null> {
+export const getPgBySlug = cache(async (slug: string): Promise<PgDetailItem | null> => {
  const normalized = slug.trim().toLowerCase();
  const all = await getAllPgs();
  const match = all.find((p) => p.slug.toLowerCase() === normalized) || null;
  return match;
-}
+});
 
 /**
  * Get PG by ID
  */
-export async function getPgById(id: string): Promise<PgDetailItem | null> {
+export const getPgById = cache(async (id: string): Promise<PgDetailItem | null> => {
  const all = await getAllPgs();
  const match = all.find((p) => p.id === id) || null;
  return match;
-}
+});
 
 /**
  * Upload PG logo strictly at `${pgId}/logo.${fileExt}` with upsert: true

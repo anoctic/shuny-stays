@@ -21,8 +21,12 @@ import { TenantIdNoticeView } from "@/components/tenant/TenantIdNoticeView";
 
 export default async function TenantPassesPage() {
  const session = await getCurrentUserSession();
- const passes = await getPassesForTenant(session.id);
- const pg = (await getPgById(session.pg_id || "00000000-0000-0000-0000-000000000001")) || {
+ const [passes, dbPg] = await Promise.all([
+ getPassesForTenant(session.id),
+ getPgById(session.pg_id || "00000000-0000-0000-0000-000000000001"),
+ ]);
+
+ const pg = dbPg || {
  id: "00000000-0000-0000-0000-000000000001",
  name: "Royal Stay PG",
  slug: "royal-stay",

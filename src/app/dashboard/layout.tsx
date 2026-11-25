@@ -45,68 +45,71 @@ export default async function DashboardLayout({
  const cookieStore = await cookies();
  const activeBuildingId = cookieStore.get("pg_active_building_id")?.value || null;
 
- // Fetch real buildings for this PG from Supabase
- let buildings: Building[] = [];
- try {
- const supabase = await createClient();
- let query = supabase.from("buildings").select("*");
+  // Fetch real buildings for this PG from Supabase
+  const buildingsPromise = (async (): Promise<Building[]> => {
+    try {
+      const supabase = await createClient();
+      let query = supabase.from("buildings").select("*");
+      if (session.pg_id) {
+        query = query.eq("pg_id", session.pg_id);
+      }
+      if (session.role === "admin" && session.assigned_building_ids && session.assigned_building_ids.length > 0) {
+        query = query.in("id", session.assigned_building_ids);
+      }
+      const { data } = await query;
+      return (data && data.length > 0 ? (data as Building[]) : []);
+    } catch (err) {
+      console.error("Error fetching buildings in DashboardLayout:", err);
+      return [];
+    }
+  })();
 
- if (session.pg_id) {
- query = query.eq("pg_id", session.pg_id);
- }
+  const pgDetailsPromise = (async () => {
+    if (!session.pg_id) return null;
+    try {
+      const admin = createAdminClient();
+      const { data: dbPg } = await (admin.from("pgs" as any) as any)
+        .select("id, name, status, plan_expires_at, plan_price, plan_benefits")
+        .eq("id", session.pg_id)
+        .maybeSingle();
+      return dbPg;
+    } catch (err) {
+      console.warn("Could not fetch PG subscription details in layout:", err);
+      return null;
+    }
+  })();
 
- // If staff/admin, filter to their assigned buildings
- if (session.role === "admin" && session.assigned_building_ids && session.assigned_building_ids.length > 0) {
- query = query.in("id", session.assigned_building_ids);
- }
+  const [buildings, broadcasts, platformSettings, dbPg] = await Promise.all([
+    buildingsPromise,
+    getActiveBroadcastsForRole(session.role),
+    getPlatformBillingSettings(),
+    pgDetailsPromise,
+  ]);
 
- const { data } = await query;
- if (data && data.length > 0) {
- buildings = data as Building[];
- }
- } catch (err) {
- console.error("Error fetching buildings in DashboardLayout:", err);
- }
+  // Fetch PG subscription status & expiry for lock/expiry guard
+  let pgDetails = {
+    id: session.pg_id || "default",
+    name: session.pg_name || "My PG Property",
+    status: "active" as "active" | "pending" | "suspended",
+    plan_expires_at: null as string | null,
+    plan_price: 1999,
+    plan_benefits: [] as string[],
+  };
 
- const broadcasts = await getActiveBroadcastsForRole(session.role);
- const platformSettings = await getPlatformBillingSettings();
-
- // Fetch PG subscription status & expiry for lock/expiry guard
- let pgDetails = {
- id: session.pg_id || "default",
- name: session.pg_name || "My PG Property",
- status: "active" as "active" | "pending" | "suspended",
- plan_expires_at: null as string | null,
- plan_price: 1999,
- plan_benefits: [] as string[],
- };
-
- if (session.pg_id) {
- try {
- const admin = createAdminClient();
- const { data: dbPg } = await (admin.from("pgs" as any) as any)
- .select("id, name, status, plan_expires_at, plan_price, plan_benefits")
- .eq("id", session.pg_id)
- .maybeSingle();
-
- if (dbPg) {
- pgDetails = {
- id: dbPg.id,
- name: dbPg.name || session.pg_name || "My PG Property",
- status: dbPg.status || "active",
- plan_expires_at: dbPg.plan_expires_at || null,
- plan_price: Number(dbPg.plan_price) || 1999,
- plan_benefits: Array.isArray(dbPg.plan_benefits)
- ? dbPg.plan_benefits
- : typeof dbPg.plan_benefits === "string"
- ? JSON.parse(dbPg.plan_benefits || "[]")
- : [],
- };
- }
- } catch (err) {
- console.warn("Could not fetch PG subscription details in layout:", err);
- }
- }
+  if (dbPg) {
+    pgDetails = {
+      id: dbPg.id,
+      name: dbPg.name || session.pg_name || "My PG Property",
+      status: dbPg.status || "active",
+      plan_expires_at: dbPg.plan_expires_at || null,
+      plan_price: Number(dbPg.plan_price) || 1999,
+      plan_benefits: Array.isArray(dbPg.plan_benefits)
+        ? dbPg.plan_benefits
+        : typeof dbPg.plan_benefits === "string"
+        ? JSON.parse(dbPg.plan_benefits || "[]")
+        : [],
+    };
+  }
 
  return (
  <div className="flex-1 flex flex-col min-h-screen">

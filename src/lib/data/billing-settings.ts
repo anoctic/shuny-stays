@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface PlatformBillingSettings {
@@ -53,7 +54,7 @@ export const DEFAULT_PLATFORM_BILLING_SETTINGS: PlatformBillingSettings = {
 /**
  * Fetch platform billing & UPI details directly from Supabase
  */
-export async function getPlatformBillingSettings(): Promise<PlatformBillingSettings> {
+export const getPlatformBillingSettings = cache(async (): Promise<PlatformBillingSettings> => {
  try {
  const admin = createAdminClient();
  const { data, error } = await (admin.from("platform_billing_settings" as any) as any)
@@ -85,7 +86,7 @@ export async function getPlatformBillingSettings(): Promise<PlatformBillingSetti
  }
 
  return { ...DEFAULT_PLATFORM_BILLING_SETTINGS };
-}
+});
 
 /**
  * Update platform billing & UPI details in Supabase (Super Admin only)

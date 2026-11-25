@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -76,7 +77,7 @@ export const DEMO_USERS: Record<UserRole, CurrentUserSession> = {
  * Retrieves the current authenticated user session and their role.
  * Queries Supabase `profiles` & `pgs` tables, with fallback to demo personas for development.
  */
-export async function getCurrentUserSession(): Promise<CurrentUserSession> {
+export const getCurrentUserSession = cache(async (): Promise<CurrentUserSession> => {
  const cookieStore = await cookies();
  const isDev = process.env.NODE_ENV === "development";
 
@@ -259,4 +260,4 @@ export async function getCurrentUserSession(): Promise<CurrentUserSession> {
  has_pg: false,
  is_super_admin: false,
  };
-}
+});
