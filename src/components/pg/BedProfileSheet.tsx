@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
  X,
@@ -23,10 +24,14 @@ import {
  Send,
  AlertTriangle,
  Edit3,
+ FileText,
+ ExternalLink,
+ XCircle,
 } from "lucide-react";
 import { TenantProfileItem, BuildingItem, FloorItem, RoomItem, BedItem, RentPaymentRecord } from "@/lib/data/rooms";
 import {
  verifyTenantKycAction,
+ rejectTenantKycAction,
  vacateBedAction,
  collectRentPaymentAction,
  settleRentPaymentAction,
@@ -91,10 +96,17 @@ export function BedProfileSheet({
  const [generatedInvoice, setGeneratedInvoice] = useState<RentPaymentRecord | null>(null);
 
  // Security Deposit State
+ const expectedDepInit = bed.tenant?.deposit ?? 0;
+ const paidDepInit = bed.tenant?.depositPaidAmount ?? (bed.tenant?.depositStatus === "paid" ? expectedDepInit : 0);
+ const remainingDepInit = Math.max(0, expectedDepInit - paidDepInit);
  const [isCollectingDeposit, setIsCollectingDeposit] = useState(false);
- const [depositAmountInput, setDepositAmountInput] = useState<number>(bed.tenant?.deposit || 8500);
+ const [depositAmountInput, setDepositAmountInput] = useState<number>(remainingDepInit > 0 ? remainingDepInit : expectedDepInit);
  const [depositModeInput, setDepositModeInput] = useState<"cash" | "upi" | "bank_transfer">("cash");
  const [depositRefInput, setDepositRefInput] = useState("");
+
+ // KYC Reject State
+ const [isRejectingKyc, setIsRejectingKyc] = useState(false);
+ const [kycRejectReason, setKycRejectReason] = useState("");
 
  // Refund Deposit State (Owner Only)
  const [isRefundingDeposit, setIsRefundingDeposit] = useState(false);
@@ -186,12 +198,35 @@ export function BedProfileSheet({
 
  const handleVerifyKyc = async () => {
  setIsProcessing(true);
- await verifyTenantKycAction(t.id);
- router.refresh();
+ const res = await verifyTenantKycAction(t.id);
+ if (res && "error" in res && res.error) {
+ setToastMsg(`❌ ${res.error}`);
+ } else {
  t.kycStatus = "Verified";
- setIsProcessing(false);
+ setIsRejectingKyc(false);
+ router.refresh();
  setToastMsg("KYC verified successfully ✓");
+ }
+ setIsProcessing(false);
  setTimeout(() => setToastMsg(null), 3000);
+ };
+
+ const handleRejectKyc = async () => {
+ setIsProcessing(true);
+ const reason = kycRejectReason.trim() || "Aadhaar photo unclear or mismatch. Please re-upload.";
+ const res = await rejectTenantKycAction(t.id, reason);
+ if (res && "error" in res && res.error) {
+ setToastMsg(`❌ ${res.error}`);
+ } else {
+ t.kycStatus = "Rejected";
+ t.kycRejectionReason = reason;
+ setIsRejectingKyc(false);
+ setKycRejectReason("");
+ router.refresh();
+ setToastMsg("KYC rejected. Tenant prompted to re-upload Aadhaar.");
+ }
+ setIsProcessing(false);
+ setTimeout(() => setToastMsg(null), 3500);
  };
 
  // Collect Rent Handler
@@ -244,15 +279,26 @@ export function BedProfileSheet({
  });
  router.refresh();
 
- t.deposit = depositAmountInput;
- t.depositStatus = "paid";
+ const prevPaid = t.depositPaidAmount ?? (t.depositStatus === "paid" ? t.deposit : 0);
+ const newPaid = prevPaid + depositAmountInput;
+ const targetExpected = Math.max(t.deposit, newPaid);
+ const fullyPaid = newPaid >= targetExpected;
+
+ t.deposit = targetExpected;
+ t.depositPaidAmount = newPaid;
+ t.depositStatus = fullyPaid ? "paid" : "pending";
  t.depositPaymentMode = depositModeInput;
- t.depositCollectedByName = isOwner ? "Owner Manoj Kumar" : "Warden Staff";
+ t.depositCollectedByName = isOwner ? "PG Owner" : "Warden Staff";
  t.depositCollectedAt = "Today";
 
  setIsProcessing(false);
  setIsCollectingDeposit(false);
- setToastMsg(`Deposit ₹${depositAmountInput.toLocaleString("en-IN")} marked Paid & Held Safely!`);
+ setDepositAmountInput(Math.max(0, targetExpected - newPaid));
+ setToastMsg(
+ fullyPaid
+ ? `Deposit ₹${newPaid.toLocaleString("en-IN")} marked Paid & Held Safely!`
+ : `₹${depositAmountInput.toLocaleString("en-IN")} recorded! Remaining ₹${Math.max(0, targetExpected - newPaid).toLocaleString("en-IN")} still pending.`
+ );
  setTimeout(() => setToastMsg(null), 3500);
  };
 
@@ -309,6 +355,10 @@ export function BedProfileSheet({
  className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
  t.kycStatus === "Verified"
  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+ : t.kycStatus === "Under Review"
+ ? "bg-sky-50 text-sky-700 border border-sky-200"
+ : t.kycStatus === "Rejected"
+ ? "bg-rose-50 text-rose-700 border border-rose-200"
  : "bg-amber-50 text-amber-700 border border-amber-200"
  }`}
  >
@@ -351,15 +401,13 @@ export function BedProfileSheet({
  <PhoneForwarded className="w-3.5 h-3.5 text-emerald-600" />
  <span>Call Parent</span>
  </a>
- <button
- onClick={() => {
- alert(`Gate Pass generation shortcut for ${t.name}`);
- }}
+ <Link
+ href="/dashboard/passes"
  className="py-2 px-2 rounded-xl bg-[#4F46E5] text-white flex items-center justify-center gap-1 transition active:scale-95 shadow-xs"
  >
  <Ticket className="w-3.5 h-3.5" />
  <span>Gate Pass</span>
- </button>
+ </Link>
  </div>
 
  {/* Owner Only: Edit Resident Details & Bed Transfer Trigger */}
@@ -524,38 +572,166 @@ export function BedProfileSheet({
  )}
 
  {/* ========================================================================= */}
- {/* 1. DEDICATED SECURITY DEPOSIT CARD (PART 1) */}
+ {/* 0. AADHAAR KYC VERIFICATION & OWNER APPROVAL CARD */}
  {/* ========================================================================= */}
  <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-2.5">
- <div className="flex items-center justify-between">
+ <div className="flex items-center justify-between gap-2">
+ <div className="flex items-center gap-2 min-w-0">
+ <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+ <FileText className="w-4 h-4" />
+ </div>
+ <div className="min-w-0">
+ <h4 className="text-xs font-extrabold text-slate-900">Aadhaar KYC Verification</h4>
+ <p className="text-[10px] text-slate-400 truncate">
+ {t.aadhaarNumber
+ ? `Aadhaar: XXXX XXXX ${t.aadhaarNumber.slice(-4)} (${t.aadhaarNumber})`
+ : "No Aadhaar uploaded by resident yet"}
+ </p>
+ </div>
+ </div>
+ <span
+ className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold shrink-0 border ${
+ t.kycStatus === "Verified"
+ ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+ : t.kycStatus === "Under Review"
+ ? "bg-sky-50 text-sky-700 border-sky-200"
+ : t.kycStatus === "Rejected"
+ ? "bg-rose-50 text-rose-700 border-rose-200"
+ : "bg-amber-50 text-amber-700 border-amber-200"
+ }`}
+ >
+ {t.kycStatus === "Under Review" ? "Under Review" : t.kycStatus}
+ </span>
+ </div>
+
+ {t.kycStatus === "Pending" && (
+ <p className="text-[10.5px] text-amber-700 bg-amber-50/70 border border-amber-200/80 rounded-xl px-2.5 py-2 font-semibold">
+ Waiting for {t.name} to enter 12-digit Aadhaar & upload Aadhaar photo in Tenant App before KYC can be approved.
+ </p>
+ )}
+
+ {t.kycStatus === "Rejected" && t.kycRejectionReason && (
+ <p className="text-[10.5px] text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-2.5 py-2 font-semibold">
+ Rejected reason: {t.kycRejectionReason}
+ </p>
+ )}
+
+ {t.kycDocUrl && (
+ <a
+ href={t.kycDocUrl}
+ target="_blank"
+ rel="noopener noreferrer"
+ className="w-full py-2 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-indigo-700 text-[11px] font-extrabold flex items-center justify-center gap-1.5 transition"
+ >
+ <ExternalLink className="w-3.5 h-3.5" />
+ <span>View Uploaded Aadhaar Document</span>
+ </a>
+ )}
+
+ {(isOwner || isAdmin) && t.kycStatus !== "Verified" && (
+ <div className="space-y-2 pt-1">
  <div className="flex items-center gap-2">
+ <button
+ type="button"
+ disabled={isProcessing}
+ onClick={handleVerifyKyc}
+ className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition shadow-xs active:scale-95 ${
+ t.kycStatus === "Under Review"
+ ? "bg-emerald-600 hover:bg-emerald-500 text-white"
+ : "bg-slate-900 hover:bg-slate-800 text-white"
+ }`}
+ >
+ <CheckCircle2 className="w-3.5 h-3.5" />
+ <span>
+ {t.kycStatus === "Under Review" ? "Approve KYC" : "Approve Manually"}
+ </span>
+ </button>
+ {t.kycStatus === "Under Review" && (
+ <button
+ type="button"
+ disabled={isProcessing}
+ onClick={() => setIsRejectingKyc(!isRejectingKyc)}
+ className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-extrabold flex items-center justify-center gap-1 transition"
+ >
+ <XCircle className="w-3.5 h-3.5" />
+ <span>Reject</span>
+ </button>
+ )}
+ </div>
+
+ {isRejectingKyc && (
+ <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
+ <input
+ type="text"
+ value={kycRejectReason}
+ onChange={(e) => setKycRejectReason(e.target.value)}
+ placeholder="Reason for rejection (e.g. Blur Aadhaar photo)"
+ className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-rose-200 text-xs text-slate-900 focus:outline-none"
+ />
+ <button
+ type="button"
+ disabled={isProcessing}
+ onClick={handleRejectKyc}
+ className="w-full py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-extrabold transition"
+ >
+ Confirm Reject & Ask Re-upload
+ </button>
+ </div>
+ )}
+ </div>
+ )}
+ </div>
+
+ {/* ========================================================================= */}
+ {/* 1. DEDICATED SECURITY DEPOSIT CARD (PART 1) */}
+ {/* ========================================================================= */}
+ {(() => {
+ const expectedDep = t.deposit || 0;
+ const paidDep = t.depositPaidAmount ?? (t.depositStatus === "paid" ? expectedDep : 0);
+ const remainingDep = Math.max(0, expectedDep - paidDep);
+ const isDepPaid = t.depositStatus === "paid" && remainingDep === 0;
+ const isDepRefunded = t.depositStatus === "refunded" || t.depositStatus === "partially_refunded";
+
+ return (
+ <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-2.5">
+ <div className="flex items-center justify-between gap-2">
+ <div className="flex items-center gap-2 min-w-0">
  <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
  <ShieldCheck className="w-4 h-4" />
  </div>
- <div>
+ <div className="min-w-0">
  <h4 className="text-xs font-extrabold text-slate-900">Security Deposit</h4>
- <p className="text-[10px] text-slate-400">100% Refundable at Checkout</p>
+ <p className="text-[10px] text-slate-400">
+ {paidDep > 0 && remainingDep > 0
+ ? `Total: ₹${expectedDep.toLocaleString("en-IN")} • Paid: ₹${paidDep.toLocaleString("en-IN")}`
+ : "100% Refundable at Checkout"}
+ </p>
  </div>
  </div>
 
- <div className="text-right">
+ <div className="text-right shrink-0">
  <div className="text-sm font-black text-slate-900 tabular-nums">
- ₹{(t.deposit || 8500).toLocaleString("en-IN")}
+ ₹{(paidDep > 0 ? paidDep : expectedDep).toLocaleString("en-IN")}
+ {paidDep > 0 && remainingDep > 0 && (
+ <span className="text-[10px] font-bold text-slate-400"> / ₹{expectedDep.toLocaleString("en-IN")}</span>
+ )}
  </div>
  <span
- className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
- t.depositStatus === "paid"
+ className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
+ isDepPaid
  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
- : t.depositStatus === "pending"
+ : t.depositStatus === "pending" || remainingDep > 0
  ? "bg-amber-50 text-amber-700 border border-amber-200"
  : "bg-purple-50 text-purple-700 border border-purple-200"
  }`}
  >
- {t.depositStatus === "paid"
+ {isDepPaid
  ? "Paid • Held Safely"
- : t.depositStatus === "pending"
- ? "Deposit Pending"
- : "Refunded"}
+ : isDepRefunded
+ ? "Refunded"
+ : paidDep > 0
+ ? `₹${remainingDep.toLocaleString("en-IN")} Pending`
+ : "Pending • To be collected"}
  </span>
  </div>
  </div>
@@ -563,35 +739,60 @@ export function BedProfileSheet({
  {/* Deposit Metadata */}
  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10.5px] text-slate-500">
  <span>
- Mode: <strong className="text-slate-800">{(t.depositPaymentMode || "UPI").toUpperCase()}</strong>
+ {paidDep > 0 ? (
+ <>
+ Mode: <strong className="text-slate-800">{(t.depositPaymentMode || "CASH").toUpperCase()}</strong>
+ </>
+ ) : (
+ <>
+ Paid So Far: <strong className="text-slate-800">₹0</strong>
+ </>
+ )}
  </span>
  <span>
- Collected by: <strong className="text-slate-800">{t.depositCollectedByName || "Warden Ramesh"}</strong>
+ {paidDep > 0 ? (
+ <>
+ Collected by: <strong className="text-slate-800">{t.depositCollectedByName || "PG Owner"}</strong>
+ </>
+ ) : (
+ <>
+ Balance Due: <strong className="text-amber-700">₹{remainingDep.toLocaleString("en-IN")}</strong>
+ </>
+ )}
  </span>
  </div>
 
  {/* Actions: Collect Deposit (if pending) OR Refund Deposit (if paid & Owner) */}
  <div className="pt-1 flex items-center gap-2">
- {t.depositStatus === "pending" ? (
+ {t.depositStatus === "pending" || remainingDep > 0 ? (
  <button
  type="button"
- onClick={() => setIsCollectingDeposit(!isCollectingDeposit)}
+ onClick={() => {
+ if (!isCollectingDeposit && remainingDep > 0) {
+ setDepositAmountInput(remainingDep);
+ }
+ setIsCollectingDeposit(!isCollectingDeposit);
+ }}
  className="w-full py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-extrabold transition shadow-xs active:scale-95"
  >
- {isCollectingDeposit ? "Cancel" : "Collect Deposit"}
+ {isCollectingDeposit
+ ? "Cancel"
+ : remainingDep > 0
+ ? `Collect Remaining Deposit (₹${remainingDep.toLocaleString("en-IN")})`
+ : "Collect Deposit"}
  </button>
  ) : (
  <>
  <DepositReceiptModal
- pgName="Royal Stay PG"
+ pgName="PG Security Receipt"
  primaryColor="#4F46E5"
  tenantName={t.name}
  roomNumber={`Room ${room.number}`}
  bedLabel={bed.label}
- amount={t.deposit || 8500}
- paymentMode={t.depositPaymentMode || "UPI"}
- collectedByName={t.depositCollectedByName || "Warden Staff"}
- status={t.depositStatus === "paid" ? "Paid • Held Safely" : "Refunded"}
+ amount={paidDep}
+ paymentMode={t.depositPaymentMode || "CASH"}
+ collectedByName={t.depositCollectedByName || "PG Owner"}
+ status={isDepPaid ? "Paid • Held Safely" : "Refunded"}
  deductionAmount={t.depositDeduction}
  deductionReason={t.depositDeductionReason}
  refundedAmount={t.depositRefundedAmount}
@@ -605,7 +806,7 @@ export function BedProfileSheet({
  }
  />
 
- {isOwner && t.depositStatus === "paid" && (
+ {isOwner && isDepPaid && (
  <button
  type="button"
  onClick={() => setIsRefundingDeposit(!isRefundingDeposit)}
@@ -619,7 +820,7 @@ export function BedProfileSheet({
  </div>
 
  {/* Quick Collect Deposit Form Panel */}
- {isCollectingDeposit && t.depositStatus === "pending" && (
+ {isCollectingDeposit && (t.depositStatus === "pending" || (t.deposit - (t.depositPaidAmount ?? 0)) > 0) && (
  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 mt-2 animate-in fade-in">
  <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wide block">
  Collect Security Deposit
@@ -724,6 +925,8 @@ export function BedProfileSheet({
  </div>
  )}
  </div>
+ );
+ })()}
 
  {/* ========================================================================= */}
  {/* 2. FLOOR-WISE RENT COLLECTION & 2-STEP AUTO-INVOICE (PART 2) */}

@@ -12,6 +12,8 @@ import {
  walkInAddTenant,
  vacateBed,
  verifyTenantKyc,
+ rejectTenantKyc,
+ submitTenantAadhaarKyc,
  markBedRentPaid,
  collectRentPayment,
  settleRentPaymentWithOwner,
@@ -196,6 +198,14 @@ export async function walkInAddTenantAction(
  const parsedDep = rawDep !== null && rawDep !== "" ? parseInt(rawDep, 10) : NaN;
  const depositAmount = !Number.isNaN(parsedDep) && parsedDep >= 0 ? parsedDep : 0;
  const depositStatus = (formData.get("depositStatus") as "paid" | "pending") || "paid";
+ const rawPaidDep = formData.get("depositPaidAmount") as string;
+ const parsedPaidDep = rawPaidDep !== null && rawPaidDep !== "" ? parseInt(rawPaidDep, 10) : NaN;
+ const depositPaidAmount =
+ depositStatus === "paid"
+ ? depositAmount
+ : !Number.isNaN(parsedPaidDep) && parsedPaidDep >= 0
+ ? Math.min(parsedPaidDep, depositAmount > 0 ? depositAmount : parsedPaidDep)
+ : 0;
  const depositPaymentMode = (formData.get("depositPaymentMode") as "cash" | "upi" | "bank_transfer") || "cash";
  const depositRef = (formData.get("depositRef") as string) || undefined;
 
@@ -205,6 +215,7 @@ export async function walkInAddTenantAction(
  joinDate,
  rentPaid,
  depositAmount,
+ depositPaidAmount,
  depositStatus,
  depositPaymentMode,
  depositRef,
@@ -239,6 +250,8 @@ export async function walkInAddTenantAction(
  revalidatePath("/dashboard/ledger");
  revalidatePath("/dashboard");
  revalidatePath("/tenant");
+ revalidatePath("/tenant/dues");
+ revalidatePath("/tenant/passes");
 
  return {
  ...res,
@@ -282,6 +295,8 @@ export async function collectRentPaymentAction(params: {
  revalidatePath("/dashboard");
  revalidatePath("/tenant");
  revalidatePath("/tenant/dues");
+ revalidatePath("/tenant/passes");
+ revalidatePath("/tenant/dues");
  return res;
 }
 
@@ -323,6 +338,8 @@ export async function collectSecurityDepositAction(params: {
  revalidatePath("/dashboard/rooms");
  revalidatePath("/dashboard/ledger");
  revalidatePath("/tenant");
+ revalidatePath("/tenant/dues");
+ revalidatePath("/tenant/passes");
  return res;
 }
 
@@ -345,6 +362,8 @@ export async function refundSecurityDepositAction(params: {
  revalidatePath("/dashboard/rooms");
  revalidatePath("/dashboard/ledger");
  revalidatePath("/tenant");
+ revalidatePath("/tenant/dues");
+ revalidatePath("/tenant/passes");
  return res;
 }
 
@@ -360,10 +379,28 @@ export async function vacateBedAction(buildingId: string, floorIdx: number, room
 
 export async function verifyTenantKycAction(tenantId: string) {
  const session = await getCurrentUserSession();
- if (session.role !== "owner" && session.role !== "admin") return { error: "Unauthorized" };
+ if (session.role !== "owner" && session.role !== "admin" && session.role !== "super_admin") return { error: "Unauthorized" };
 
  const res = await verifyTenantKyc(tenantId);
  revalidatePath("/dashboard/rooms");
+ revalidatePath("/tenant");
+ revalidatePath("/tenant/passes");
+ revalidatePath(`/verify/id/${tenantId}`);
+ return res;
+}
+
+export async function rejectTenantKycAction(tenantId: string, reason: string) {
+ const session = await getCurrentUserSession();
+ if (session.role !== "owner" && session.role !== "admin" && session.role !== "super_admin") return { error: "Unauthorized" };
+
+ const res = await rejectTenantKyc(
+ tenantId,
+ (reason || "").trim() || "Aadhaar photo unclear or mismatch. Please re-upload."
+ );
+ revalidatePath("/dashboard/rooms");
+ revalidatePath("/tenant");
+ revalidatePath("/tenant/passes");
+ revalidatePath(`/verify/id/${tenantId}`);
  return res;
 }
 
@@ -374,6 +411,8 @@ export async function markBedRentPaidAction(tenantId: string) {
  const res = await markBedRentPaid(tenantId);
  revalidatePath("/dashboard/rooms");
  revalidatePath("/dashboard/ledger");
+ revalidatePath("/tenant");
+ revalidatePath("/tenant/dues");
  return res;
 }
 
@@ -479,11 +518,12 @@ export async function submitTenantUpiScreenshotAction(formData: FormData) {
  const utr = (formData.get("utr") as string) || `UTR${Math.floor(10000000 + Math.random() * 90000000)}`;
  const amount = parseInt(formData.get("amount") as string) || 8500;
 
- const { submitTenantUpiScreenshot } = await import("@/lib/data/rooms");
+ const { submitTenantUpiScreenshot, getTenantLiveProfile } = await import("@/lib/data/rooms");
+ const profile = await getTenantLiveProfile(session.id, session.phone);
  const res = await submitTenantUpiScreenshot({
- tenantId: session.id,
- tenantName: session.full_name,
- room: "Block A • Room 101",
+ tenantId: profile?.tenantId || session.id,
+ tenantName: profile?.fullName || session.full_name,
+ room: profile ? `${profile.buildingName} • ${profile.roomNumber}` : "Assigned Room",
  amount,
  utr,
  });
@@ -494,14 +534,67 @@ export async function submitTenantUpiScreenshotAction(formData: FormData) {
  return { success: true, upi: res };
 }
 
-export async function verifySelfKycAction() {
+export async function submitTenantKycAction(formData: FormData) {
+ try {
  const session = await getCurrentUserSession();
- const { verifyTenantKyc } = await import("@/lib/data/rooms");
- await verifyTenantKyc(session.id);
+ if (!session?.id) return { error: "Unauthorized" };
+
+ const rawAadhaar = ((formData.get("aadhaarNumber") as string) || "").replace(/\D/g, "");
+ if (rawAadhaar.length !== 12) {
+ return { error: "Please enter a valid 12-digit Aadhaar number." };
+ }
+
+ const file = formData.get("aadhaarFile") as File | null;
+ const existingDocUrl = ((formData.get("existingDocUrl") as string) || "").trim() || null;
+ let docUrl: string | null = existingDocUrl;
+
+ if (file && typeof file === "object" && "size" in file && file.size > 0) {
+ if (file.size > 5 * 1024 * 1024) {
+ return { error: "Aadhaar photo/PDF must be under 5 MB." };
+ }
+ const extRaw = (file.name || "aadhaar.jpg").split(".").pop()?.toLowerCase() || "jpg";
+ const ext = ["jpg", "jpeg", "png", "webp", "pdf"].includes(extRaw) ? extRaw : "jpg";
+ const filePath = `${session.id}/${Date.now()}.${ext}`;
+ const bytes = new Uint8Array(await file.arrayBuffer());
+ const admin = createAdminClient();
+ const { error: uploadErr } = await admin.storage
+ .from("kyc-documents")
+ .upload(filePath, bytes, {
+ contentType: file.type || (ext === "pdf" ? "application/pdf" : "image/jpeg"),
+ upsert: true,
+ });
+ if (uploadErr) {
+ return { error: `Document upload failed: ${uploadErr.message}` };
+ }
+ const { data: pubData } = admin.storage.from("kyc-documents").getPublicUrl(filePath);
+ docUrl = pubData?.publicUrl || null;
+ }
+
+ if (!docUrl) {
+ return { error: "Please upload your Aadhaar Card photo or PDF." };
+ }
+
+ const res = await submitTenantAadhaarKyc({
+ tenantOrUserId: session.id,
+ phone: session.phone,
+ aadhaarNumber: rawAadhaar,
+ docUrl,
+ });
+
  revalidatePath("/tenant");
  revalidatePath("/tenant/passes");
  revalidatePath("/dashboard/rooms");
- return { success: true };
+ if (res?.tenantId) revalidatePath(`/verify/id/${res.tenantId}`);
+ revalidatePath(`/verify/id/${session.id}`);
+ return {
+ success: true,
+ kycStatus: "Under Review" as const,
+ docUrl,
+ tenantId: res?.tenantId,
+ };
+ } catch (err: any) {
+ return { error: err?.message || "Failed to submit Aadhaar KYC." };
+ }
 }
 
 export async function submitVacateNoticeAction(formData: FormData) {

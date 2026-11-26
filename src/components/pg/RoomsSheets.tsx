@@ -38,6 +38,7 @@ export function WalkInSheet({
  const router = useRouter();
  const [isSubmitting, setIsSubmitting] = useState(false);
  const [error, setError] = useState<string | null>(null);
+ const [depositStatusInput, setDepositStatusInput] = useState<"paid" | "pending">("paid");
  const [createdCreds, setCreatedCreds] = useState<{
  name: string;
  role: "tenant";
@@ -54,6 +55,7 @@ export function WalkInSheet({
  const handleClose = () => {
  setCreatedCreds(null);
  setError(null);
+ setDepositStatusInput("paid");
  onClose();
  };
 
@@ -189,7 +191,7 @@ export function WalkInSheet({
  <div className="grid grid-cols-2 gap-2">
  <div>
  <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
- Deposit Amount (₹)
+ {depositStatusInput === "pending" ? "Total Expected Deposit (₹)" : "Deposit Amount (₹)"}
  </label>
  <input
  name="depositAmount"
@@ -207,7 +209,8 @@ export function WalkInSheet({
  </label>
  <select
  name="depositStatus"
- defaultValue="paid"
+ value={depositStatusInput}
+ onChange={(e) => setDepositStatusInput(e.target.value as "paid" | "pending")}
  className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-slate-900 focus:outline-none text-xs"
  >
  <option value="paid">Paid • Collected Now</option>
@@ -215,6 +218,24 @@ export function WalkInSheet({
  </select>
  </div>
  </div>
+
+ {depositStatusInput === "pending" && (
+ <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 space-y-1">
+ <label className="text-[10px] font-extrabold text-amber-900 block">
+ Paid Now / Partial Advance (₹) — Optional
+ </label>
+ <input
+ name="depositPaidAmount"
+ type="number"
+ min="0"
+ placeholder="Leave blank if ₹0 paid (or enter partial e.g. 2000)"
+ className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-amber-200 font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:border-amber-500 text-xs"
+ />
+ <p className="text-[9.5px] text-amber-800 font-medium">
+ Remaining balance syncs live as Pending in both Owner &amp; Tenant portals.
+ </p>
+ </div>
+ )}
 
  <div className="grid grid-cols-2 gap-2">
  <div>
@@ -257,7 +278,7 @@ export function WalkInSheet({
  </label>
 
  <p className="text-[10px] text-[#64748B]">
- Sets kyc_status = &apos;pending&apos; so resident uploads Aadhar & selfie on resident login.
+ KYC starts as <strong>Pending</strong> until resident uploads 12-digit Aadhaar in their app &amp; you approve it.
  </p>
 
  <button

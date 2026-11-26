@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import {
  IndianRupee,
  CheckCircle2,
@@ -48,12 +49,21 @@ export function LedgerExplorer({
  currentUserName = "Manoj Kumar",
 }: LedgerExplorerProps) {
  const router = useRouter();
+ useRealtimeSync(["rent_payments", "security_deposits", "tenants"]);
  const isOwner = userRole === "owner";
  const isAdmin = userRole === "admin";
 
  const [activeTab, setActiveTab] = useState<"rent" | "deposits">("rent");
  const [rentPayments, setRentPayments] = useState<RentPaymentRecord[]>(initialRentPayments);
  const [deposits, setDeposits] = useState<SecurityDepositItem[]>(initialDeposits);
+
+ useEffect(() => {
+ setRentPayments(initialRentPayments);
+ }, [initialRentPayments]);
+
+ useEffect(() => {
+ setDeposits(initialDeposits);
+ }, [initialDeposits]);
  const [toastMsg, setToastMsg] = useState<string | null>(null);
  const [isProcessingId, setIsProcessingId] = useState<string | null>(null);
 
@@ -91,9 +101,12 @@ export function LedgerExplorer({
  const pendingHandoverTotal = pendingHandovers.reduce((acc, r) => acc + r.amount, 0);
  const rentCollectedTotal = settledPayments.reduce((acc, r) => acc + r.amount, 0);
 
- // Security deposits sum (active paid deposits)
- const activePaidDeposits = deposits.filter((d) => d.status === "paid");
- const totalSecurityDeposits = activePaidDeposits.reduce((acc, d) => acc + (d.paidAmount || d.expectedAmount), 0);
+ // Security deposits sum (actual collected held amounts, including partial advances)
+ const totalSecurityDeposits = deposits.reduce((acc, d) => {
+ if (d.status === "refunded") return acc;
+ if (d.status === "partially_refunded") return acc + Math.max(0, (d.paidAmount || 0) - (d.refundedAmount || 0));
+ return acc + (d.paidAmount || 0);
+ }, 0);
 
  // Admin Collections
  const myAdminCollections = rentPayments.filter(
@@ -432,7 +445,11 @@ export function LedgerExplorer({
 
  {/* Mobile View (< lg) */}
  <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 md:gap-3.5 lg:hidden">
- {deposits.map((dep) => (
+ {deposits.map((dep) => {
+ const remaining = Math.max(0, (dep.expectedAmount || 0) - (dep.paidAmount || 0));
+ const isPaidFull = dep.status === "paid" && remaining === 0;
+ const isPending = dep.status === "pending" || (dep.status !== "refunded" && dep.status !== "partially_refunded" && remaining > 0);
+ return (
  <div
  key={dep.id}
  className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-sm hover:border-slate-300 transition"
@@ -445,17 +462,19 @@ export function LedgerExplorer({
  </span>
  <span
  className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
- dep.status === "paid"
+ isPaidFull
  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
- : dep.status === "pending"
+ : isPending
  ? "bg-amber-50 text-amber-700 border border-amber-200"
  : "bg-purple-50 text-purple-700 border border-purple-200"
  }`}
  >
- {dep.status === "paid"
+ {isPaidFull
  ? "Paid • Held Safely"
- : dep.status === "pending"
- ? "Deposit Pending"
+ : isPending
+ ? dep.paidAmount > 0
+ ? `Partial • ₹${remaining.toLocaleString("en-IN")} Pending`
+ : "Pending • To be collected"
  : "Refunded"}
  </span>
  </div>
@@ -466,7 +485,10 @@ export function LedgerExplorer({
 
  <div className="text-right">
  <span className="text-sm font-black text-slate-900 tabular-nums">
- ₹{(dep.paidAmount || dep.expectedAmount).toLocaleString("en-IN")}
+ ₹{(dep.paidAmount || 0).toLocaleString("en-IN")}
+ {isPending && dep.expectedAmount > 0 && (
+ <span className="text-[10px] font-bold text-slate-400"> / ₹{dep.expectedAmount.toLocaleString("en-IN")}</span>
+ )}
  </span>
  <span className="text-[10px] text-slate-400 block font-mono">
  #{dep.id}
@@ -476,21 +498,29 @@ export function LedgerExplorer({
 
  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
  <span>
- Mode: <strong className="text-slate-800">{dep.paymentMode.toUpperCase()}</strong> • Collected by{" "}
- <strong className="text-slate-800">{dep.collectedByName || "Staff"}</strong>
+ Mode: <strong className="text-slate-800">{(dep.paymentMode || "cash").toUpperCase()}</strong> • {dep.paidAmount > 0 ? "Collected by " : "Balance Due: "}
+ <strong className="text-slate-800">{dep.paidAmount > 0 ? dep.collectedByName || "Owner" : `₹${remaining.toLocaleString("en-IN")}`}</strong>
  </span>
 
  <DepositReceiptModal
- pgName="Royal Stay PG"
+ pgName="PG Security Receipt"
  primaryColor="#4F46E5"
  tenantName={dep.tenantName}
  roomNumber={`Room ${dep.roomNumber}`}
  bedLabel={dep.bedLabel}
  receiptNumber={dep.id}
- amount={dep.paidAmount || dep.expectedAmount}
- paymentMode={dep.paymentMode}
- collectedByName={dep.collectedByName || "Staff Desk"}
- status={dep.status === "paid" ? "Paid • Held Safely" : "Refunded"}
+ amount={dep.paidAmount > 0 ? dep.paidAmount : dep.expectedAmount}
+ paymentMode={dep.paidAmount > 0 ? dep.paymentMode : "Pending"}
+ collectedByName={dep.paidAmount > 0 ? dep.collectedByName || "Owner" : "Pending Collection"}
+ status={
+ isPaidFull
+ ? "Paid • Held Safely"
+ : isPending
+ ? dep.paidAmount > 0
+ ? `Partial (₹${dep.paidAmount.toLocaleString("en-IN")} Paid • ₹${remaining.toLocaleString("en-IN")} Due)`
+ : "Pending • To be collected"
+ : "Refunded"
+ }
  deductionAmount={dep.deductionAmount}
  deductionReason={dep.deductionReason}
  refundedAmount={dep.refundedAmount}
@@ -505,7 +535,8 @@ export function LedgerExplorer({
  />
  </div>
  </div>
- ))}
+ );
+ })}
  </div>
 
  {/* Widescreen Desktop Table (>= lg) */}
@@ -518,12 +549,16 @@ export function LedgerExplorer({
  <th scope="col" className="px-4 py-3.5">Property & Bed</th>
  <th scope="col" className="px-4 py-3.5">Status</th>
  <th scope="col" className="px-4 py-3.5">Payment Mode & Collector</th>
- <th scope="col" className="px-4 py-3.5 text-right">Held Deposit</th>
+ <th scope="col" className="px-4 py-3.5 text-right">Paid / Expected</th>
  <th scope="col" className="px-4 py-3.5 text-right">Receipt</th>
  </tr>
  </thead>
  <tbody className="divide-y divide-slate-100">
- {deposits.map((dep) => (
+ {deposits.map((dep) => {
+ const remaining = Math.max(0, (dep.expectedAmount || 0) - (dep.paidAmount || 0));
+ const isPaidFull = dep.status === "paid" && remaining === 0;
+ const isPending = dep.status === "pending" || (dep.status !== "refunded" && dep.status !== "partially_refunded" && remaining > 0);
+ return (
  <tr key={dep.id} className="hover:bg-slate-50 transition">
  <td className="px-4 py-3.5">
  <span className="font-extrabold text-slate-900 block">{dep.tenantName}</span>
@@ -536,39 +571,54 @@ export function LedgerExplorer({
  <td className="px-4 py-3.5">
  <span
  className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${
- dep.status === "paid"
+ isPaidFull
  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
- : dep.status === "pending"
+ : isPending
  ? "bg-amber-50 text-amber-700 border-amber-200"
  : "bg-purple-50 text-purple-700 border border-purple-200"
  }`}
  >
- {dep.status === "paid"
+ {isPaidFull
  ? "Paid • Held Safely"
- : dep.status === "pending"
- ? "Deposit Pending"
+ : isPending
+ ? dep.paidAmount > 0
+ ? `Partial • ₹${remaining.toLocaleString("en-IN")} Due`
+ : "Pending • To be collected"
  : "Refunded"}
  </span>
  </td>
  <td className="px-4 py-3.5">
- <span className="font-semibold text-slate-800 uppercase">{dep.paymentMode}</span>
- <span className="text-[10px] text-slate-500 block">By {dep.collectedByName || "Staff"}</span>
+ <span className="font-semibold text-slate-800 uppercase">{dep.paidAmount > 0 ? dep.paymentMode : "Pending"}</span>
+ <span className="text-[10px] text-slate-500 block">
+ {dep.paidAmount > 0 ? `By ${dep.collectedByName || "Owner"}` : `Due: ₹${remaining.toLocaleString("en-IN")}`}
+ </span>
  </td>
  <td className="px-4 py-3.5 text-right font-black text-slate-900 tabular-nums text-xs">
- ₹{(dep.paidAmount || dep.expectedAmount).toLocaleString("en-IN")}
+ ₹{(dep.paidAmount || 0).toLocaleString("en-IN")}
+ {isPending && dep.expectedAmount > 0 && (
+ <span className="text-[10px] font-bold text-slate-400 block">of ₹{dep.expectedAmount.toLocaleString("en-IN")}</span>
+ )}
  </td>
  <td className="px-4 py-3.5 text-right">
  <DepositReceiptModal
- pgName="Royal Stay PG"
+ pgName="PG Security Receipt"
  primaryColor="#4F46E5"
  tenantName={dep.tenantName}
  roomNumber={`Room ${dep.roomNumber}`}
  bedLabel={dep.bedLabel}
  receiptNumber={dep.id}
- amount={dep.paidAmount || dep.expectedAmount}
- paymentMode={dep.paymentMode}
- collectedByName={dep.collectedByName || "Staff Desk"}
- status={dep.status === "paid" ? "Paid • Held Safely" : "Refunded"}
+ amount={dep.paidAmount > 0 ? dep.paidAmount : dep.expectedAmount}
+ paymentMode={dep.paidAmount > 0 ? dep.paymentMode : "Pending"}
+ collectedByName={dep.paidAmount > 0 ? dep.collectedByName || "Owner" : "Pending Collection"}
+ status={
+ isPaidFull
+ ? "Paid • Held Safely"
+ : isPending
+ ? dep.paidAmount > 0
+ ? `Partial (₹${dep.paidAmount.toLocaleString("en-IN")} Paid • ₹${remaining.toLocaleString("en-IN")} Due)`
+ : "Pending • To be collected"
+ : "Refunded"
+ }
  deductionAmount={dep.deductionAmount}
  deductionReason={dep.deductionReason}
  refundedAmount={dep.refundedAmount}
@@ -583,7 +633,8 @@ export function LedgerExplorer({
  />
  </td>
  </tr>
- ))}
+ );
+ })}
  </tbody>
  </table>
  </div>

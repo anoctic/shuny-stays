@@ -8,6 +8,7 @@ import {
  getTenantDinnerPoll,
  getSecurityDepositForTenant,
  getRentPaymentsForTenant,
+ getTenantLiveProfile,
 } from "@/lib/data/rooms";
 import { getTenantMealPollStatus } from "@/lib/data/meal-polls";
 import { TenantHomeExplorer } from "@/components/tenant/TenantHomeExplorer";
@@ -18,6 +19,9 @@ export const revalidate = 0;
 
 export default async function TenantDashboardPage() {
  const session = await getCurrentUserSession();
+ const liveProfile = await getTenantLiveProfile(session.id, session.phone);
+ const lookupId = liveProfile?.tenantId || session.id;
+ const targetPgId = liveProfile?.pgId || session.pg_id || "00000000-0000-0000-0000-000000000001";
 
  const [
  broadcasts,
@@ -30,17 +34,17 @@ export default async function TenantDashboardPage() {
  invoices,
  ] = await Promise.all([
  getActiveBroadcastsForRole("tenant"),
- getPassesForTenant(session.id),
+ getPassesForTenant(lookupId),
  getTenantAttendanceStatus(session.id),
- getPgById(session.pg_id || "00000000-0000-0000-0000-000000000001"),
+ getPgById(targetPgId),
  getMessMenu(),
  getTenantDinnerPoll(session.id),
- getSecurityDepositForTenant(session.id),
- getRentPaymentsForTenant(session.id),
+ getSecurityDepositForTenant(lookupId),
+ getRentPaymentsForTenant(lookupId),
  ]);
 
  const pg = dbPg || {
- id: "00000000-0000-0000-0000-000000000001",
+ id: targetPgId,
  name: "Royal Stay PG",
  slug: "royal-stay",
  logo_url: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=200&h=200&q=80",
@@ -54,42 +58,53 @@ export default async function TenantDashboardPage() {
  getTenantMealPollStatus(pg.id, session.id, "dinner"),
  ]);
 
- // Security Deposit for this tenant
+ const expectedDep = dbDeposit?.expectedAmount ?? liveProfile?.depositAmount ?? 0;
+
+ // Security Deposit for this tenant (never pretend paid if missing/pending!)
  const depositDetails = dbDeposit || {
- id: "DEP-PENDING",
+ id: liveProfile ? `DEP-${liveProfile.tenantId.slice(0, 8).toUpperCase()}` : "DEP-PENDING",
  pgId: pg.id,
  buildingId: "",
- buildingName: "Main Wing",
- tenantId: session.id,
- tenantName: session.full_name,
- roomNumber: "Pending Allocation",
- bedLabel: "Pending",
- expectedAmount: 0,
+ buildingName: liveProfile?.buildingName || "Main Wing",
+ tenantId: lookupId,
+ tenantName: liveProfile?.fullName || session.full_name,
+ roomNumber: liveProfile?.roomNumber || "Pending Allocation",
+ bedLabel: liveProfile?.bedLabel || "Pending",
+ expectedAmount: expectedDep,
  paidAmount: 0,
- status: "pending" as const,
- paymentMode: "upi" as const,
- collectedByName: "Management",
- collectedAt: "-",
+ status: (expectedDep > 0 ? "pending" : "paid") as "pending" | "paid",
+ paymentMode: "cash" as const,
+ collectedByName: "Pending Collection",
+ collectedAt: "",
  deductionAmount: 0,
  refundedAmount: 0,
  createdAt: new Date().toISOString(),
  };
 
- // Rent Payments & Invoices for this tenant
- const rentPaid = invoices.some(
- (inv) =>
- inv.billingMonth.includes("November 2026") ||
- inv.status === "collected_by_admin" ||
- inv.status === "settled_with_owner"
+ // Live Current-Month Rent Paid check
+ const now = new Date();
+ const currentBillingMonth = now.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+ const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+ const rentPaid = invoices.some((inv) => {
+ const st = (inv.status || "").toLowerCase();
+ if (!["settled_with_owner", "collected_by_admin", "paid", "verified"].includes(st)) return false;
+ const bm = (inv.billingMonth || "").trim();
+ const dt = inv.collectedAt || "";
+ return (
+ bm.toLowerCase() === currentBillingMonth.toLowerCase() ||
+ bm.startsWith(currentYearMonth) ||
+ (!bm && dt.startsWith(currentYearMonth))
  );
+ });
 
  return (
  <TenantHomeExplorer
  session={{
  id: session.id,
- full_name: session.full_name,
- email: session.email,
- phone: session.phone || undefined,
+ full_name: liveProfile?.fullName || session.full_name,
+ email: liveProfile?.email || session.email,
+ phone: liveProfile?.phone || session.phone || undefined,
  room_id: session.room_id || undefined,
  building_id: session.building_id || undefined,
  }}
@@ -115,14 +130,23 @@ export default async function TenantDashboardPage() {
  dinner: messMenu.dinner,
  }}
  initialDinnerPoll={dinnerPoll}
- initialKycStatus="Pending"
- roomNumber="Room 101 • Bed A"
- buildingName="Block A - Krishna Bhawan"
- rentAmount={8500}
+ tenantRecordId={liveProfile?.tenantId || session.id}
+ initialKycStatus={liveProfile?.kycStatus || "Pending"}
+ initialAadhaarNumber={liveProfile?.aadhaarNumber || null}
+ initialKycDocUrl={liveProfile?.kycDocUrl || null}
+ initialKycRejectionReason={liveProfile?.kycRejectionReason || null}
+ roomNumber={
+ liveProfile
+ ? `${liveProfile.roomNumber} • ${liveProfile.bedLabel}`
+ : "Pending Allocation"
+ }
+ buildingName={liveProfile?.buildingName || "Main Block"}
+ rentAmount={liveProfile?.rentAmount ?? 0}
  rentPaid={rentPaid}
+ depositAmount={expectedDep}
  depositDetails={depositDetails}
  invoices={invoices}
- upiId="royalstay@okicici"
+ upiId={liveProfile?.upiId || (pg as any).upi_id || "royalstay@okicici"}
  wifiName="ROYAL_5G_RESIDENT"
  wifiPass="StayRoyal@2026"
  broadcasts={broadcasts}

@@ -38,11 +38,14 @@ interface TenantIdNoticeViewProps {
     name: string;
     primaryColor: string;
   };
+  tenantRecordId?: string;
   buildingName: string;
   roomNumber: string;
   kycStatus: string;
   joinDate: string;
   depositAmount: number;
+  depositStatus?: "paid" | "pending" | "refunded" | "partially_refunded";
+  depositPaidAmount?: number;
   emergencyPhone: string;
   passes: GatePassItem[];
   gatePassEnabled?: boolean;
@@ -51,11 +54,14 @@ interface TenantIdNoticeViewProps {
 export function TenantIdNoticeView({
   session,
   pg,
+  tenantRecordId,
   buildingName,
   roomNumber,
   kycStatus,
   joinDate,
   depositAmount,
+  depositStatus = "pending",
+  depositPaidAmount,
   emergencyPhone,
   passes,
   gatePassEnabled = true,
@@ -76,7 +82,7 @@ export function TenantIdNoticeView({
     }
   }, []);
 
-  const verifyUrl = `${origin}/verify/id/${session.id}`;
+  const verifyUrl = `${origin}/verify/id/${tenantRecordId || session.id}`;
 
   const copyVerifyLink = () => {
     navigator.clipboard.writeText(verifyUrl);
@@ -162,7 +168,19 @@ export function TenantIdNoticeView({
           </div>
           <div>
             <span className="opacity-75 block text-[9px] uppercase">KYC Status</span>
-            <strong className="text-emerald-300 block">{kycStatus}</strong>
+            <strong
+              className={`block ${
+                kycStatus === "Verified"
+                  ? "text-emerald-300"
+                  : kycStatus === "Under Review"
+                  ? "text-sky-300"
+                  : kycStatus === "Rejected"
+                  ? "text-rose-300"
+                  : "text-amber-300"
+              }`}
+            >
+              {kycStatus}
+            </strong>
           </div>
         </div>
       </div>
@@ -175,7 +193,37 @@ export function TenantIdNoticeView({
         </div>
         <div className="flex justify-between">
           <span className="text-slate-400">Security Deposit</span>
-          <strong className="text-emerald-600">₹{depositAmount.toLocaleString("en-IN")} Held</strong>
+          {(() => {
+            const paidDep =
+              depositPaidAmount !== undefined
+                ? depositPaidAmount
+                : depositStatus === "paid"
+                ? depositAmount
+                : 0;
+            const remainingDep = Math.max(0, depositAmount - paidDep);
+            if (depositStatus === "paid" && remainingDep === 0) {
+              return (
+                <strong className="text-emerald-600">
+                  ₹{paidDep.toLocaleString("en-IN")} Held
+                </strong>
+              );
+            }
+            if (depositStatus === "refunded" || depositStatus === "partially_refunded") {
+              return <strong className="text-indigo-600">Settled / Refunded</strong>;
+            }
+            if (paidDep > 0) {
+              return (
+                <strong className="text-amber-600">
+                  ₹{paidDep.toLocaleString("en-IN")} Paid • ₹{remainingDep.toLocaleString("en-IN")} Pending
+                </strong>
+              );
+            }
+            return (
+              <strong className="text-amber-600">
+                ₹{depositAmount.toLocaleString("en-IN")} Pending
+              </strong>
+            );
+          })()}
         </div>
         <div className="flex justify-between">
           <span className="text-slate-400">Emergency Contact</span>

@@ -15,8 +15,11 @@ export async function getPassesForTenant(tenantId: string): Promise<GatePass[]> 
  // Support lookup by either tenant record ID or auth user ID
  let effectiveTenantId = tenantId;
  const { data: tenant } = await db(admin, "tenants")
- .select("id, full_name, phone, room_id, buildings(name), rooms(room_number)")
+ .select("id, pg_id, full_name, phone, room_id, buildings(name), rooms(room_number)")
  .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
+ .eq("is_active", true)
+ .order("created_at", { ascending: false })
+ .limit(1)
  .maybeSingle();
 
  if (tenant) {
@@ -192,11 +195,27 @@ export async function requestGatePass(params: {
 
  const admin = createAdminClient();
 
+ const { data: activeTenant } = await db(admin, "tenants")
+ .select("id, pg_id, building_id, full_name, phone, rooms(room_number), buildings(name)")
+ .or(`id.eq.${params.tenantId},user_id.eq.${params.tenantId}`)
+ .eq("is_active", true)
+ .order("created_at", { ascending: false })
+ .limit(1)
+ .maybeSingle();
+
+ const effectiveTenantId = activeTenant?.id || params.tenantId;
+ const effectivePgId = activeTenant?.pg_id || params.pgId;
+ const effectiveBuildingId = activeTenant?.building_id || params.buildingId;
+ const effectiveBuildingName = activeTenant?.buildings?.name || params.buildingName || "Main Building";
+ const effectiveRoomNumber = activeTenant?.rooms?.room_number
+ ? `Room ${activeTenant.rooms.room_number}`
+ : params.roomNumber || "Room 101";
+
  const { error } = await db(admin, "gate_passes").insert({
  id: passId,
- pg_id: params.pgId,
- building_id: params.buildingId,
- tenant_id: params.tenantId,
+ pg_id: effectivePgId,
+ building_id: effectiveBuildingId,
+ tenant_id: effectiveTenantId,
  pass_type: params.passType,
  pass_number: passNumber,
  outing_date: params.outingDate,
@@ -227,13 +246,13 @@ export async function requestGatePass(params: {
 
  const createdPass: GatePass = {
  id: passId,
- pg_id: params.pgId,
- building_id: params.buildingId,
- building_name: params.buildingName || "Main Building",
- tenant_id: params.tenantId,
- tenant_name: params.tenantName,
- tenant_phone: params.tenantPhone || "+91 98765 00000",
- room_number: params.roomNumber || "Room 101",
+ pg_id: effectivePgId,
+ building_id: effectiveBuildingId,
+ building_name: effectiveBuildingName,
+ tenant_id: effectiveTenantId,
+ tenant_name: activeTenant?.full_name || params.tenantName,
+ tenant_phone: activeTenant?.phone || params.tenantPhone || "+91 98765 00000",
+ room_number: effectiveRoomNumber,
  pass_type: params.passType,
  pass_number: passNumber,
  outing_date: params.outingDate,

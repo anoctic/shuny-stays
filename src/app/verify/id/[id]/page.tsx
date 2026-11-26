@@ -143,6 +143,17 @@ export default async function VerifyTenantIdPage({ params }: VerifyIdPageProps) 
   const bedName = tenant.beds?.bed_name ? `(${tenant.beds.bed_name})` : "";
   const isActive = tenant.is_active !== false;
 
+  const rawKyc = (tenant.kyc_status || "").toLowerCase();
+  const kycState =
+    rawKyc === "verified" || tenant.id_proof_type === "verified"
+      ? "Verified"
+      : rawKyc === "under_review"
+      ? "Under Review"
+      : rawKyc === "rejected"
+      ? "Rejected"
+      : "Pending";
+  const isKycVerified = kycState === "Verified";
+
   // Mask phone number for public privacy
   const rawPhone = tenant.phone || "";
   const maskedPhone =
@@ -161,9 +172,37 @@ export default async function VerifyTenantIdPage({ params }: VerifyIdPageProps) 
       <div className="w-full max-w-[430px] space-y-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
         {/* Verification Status Header Banner */}
         <div className="text-center space-y-1">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            Official Verified Resident
+          <div
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg ${
+              isKycVerified
+                ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-emerald-500/10"
+                : kycState === "Under Review"
+                ? "bg-sky-500/15 border border-sky-500/30 text-sky-300 shadow-sky-500/10"
+                : kycState === "Rejected"
+                ? "bg-rose-500/15 border border-rose-500/30 text-rose-300 shadow-rose-500/10"
+                : "bg-amber-500/15 border border-amber-500/30 text-amber-300 shadow-amber-500/10"
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full animate-pulse ${
+                isKycVerified
+                  ? "bg-emerald-400"
+                  : kycState === "Under Review"
+                  ? "bg-sky-400"
+                  : kycState === "Rejected"
+                  ? "bg-rose-400"
+                  : "bg-amber-400"
+              }`}
+            />
+            {isKycVerified
+              ? isActive
+                ? "Official Verified Resident"
+                : "Verified Alumni Resident"
+              : kycState === "Under Review"
+              ? "Active Resident • KYC Under Review"
+              : kycState === "Rejected"
+              ? "Active Resident • KYC Rejected"
+              : "Active Resident • KYC Pending"}
           </div>
           <p className="text-[11px] text-slate-400">
             Certified by ShunyStays Security & Trust Network
@@ -192,9 +231,29 @@ export default async function VerifyTenantIdPage({ params }: VerifyIdPageProps) 
 
               {/* Verified Shield Emblem */}
               <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 backdrop-blur-md flex flex-col items-center justify-center text-white shrink-0 shadow-lg">
-                <ShieldCheck className="w-6 h-6 text-emerald-300" />
-                <span className="text-[7px] font-mono font-black uppercase tracking-wider text-emerald-200">
-                  ACTIVE
+                <ShieldCheck
+                  className={`w-6 h-6 ${
+                    isKycVerified
+                      ? "text-emerald-300"
+                      : kycState === "Under Review"
+                      ? "text-sky-300"
+                      : kycState === "Rejected"
+                      ? "text-rose-300"
+                      : "text-amber-300"
+                  }`}
+                />
+                <span
+                  className={`text-[7px] font-mono font-black uppercase tracking-wider ${
+                    isKycVerified
+                      ? "text-emerald-200"
+                      : kycState === "Under Review"
+                      ? "text-sky-200"
+                      : kycState === "Rejected"
+                      ? "text-rose-200"
+                      : "text-amber-200"
+                  }`}
+                >
+                  {isKycVerified ? "VERIFIED" : kycState === "Under Review" ? "REVIEW" : "PENDING"}
                 </span>
               </div>
             </div>
@@ -224,9 +283,25 @@ export default async function VerifyTenantIdPage({ params }: VerifyIdPageProps) 
                 <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
                   <span>{maskedPhone}</span>
                   <span>•</span>
-                  <span className="inline-flex items-center gap-1 text-emerald-400 font-bold text-[11px]">
-                    <CheckCircle2 className="w-3 h-3" />
-                    KYC Verified
+                  <span
+                    className={`inline-flex items-center gap-1 font-bold text-[11px] ${
+                      isKycVerified
+                        ? "text-emerald-400"
+                        : kycState === "Under Review"
+                        ? "text-sky-400"
+                        : kycState === "Rejected"
+                        ? "text-rose-400"
+                        : "text-amber-400"
+                    }`}
+                  >
+                    {isKycVerified ? (
+                      <CheckCircle2 className="w-3 h-3" />
+                    ) : kycState === "Under Review" ? (
+                      <ClockIcon className="w-3 h-3" />
+                    ) : (
+                      <AlertTriangle className="w-3 h-3" />
+                    )}
+                    KYC {kycState}
                   </span>
                 </div>
               </div>

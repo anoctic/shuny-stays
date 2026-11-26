@@ -11,6 +11,7 @@ import {
 import { getCurrentUserSession } from "@/lib/auth/session";
 import { getPassesForTenant } from "@/lib/data/gate-passes";
 import { getPgById } from "@/lib/data/pgs";
+import { getTenantLiveProfile, getSecurityDepositForTenant } from "@/lib/data/rooms";
 import { GatePassCard } from "@/components/passes/GatePassCard";
 import { RequestPassModal } from "@/components/passes/RequestPassModal";
 
@@ -21,9 +22,12 @@ import { TenantIdNoticeView } from "@/components/tenant/TenantIdNoticeView";
 
 export default async function TenantPassesPage() {
  const session = await getCurrentUserSession();
- const [passes, dbPg] = await Promise.all([
- getPassesForTenant(session.id),
- getPgById(session.pg_id || "00000000-0000-0000-0000-000000000001"),
+ const liveProfile = await getTenantLiveProfile(session.id, session.phone);
+ const lookupId = liveProfile?.tenantId || session.id;
+ const [passes, dbPg, depositDetails] = await Promise.all([
+ getPassesForTenant(lookupId),
+ getPgById(liveProfile?.pgId || session.pg_id || "00000000-0000-0000-0000-000000000001"),
+ getSecurityDepositForTenant(lookupId),
  ]);
 
  const pg = dbPg || {
@@ -34,13 +38,24 @@ export default async function TenantPassesPage() {
  city: "Bengaluru",
  };
 
+ const expectedDeposit = depositDetails?.expectedAmount ?? liveProfile?.depositAmount ?? 0;
+ const paidDeposit = depositDetails?.paidAmount ?? 0;
+ const depStatus: "paid" | "pending" | "refunded" | "partially_refunded" =
+ depositDetails?.status === "refunded" || depositDetails?.status === "partially_refunded"
+ ? depositDetails.status
+ : depositDetails?.status === "paid" && paidDeposit >= expectedDeposit
+ ? "paid"
+ : expectedDeposit > 0 || depositDetails?.status === "pending"
+ ? "pending"
+ : "paid";
+
  return (
  <TenantIdNoticeView
  session={{
  id: session.id,
- full_name: session.full_name,
- phone: session.phone || "+91 98765 43210",
- email: session.email,
+ full_name: liveProfile?.fullName || session.full_name,
+ phone: liveProfile?.phone || session.phone || "",
+ email: liveProfile?.email || session.email,
  room_id: session.room_id,
  building_id: session.building_id,
  }}
@@ -48,12 +63,19 @@ export default async function TenantPassesPage() {
  name: pg.name,
  primaryColor: pg.primary_color || "#4F46E5",
  }}
- buildingName="Block A - Krishna Bhawan"
- roomNumber="Room 101 (Bed A)"
- kycStatus="Verified"
- joinDate="01 Aug 2026"
- depositAmount={8500}
- emergencyPhone="+91 98111 22233"
+ tenantRecordId={liveProfile?.tenantId || session.id}
+ buildingName={liveProfile?.buildingName || "Pending Allocation"}
+ roomNumber={
+ liveProfile
+ ? `${liveProfile.roomNumber} (${liveProfile.bedLabel})`
+ : "Pending Room"
+ }
+ kycStatus={liveProfile?.kycStatus || "Pending"}
+ joinDate={liveProfile?.joinDate || "Recently Joined"}
+ depositAmount={expectedDeposit}
+ depositStatus={depStatus}
+ depositPaidAmount={paidDeposit}
+ emergencyPhone={(pg as any).contact_phone || "Property Office"}
  passes={passes}
  />
  );

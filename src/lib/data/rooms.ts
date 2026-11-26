@@ -18,6 +18,7 @@ export interface TenantProfileItem {
  college: string;
  joinDate: string;
  deposit: number;
+ depositPaidAmount?: number;
  rent?: number;
  depositStatus: "paid" | "pending" | "refunded" | "partially_refunded";
  depositPaymentMode?: "cash" | "upi" | "bank_transfer";
@@ -29,7 +30,10 @@ export interface TenantProfileItem {
  depositRefundedAmount?: number;
  depositRefundedAt?: string;
  rentPaid: boolean;
- kycStatus: "Verified" | "Pending" | "Rejected";
+ kycStatus: "Verified" | "Under Review" | "Pending" | "Rejected";
+ aadhaarNumber?: string | null;
+ kycDocUrl?: string | null;
+ kycRejectionReason?: string | null;
 }
 
 export interface BedItem {
@@ -201,7 +205,7 @@ export const getAllBuildings = cache(async (selectedBuildingId?: string | null):
  beds (
  id, bed_name, status, monthly_rent,
  tenants (
- id, full_name, phone, emergency_contact_phone, work_or_college, check_in_date, rent_amount, deposit_amount, is_active
+ id, full_name, phone, emergency_contact_phone, work_or_college, check_in_date, rent_amount, deposit_amount, is_active, kyc_status, id_proof_type, id_proof_number, id_proof_doc_url, kyc_rejection_reason, created_at
  )
  )
  )
@@ -211,6 +215,49 @@ export const getAllBuildings = cache(async (selectedBuildingId?: string | null):
  // Scoped strictly to PG ID for owner or admin
  if (session.pg_id && session.role !== "super_admin") {
  query = query.eq("pg_id", session.pg_id);
+ }
+
+ const now = new Date();
+ const currentBillingMonth = now.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+ const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+ let depQuery = db(admin, "security_deposits")
+ .select("tenant_id, expected_amount, paid_amount, status, payment_mode, transaction_ref, collected_by_name, collected_at, deduction_amount, deduction_reason, refunded_amount, refunded_at, updated_at, created_at")
+ .order("updated_at", { ascending: false });
+
+ let rentQuery = db(admin, "rent_payments")
+ .select("tenant_id, billing_month, status, amount, collected_at, created_at")
+ .order("created_at", { ascending: false });
+
+ if (session.pg_id && session.role !== "super_admin") {
+ depQuery = depQuery.eq("pg_id", session.pg_id);
+ rentQuery = rentQuery.eq("pg_id", session.pg_id);
+ }
+
+ const [{ data: secDepositsData }, { data: rentPaymentsData }] = await Promise.all([depQuery, rentQuery]);
+
+ const depositByTenant = new Map<string, any>();
+ for (const dep of secDepositsData || []) {
+ if (dep.tenant_id && !depositByTenant.has(dep.tenant_id)) {
+ depositByTenant.set(dep.tenant_id, dep);
+ }
+ }
+
+ const paidRentTenantIds = new Set<string>();
+ for (const rp of rentPaymentsData || []) {
+ if (!rp.tenant_id) continue;
+ const st = (rp.status || "").toLowerCase();
+ const isPaidStatus = ["settled_with_owner", "collected_by_admin", "paid", "verified"].includes(st);
+ if (!isPaidStatus) continue;
+ const bm = (rp.billing_month || "").trim();
+ const dt = rp.collected_at || rp.created_at || "";
+ const matchesMonth =
+ bm.toLowerCase() === currentBillingMonth.toLowerCase() ||
+ bm.startsWith(currentYearMonth) ||
+ (!bm && dt.startsWith(currentYearMonth));
+ if (matchesMonth) {
+ paidRentTenantIds.add(rp.tenant_id);
+ }
  }
 
  if (selectedBuildingId && selectedBuildingId !== "all") {
@@ -253,11 +300,39 @@ export const getAllBuildings = cache(async (selectedBuildingId?: string | null):
  sharing: r.sharing_type,
  rent: Number(r.base_rent_monthly) || 0,
  beds: sortedBeds.map((bed: any) => {
- const rawTenant = Array.isArray(bed.tenants) ? bed.tenants[0] : bed.tenants;
+ const tenantList = Array.isArray(bed.tenants) ? bed.tenants : bed.tenants ? [bed.tenants] : [];
+ const rawTenant = tenantList.find((t: any) => t.is_active !== false) || null;
  const isOccupied = bed.status === "occupied" || !!rawTenant;
 
  let tenantProfile: TenantProfileItem | null = null;
- if (rawTenant && (rawTenant.is_active ?? true)) {
+ if (rawTenant) {
+ const depRow = depositByTenant.get(rawTenant.id);
+ const expectedDep = depRow ? Number(depRow.expected_amount ?? rawTenant.deposit_amount ?? 0) : Number(rawTenant.deposit_amount) || 0;
+ const paidDep = depRow ? Number(depRow.paid_amount ?? 0) : 0;
+
+ let depStatus: "paid" | "pending" | "refunded" | "partially_refunded" = "pending";
+ if (depRow) {
+ if (depRow.status === "refunded" || depRow.status === "partially_refunded") {
+ depStatus = depRow.status;
+ } else if (depRow.status === "pending" || (expectedDep > 0 && paidDep < expectedDep)) {
+ depStatus = "pending";
+ } else {
+ depStatus = "paid";
+ }
+ } else {
+ depStatus = expectedDep > 0 ? "pending" : "paid";
+ }
+
+ const rawKyc = (rawTenant.kyc_status || "").toLowerCase();
+ let mappedKyc: "Verified" | "Under Review" | "Pending" | "Rejected" = "Pending";
+ if (rawKyc === "verified" || rawTenant.id_proof_type === "verified") {
+ mappedKyc = "Verified";
+ } else if (rawKyc === "under_review") {
+ mappedKyc = "Under Review";
+ } else if (rawKyc === "rejected") {
+ mappedKyc = "Rejected";
+ }
+
  tenantProfile = {
  id: rawTenant.id,
  pgId: b.pg_id,
@@ -265,11 +340,24 @@ export const getAllBuildings = cache(async (selectedBuildingId?: string | null):
  phone: rawTenant.phone,
  parentPhone: rawTenant.emergency_contact_phone || "",
  college: rawTenant.work_or_college || "",
- joinDate: rawTenant.check_in_date || "2026-08-01",
- deposit: Number(rawTenant.deposit_amount) || 0,
- depositStatus: "paid",
- rentPaid: true,
- kycStatus: "Verified",
+ joinDate: rawTenant.check_in_date || new Date().toISOString().split("T")[0],
+ rent: Number(rawTenant.rent_amount) || Number(bed.monthly_rent) || 0,
+ deposit: expectedDep,
+ depositPaidAmount: paidDep,
+ depositStatus: depStatus,
+ depositPaymentMode: depRow?.payment_mode || undefined,
+ depositCollectedByName: depRow?.collected_by_name || undefined,
+ depositCollectedAt: depRow?.collected_at || undefined,
+ depositReceiptNo: depRow?.transaction_ref || undefined,
+ depositDeduction: depRow?.deduction_amount ? Number(depRow.deduction_amount) : undefined,
+ depositDeductionReason: depRow?.deduction_reason || undefined,
+ depositRefundedAmount: depRow?.refunded_amount ? Number(depRow.refunded_amount) : undefined,
+ depositRefundedAt: depRow?.refunded_at || undefined,
+ rentPaid: paidRentTenantIds.has(rawTenant.id),
+ kycStatus: mappedKyc,
+ aadhaarNumber: rawTenant.id_proof_number || null,
+ kycDocUrl: rawTenant.id_proof_doc_url || null,
+ kycRejectionReason: rawTenant.kyc_rejection_reason || null,
  };
  }
 
@@ -685,6 +773,7 @@ export async function walkInAddTenant(
  joinDate: string;
  rentPaid: boolean;
  depositAmount?: number;
+ depositPaidAmount?: number;
  depositStatus?: "paid" | "pending";
  depositPaymentMode?: "cash" | "upi" | "bank_transfer";
  depositRef?: string;
@@ -718,11 +807,17 @@ export async function walkInAddTenant(
  }
 
  const tenantId = crypto.randomUUID();
- const depAmount = data.depositAmount ?? roomRent;
- const depStatus = data.depositStatus ?? "paid";
+ const depAmount = Math.max(0, Number(data.depositAmount ?? roomRent));
+ const depStatus = data.depositStatus ?? "pending";
+ const depPaid =
+ depStatus === "paid"
+ ? depAmount
+ : Math.min(depAmount, Math.max(0, Number(data.depositPaidAmount || 0)));
+ const finalDepStatus: "paid" | "pending" =
+ depAmount > 0 && depPaid < depAmount ? "pending" : depStatus;
 
  if (targetPgId && targetBedId) {
- // 1. Insert tenant into Supabase
+ // 1. Insert tenant into Supabase with explicit kyc_status = 'pending'
  const { error: tErr } = await db(admin, "tenants").insert({
  id: tenantId,
  pg_id: targetPgId,
@@ -734,6 +829,7 @@ export async function walkInAddTenant(
  rent_amount: roomRent,
  deposit_amount: depAmount,
  check_in_date: data.joinDate || new Date().toISOString().split("T")[0],
+ kyc_status: "pending",
  is_active: true,
  });
 
@@ -747,8 +843,8 @@ export async function walkInAddTenant(
  .update({ status: "occupied" })
  .eq("id", targetBedId);
 
- // 3. Record Security Deposit in Supabase if paid
- if (depStatus === "paid" && depAmount > 0) {
+ // 3. Always record Security Deposit row in Supabase (paid, partial, or pending)
+ if (depAmount > 0 || depPaid > 0) {
  await db(admin, "security_deposits").upsert(
  {
  id: crypto.randomUUID(),
@@ -756,13 +852,13 @@ export async function walkInAddTenant(
  building_id: buildingId,
  tenant_id: tenantId,
  expected_amount: depAmount,
- paid_amount: depAmount,
- status: "paid",
+ paid_amount: depPaid,
+ status: finalDepStatus,
  payment_mode: data.depositPaymentMode || "cash",
  transaction_ref: data.depositRef || null,
- collected_by: data.collectorId || null,
- collected_by_name: data.collectorName || "Warden Staff",
- collected_at: new Date().toISOString(),
+ collected_by: depPaid > 0 ? data.collectorId || null : null,
+ collected_by_name: depPaid > 0 ? data.collectorName || "Owner / Staff" : "Pending Collection",
+ collected_at: depPaid > 0 ? new Date().toISOString() : null,
  created_at: new Date().toISOString(),
  updated_at: new Date().toISOString(),
  },
@@ -851,33 +947,139 @@ export async function vacateBed(buildingId: string, floorIdx: number, roomId: st
  }
 }
 
+export async function submitTenantAadhaarKyc(params: {
+ tenantOrUserId: string;
+ phone?: string | null;
+ aadhaarNumber: string;
+ docUrl?: string | null;
+}) {
+ const admin = createAdminClient();
+ const cleanAadhaar = params.aadhaarNumber.replace(/\D/g, "");
+ if (cleanAadhaar.length !== 12) {
+ throw new Error("Please enter a valid 12-digit Aadhaar number.");
+ }
+
+ let tenant: any = null;
+ const { data: byId } = await db(admin, "tenants")
+ .select("id, full_name, pg_id, building_id")
+ .or(`id.eq.${params.tenantOrUserId},user_id.eq.${params.tenantOrUserId}`)
+ .eq("is_active", true)
+ .order("created_at", { ascending: false })
+ .limit(1)
+ .maybeSingle();
+ tenant = byId;
+
+ if (!tenant && params.phone) {
+ const digits = params.phone.replace(/\D/g, "").slice(-10);
+ if (digits.length === 10) {
+ const { data: byPhone } = await db(admin, "tenants")
+ .select("id, full_name, pg_id, building_id")
+ .ilike("phone", `%${digits}`)
+ .eq("is_active", true)
+ .order("created_at", { ascending: false })
+ .limit(1)
+ .maybeSingle();
+ tenant = byPhone;
+ }
+ }
+
+ if (!tenant) throw new Error("Active tenant profile not found.");
+
+ const nowIso = new Date().toISOString();
+ const { error: uErr } = await db(admin, "tenants")
+ .update({
+ id_proof_type: "aadhaar",
+ id_proof_number: cleanAadhaar,
+ id_proof_doc_url: params.docUrl || null,
+ kyc_status: "under_review",
+ kyc_submitted_at: nowIso,
+ kyc_rejection_reason: null,
+ updated_at: nowIso,
+ })
+ .eq("id", tenant.id);
+
+ if (uErr) throw new Error(`Failed to submit KYC: ${uErr.message}`);
+
+ try {
+ await db(admin, "pg_audit_logs").insert({
+ id: crypto.randomUUID(),
+ pg_id: tenant.pg_id,
+ building_id: tenant.building_id,
+ action: `Resident ${tenant.full_name} uploaded Aadhaar (ending ${cleanAadhaar.slice(-4)}) for KYC review`,
+ entity_table: "tenants",
+ entity_id: tenant.id,
+ created_at: nowIso,
+ });
+ } catch {}
+
+ return { success: true, tenantId: tenant.id, kycStatus: "Under Review" as const };
+}
+
 export async function verifyTenantKyc(tenantId: string) {
  const admin = createAdminClient();
  try {
  const { data: tenant } = await db(admin, "tenants")
  .select("id, full_name, pg_id, building_id")
- .eq("id", tenantId)
+ .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
+ .eq("is_active", true)
+ .order("created_at", { ascending: false })
+ .limit(1)
  .maybeSingle();
 
  if (!tenant) throw new Error("Tenant not found in database.");
 
- await db(admin, "tenants").update({ id_proof_type: "verified" }).eq("id", tenantId);
+ const nowIso = new Date().toISOString();
+ await db(admin, "tenants")
+ .update({
+ id_proof_type: "verified",
+ kyc_status: "verified",
+ kyc_verified_at: nowIso,
+ kyc_rejection_reason: null,
+ updated_at: nowIso,
+ })
+ .eq("id", tenant.id);
 
- await db(admin, "audit_logs").insert({
+ try {
+ await db(admin, "pg_audit_logs").insert({
  id: crypto.randomUUID(),
  pg_id: tenant.pg_id,
  building_id: tenant.building_id,
- action: `KYC verified for tenant ${tenant.full_name}`,
+ action: `KYC verified & approved for tenant ${tenant.full_name}`,
  entity_table: "tenants",
- entity_id: tenantId,
- created_at: new Date().toISOString(),
+ entity_id: tenant.id,
+ created_at: nowIso,
  });
+ } catch {}
 
  return { success: true };
  } catch (err: any) {
  console.error("verifyTenantKyc error:", err);
  throw err;
  }
+}
+
+export async function rejectTenantKyc(tenantId: string, reason: string) {
+ const admin = createAdminClient();
+ const { data: tenant } = await db(admin, "tenants")
+ .select("id, full_name, pg_id, building_id")
+ .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
+ .eq("is_active", true)
+ .order("created_at", { ascending: false })
+ .limit(1)
+ .maybeSingle();
+
+ if (!tenant) throw new Error("Tenant not found in database.");
+
+ const nowIso = new Date().toISOString();
+ await db(admin, "tenants")
+ .update({
+ kyc_status: "rejected",
+ kyc_rejection_reason: reason.trim() || "Document unclear, please re-upload Aadhaar.",
+ updated_at: nowIso,
+ })
+ .eq("id", tenant.id);
+
+ return { success: true };
 }
 
 export async function markBedRentPaid(tenantId: string) {
@@ -975,8 +1177,10 @@ export async function getSecurityDepositForTenant(tenantId: string): Promise<Sec
  try {
  const admin = createAdminClient();
  const { data: tenantData } = await db(admin, "tenants")
- .select("id, full_name, room_id, bed_id, rooms(room_number), beds(bed_name), buildings(name)")
+ .select("id, full_name, deposit_amount, room_id, bed_id, rooms(room_number), beds(bed_name), buildings(name)")
  .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
+ .eq("is_active", true)
+ .order("created_at", { ascending: false })
  .limit(1)
  .maybeSingle();
 
@@ -1040,14 +1244,24 @@ export async function collectSecurityDeposit(params: {
  throw new Error(`Tenant not found in database: ${tErr?.message || "Not found"}`);
  }
 
+ const { data: existingDep } = await db(admin, "security_deposits")
+ .select("expected_amount, paid_amount")
+ .eq("tenant_id", tenant.id)
+ .maybeSingle();
+
+ const expectedAmt = Math.max(Number(existingDep?.expected_amount ?? tenant.deposit_amount ?? amount), amount);
+ const prevPaid = Number(existingDep?.paid_amount ?? 0);
+ const newPaidTotal = prevPaid + Number(amount);
+ const newStatus = newPaidTotal >= expectedAmt ? "paid" : "pending";
+
  const { error: upsertErr } = await db(admin, "security_deposits").upsert(
  {
  pg_id: tenant.pg_id,
  building_id: tenant.building_id,
  tenant_id: tenant.id,
- expected_amount: tenant.deposit_amount || amount,
- paid_amount: amount,
- status: "paid",
+ expected_amount: expectedAmt,
+ paid_amount: newPaidTotal,
+ status: newStatus,
  payment_mode: paymentMode,
  transaction_ref: transactionRef || null,
  collected_by: collectorId || null,
@@ -1180,6 +1394,8 @@ export async function getRentPaymentsForTenant(tenantId: string): Promise<RentPa
  const { data: tenantData } = await db(admin, "tenants")
  .select("id, full_name, rooms(room_number)")
  .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
+ .eq("is_active", true)
+ .order("created_at", { ascending: false })
  .limit(1)
  .maybeSingle();
 
@@ -2116,4 +2332,101 @@ export async function updateTenantAndBed(
  }
 
  return { success: true };
+}
+
+export interface TenantLiveProfile {
+  tenantId: string;
+  pgId: string;
+  fullName: string;
+  phone: string;
+  email: string;
+  roomNumber: string;
+  bedLabel: string;
+  buildingName: string;
+  rentAmount: number;
+  depositAmount: number;
+  joinDate: string;
+  kycStatus: "Verified" | "Under Review" | "Pending" | "Rejected";
+  aadhaarNumber: string | null;
+  kycDocUrl: string | null;
+  kycRejectionReason: string | null;
+  upiId: string | null;
+}
+
+export async function getTenantLiveProfile(
+  userIdOrTenantId: string,
+  fallbackPhone?: string | null
+): Promise<TenantLiveProfile | null> {
+  if (!userIdOrTenantId && !fallbackPhone) return null;
+  try {
+    const admin = createAdminClient();
+    const selectStr = `
+      id, pg_id, full_name, phone, email, rent_amount, deposit_amount, check_in_date,
+      kyc_status, id_proof_type, id_proof_number, id_proof_doc_url, kyc_rejection_reason,
+      buildings(name),
+      rooms(room_number),
+      beds(bed_name),
+      pgs(id, upi_id)
+    `;
+
+    let tenant: any = null;
+    if (userIdOrTenantId) {
+      const { data } = await db(admin, "tenants")
+        .select(selectStr)
+        .or(`user_id.eq.${userIdOrTenantId},id.eq.${userIdOrTenantId}`)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      tenant = data;
+    }
+
+    if (!tenant && fallbackPhone) {
+      const digits = fallbackPhone.replace(/\D/g, "").slice(-10);
+      if (digits.length === 10) {
+        const { data } = await db(admin, "tenants")
+          .select(selectStr)
+          .ilike("phone", `%${digits}`)
+          .eq("is_active", true)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        tenant = data;
+      }
+    }
+
+    if (!tenant) return null;
+
+    const rawKyc = (tenant.kyc_status || "").toLowerCase();
+    let kycStatus: "Verified" | "Under Review" | "Pending" | "Rejected" = "Pending";
+    if (rawKyc === "verified" || tenant.id_proof_type === "verified") {
+      kycStatus = "Verified";
+    } else if (rawKyc === "under_review") {
+      kycStatus = "Under Review";
+    } else if (rawKyc === "rejected") {
+      kycStatus = "Rejected";
+    }
+
+    return {
+      tenantId: tenant.id,
+      pgId: tenant.pg_id,
+      fullName: tenant.full_name,
+      phone: tenant.phone,
+      email: tenant.email || "",
+      roomNumber: tenant.rooms?.room_number ? `Room ${tenant.rooms.room_number}` : "Pending Room",
+      bedLabel: tenant.beds?.bed_name || "Bed 1",
+      buildingName: tenant.buildings?.name || "Main Block",
+      rentAmount: Number(tenant.rent_amount) || 0,
+      depositAmount: Number(tenant.deposit_amount) || 0,
+      joinDate: tenant.check_in_date || new Date().toISOString().split("T")[0],
+      kycStatus,
+      aadhaarNumber: tenant.id_proof_number || null,
+      kycDocUrl: tenant.id_proof_doc_url || null,
+      kycRejectionReason: tenant.kyc_rejection_reason || null,
+      upiId: tenant.pgs?.upi_id || null,
+    };
+  } catch (err) {
+    console.error("getTenantLiveProfile error:", err);
+    return null;
+  }
 }

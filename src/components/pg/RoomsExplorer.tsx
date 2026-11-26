@@ -41,7 +41,7 @@ export function RoomsExplorer({
  activePasses = [],
 }: RoomsExplorerProps) {
  const router = useRouter();
- useRealtimeSync(["buildings", "floors", "rooms", "beds", "tenants", "payments", "complaints", "pgs"]);
+ useRealtimeSync(["buildings", "floors", "rooms", "beds", "tenants", "rent_payments", "security_deposits", "gate_passes", "complaints", "pgs"]);
 
  const isOwner = userRole === "owner" || userRole === "super_admin";
  const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
@@ -71,6 +71,26 @@ export function RoomsExplorer({
  const [addRoomTarget, setAddRoomTarget] = useState<{ building: BuildingItem; floorIdx: number } | null>(null);
  const [addBedTarget, setAddBedTarget] = useState<{ building: BuildingItem; floorIdx: number; roomId: string } | null>(null);
  const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
+
+ const resolvedProfileBed = activeProfileBed
+ ? (() => {
+ const lb = initialBuildings.find((b) => b.id === activeProfileBed.building.id);
+ if (!lb) return null;
+ const lf = lb.floors[activeProfileBed.floorIdx];
+ const lr = lf?.rooms.find((r) => r.id === activeProfileBed.room.id);
+ const lbed = lr?.beds[activeProfileBed.bedIdx];
+ return lb && lf && lr && lbed && lbed.occupied && lbed.tenant
+ ? {
+ building: lb,
+ floor: lf,
+ floorIdx: activeProfileBed.floorIdx,
+ room: lr,
+ bed: lbed,
+ bedIdx: activeProfileBed.bedIdx,
+ }
+ : null;
+ })()
+ : null;
 
  // Scoped buildings (Admins see their assigned buildings, Owners see all)
  const visibleBuildings =
@@ -516,6 +536,23 @@ export function RoomsExplorer({
  <div className="text-[11px] font-extrabold text-slate-900 truncate mt-0.5">
  {bed.tenant.name}
  </div>
+ <div className="flex flex-wrap gap-1 mt-1">
+ {!bed.tenant.rentPaid && (
+ <span className="px-1 py-0.2 rounded bg-rose-100 text-rose-700 text-[8px] font-extrabold">
+ Rent Due
+ </span>
+ )}
+ {bed.tenant.depositStatus === "pending" && (
+ <span className="px-1 py-0.2 rounded bg-amber-100 text-amber-800 text-[8px] font-extrabold">
+ Dep Due
+ </span>
+ )}
+ {bed.tenant.kycStatus === "Under Review" && (
+ <span className="px-1 py-0.2 rounded bg-sky-100 text-sky-800 text-[8px] font-extrabold">
+ KYC Review
+ </span>
+ )}
+ </div>
  </div>
  <ChevronRight className="w-3.5 h-3.5 text-rose-400 shrink-0" />
  </button>
@@ -601,17 +638,18 @@ export function RoomsExplorer({
  </div>
 
  {/* Right: Sticky Docked Bed Profile Side Inspector (Desktop >= 1024px) */}
- {activeProfileBed && (
+ {resolvedProfileBed && (
  <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto phone-scroll">
  <BedProfileSheet
+ key={`${resolvedProfileBed.bed.id}-${resolvedProfileBed.bed.tenant?.id || ""}`}
  isOpen={true}
  onClose={() => setActiveProfileBed(null)}
- building={activeProfileBed.building}
- floor={activeProfileBed.floor}
- floorIdx={activeProfileBed.floorIdx}
- room={activeProfileBed.room}
- bed={activeProfileBed.bed}
- bedIdx={activeProfileBed.bedIdx}
+ building={resolvedProfileBed.building}
+ floor={resolvedProfileBed.floor}
+ floorIdx={resolvedProfileBed.floorIdx}
+ room={resolvedProfileBed.room}
+ bed={resolvedProfileBed.bed}
+ bedIdx={resolvedProfileBed.bedIdx}
  userRole={userRole}
  allBuildings={initialBuildings}
  isDocked={true}
@@ -621,16 +659,17 @@ export function RoomsExplorer({
  </div>
 
  {/* 360 Occupied Bed Profile Bottom Sheet (< 1024px) */}
- {activeProfileBed && (
+ {resolvedProfileBed && (
  <BedProfileSheet
+ key={`sheet-${resolvedProfileBed.bed.id}-${resolvedProfileBed.bed.tenant?.id || ""}`}
  isOpen={true}
  onClose={() => setActiveProfileBed(null)}
- building={activeProfileBed.building}
- floor={activeProfileBed.floor}
- floorIdx={activeProfileBed.floorIdx}
- room={activeProfileBed.room}
- bed={activeProfileBed.bed}
- bedIdx={activeProfileBed.bedIdx}
+ building={resolvedProfileBed.building}
+ floor={resolvedProfileBed.floor}
+ floorIdx={resolvedProfileBed.floorIdx}
+ room={resolvedProfileBed.room}
+ bed={resolvedProfileBed.bed}
+ bedIdx={resolvedProfileBed.bedIdx}
  userRole={userRole}
  allBuildings={initialBuildings}
  isDocked={false}

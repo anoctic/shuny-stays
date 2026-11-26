@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
@@ -34,7 +34,7 @@ import { TenantMealPollCard } from "@/components/mess/TenantMealPollCard";
 import { MealPoll } from "@/types/meal-poll.types";
 import {
  submitTenantUpiScreenshotAction,
- verifySelfKycAction,
+ submitTenantKycAction,
 } from "@/app/actions/rooms-and-ops";
 
 interface TenantHomeExplorerProps {
@@ -68,7 +68,11 @@ interface TenantHomeExplorerProps {
  dinner: string;
  };
  initialDinnerPoll?: "Yes" | "No";
- initialKycStatus?: "Verified" | "Pending";
+ initialKycStatus?: "Verified" | "Under Review" | "Pending" | "Rejected";
+ initialAadhaarNumber?: string | null;
+ initialKycDocUrl?: string | null;
+ initialKycRejectionReason?: string | null;
+ tenantRecordId?: string;
  roomNumber?: string;
  buildingName?: string;
  rentAmount?: number;
@@ -105,11 +109,15 @@ export function TenantHomeExplorer({
  attendance,
  messMenu,
  initialKycStatus = "Pending",
- roomNumber = "Room 101 • Bed A",
- buildingName = "Block A - Krishna Bhawan",
- rentAmount = 8500,
+ initialAadhaarNumber = null,
+ initialKycDocUrl = null,
+ initialKycRejectionReason = null,
+ tenantRecordId,
+ roomNumber = "Pending Room",
+ buildingName = "Main Block",
+ rentAmount = 0,
  rentPaid = false,
- depositAmount = 8500,
+ depositAmount = 0,
  depositDetails,
  invoices = [],
  upiId = "royalstay@okicici",
@@ -120,15 +128,28 @@ export function TenantHomeExplorer({
  dinnerPollStatus = null,
 }: TenantHomeExplorerProps) {
  const router = useRouter();
- useRealtimeSync(["tenants", "payments", "complaints", "rooms", "attendance_logs"]);
+ useRealtimeSync(["tenants", "rent_payments", "security_deposits", "gate_passes", "complaints", "rooms", "pg_attendance_logs"]);
 
  const [showHistory, setShowHistory] = useState(false);
- const [kycStatus, setKycStatus] = useState<"Verified" | "Pending">(initialKycStatus);
+ const [kycStatus, setKycStatus] = useState<"Verified" | "Under Review" | "Pending" | "Rejected">(initialKycStatus);
  const [isKycModalOpen, setIsKycModalOpen] = useState(false);
  const [kycLoading, setKycLoading] = useState(false);
+ const [aadhaarInput, setAadhaarInput] = useState(initialAadhaarNumber || "");
+ const [aadhaarFile, setAadhaarFile] = useState<File | null>(null);
+ const [aadhaarDocUrl, setAadhaarDocUrl] = useState<string | null>(initialKycDocUrl || null);
+ const [kycError, setKycError] = useState<string | null>(null);
+
+ useEffect(() => {
+ setKycStatus(initialKycStatus);
+ }, [initialKycStatus]);
+
+ useEffect(() => {
+ if (initialAadhaarNumber) setAadhaarInput(initialAadhaarNumber);
+ if (initialKycDocUrl) setAadhaarDocUrl(initialKycDocUrl);
+ }, [initialAadhaarNumber, initialKycDocUrl]);
 
  // UTR submission state
- const [utrInput, setUtrInput] = useState("UTR40988712");
+ const [utrInput, setUtrInput] = useState("");
  const [utrSubmitted, setUtrSubmitted] = useState(false);
  const [utrLoading, setUtrLoading] = useState(false);
 
@@ -145,18 +166,39 @@ export function TenantHomeExplorer({
  showToast(`${label} copied to clipboard!`);
  };
 
- const handleKycSubmit = async () => {
+ const handleKycSubmit = async (e?: React.FormEvent) => {
+ if (e) e.preventDefault();
+ setKycError(null);
+ const cleanAadhaar = aadhaarInput.replace(/\D/g, "");
+ if (cleanAadhaar.length !== 12) {
+ setKycError("Please enter your valid 12-digit Aadhaar number.");
+ return;
+ }
+ if (!aadhaarFile && !aadhaarDocUrl) {
+ setKycError("Please upload your Aadhaar Card photo or PDF.");
+ return;
+ }
+
  setKycLoading(true);
  try {
- await verifySelfKycAction();
+ const fd = new FormData();
+ fd.append("aadhaarNumber", cleanAadhaar);
+ if (aadhaarFile) fd.append("aadhaarFile", aadhaarFile);
+ if (aadhaarDocUrl) fd.append("existingDocUrl", aadhaarDocUrl);
+ const res = await submitTenantKycAction(fd);
+ if (res && "error" in res && res.error) {
+ setKycError(res.error);
+ } else {
+ setKycStatus("Under Review");
+ if (res && "docUrl" in res && res.docUrl) {
+ setAadhaarDocUrl(res.docUrl);
+ }
  router.refresh();
- setKycStatus("Verified");
  setIsKycModalOpen(false);
- showToast("KYC Documents Verified & Synced!");
+ showToast("Aadhaar submitted! Waiting for PG Owner approval.");
+ }
  } catch {
- setKycStatus("Verified");
- setIsKycModalOpen(false);
- showToast("KYC Verified!");
+ setKycError("Failed to upload Aadhaar KYC. Please try again.");
  } finally {
  setKycLoading(false);
  }
@@ -247,23 +289,73 @@ export function TenantHomeExplorer({
  </span>
  </div>
 
- {/* KYC Alert if Pending */}
+ {/* KYC Alert / Status Banner when not yet Verified */}
  {kycStatus !== "Verified" && (
  <div
  onClick={() => setIsKycModalOpen(true)}
- className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex items-center justify-between gap-2 cursor-pointer transition hover:bg-amber-100/60"
+ className={`rounded-2xl p-3.5 flex items-center justify-between gap-2 cursor-pointer transition border ${
+ kycStatus === "Under Review"
+ ? "bg-sky-50 border-sky-200 hover:bg-sky-100/60"
+ : kycStatus === "Rejected"
+ ? "bg-rose-50 border-rose-200 hover:bg-rose-100/60"
+ : "bg-amber-50 border-amber-200 hover:bg-amber-100/60"
+ }`}
  >
  <div className="flex items-center gap-2.5 min-w-0">
- <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-700 shrink-0">
+ <div
+ className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+ kycStatus === "Under Review"
+ ? "bg-sky-500/20 text-sky-700"
+ : kycStatus === "Rejected"
+ ? "bg-rose-500/20 text-rose-700"
+ : "bg-amber-500/20 text-amber-700"
+ }`}
+ >
  <IdCard className="w-4 h-4" />
  </div>
  <div className="min-w-0">
- <div className="text-xs font-extrabold text-amber-900">KYC Verification Pending</div>
- <div className="text-[10px] text-amber-700 truncate">Tap to upload Aadhar & Selfie</div>
+ <div
+ className={`text-xs font-extrabold ${
+ kycStatus === "Under Review"
+ ? "text-sky-900"
+ : kycStatus === "Rejected"
+ ? "text-rose-900"
+ : "text-amber-900"
+ }`}
+ >
+ {kycStatus === "Under Review"
+ ? "Aadhaar Submitted • Under Owner Review"
+ : kycStatus === "Rejected"
+ ? "KYC Rejected • Re-upload Aadhaar"
+ : "KYC Verification Pending"}
+ </div>
+ <div
+ className={`text-[10px] truncate ${
+ kycStatus === "Under Review"
+ ? "text-sky-700"
+ : kycStatus === "Rejected"
+ ? "text-rose-700"
+ : "text-amber-700"
+ }`}
+ >
+ {kycStatus === "Under Review"
+ ? `Aadhaar XXXX-${aadhaarInput.replace(/\D/g, "").slice(-4) || "••••"} submitted. Waiting for PG Owner approval.`
+ : kycStatus === "Rejected"
+ ? initialKycRejectionReason || "Tap to re-upload clear Aadhaar photo"
+ : "Tap to enter 12-digit Aadhaar & upload Aadhaar card"}
  </div>
  </div>
- <span className="px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 text-[10px] font-extrabold shrink-0 shadow-xs">
- Verify →
+ </div>
+ <span
+ className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold shrink-0 shadow-xs ${
+ kycStatus === "Under Review"
+ ? "bg-sky-600 text-white"
+ : kycStatus === "Rejected"
+ ? "bg-rose-600 text-white"
+ : "bg-amber-500 text-slate-950"
+ }`}
+ >
+ {kycStatus === "Under Review" ? "Reviewing" : kycStatus === "Rejected" ? "Re-upload →" : "Verify →"}
  </span>
  </div>
  )}
@@ -298,7 +390,19 @@ export function TenantHomeExplorer({
  </div>
  <div>
  <span className="opacity-75 block text-[9px] uppercase">KYC Status</span>
- <strong className="text-emerald-300 block">{kycStatus}</strong>
+ <strong
+ className={`block ${
+ kycStatus === "Verified"
+ ? "text-emerald-300"
+ : kycStatus === "Under Review"
+ ? "text-sky-300"
+ : kycStatus === "Rejected"
+ ? "text-rose-300"
+ : "text-amber-300"
+ }`}
+ >
+ {kycStatus}
+ </strong>
  </div>
  </div>
  </div>
@@ -405,38 +509,76 @@ export function TenantHomeExplorer({
  {/* COLUMN 2: Monthly Rent, Auto-Invoices & Security Deposit */}
  <div className="space-y-3.5">
  {/* 4. Security Deposit Held Card */}
+ {(() => {
+ const expectedDep = depositDetails?.expectedAmount ?? depositAmount;
+ const paidDep = depositDetails ? (depositDetails.paidAmount ?? 0) : 0;
+ const remainingDep = Math.max(0, expectedDep - paidDep);
+ const isDepPaid = depositDetails?.status === "paid" && remainingDep === 0;
+ const isDepRefunded = depositDetails?.status === "refunded" || depositDetails?.status === "partially_refunded";
+ const hasPendingBalance = !isDepPaid && !isDepRefunded && (remainingDep > 0 || depositDetails?.status === "pending");
+
+ return (
  <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-3">
- <div className="flex items-center justify-between">
- <div className="flex items-center gap-3">
+ <div className="flex items-center justify-between gap-2">
+ <div className="flex items-center gap-3 min-w-0">
  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
  <ShieldCheck className="w-5 h-5" />
  </div>
- <div>
+ <div className="min-w-0">
  <div className="text-xs font-extrabold text-slate-900">Security Deposit</div>
- <div className="text-[10px] text-slate-400">100% Refundable at Checkout</div>
+ <div className="text-[10px] text-slate-400">
+ {paidDep > 0 && remainingDep > 0
+ ? `Total: ₹${expectedDep.toLocaleString("en-IN")} • Paid: ₹${paidDep.toLocaleString("en-IN")}`
+ : "100% Refundable at Checkout"}
  </div>
  </div>
- <div className="text-right">
+ </div>
+ <div className="text-right shrink-0">
  <div className="text-sm font-black text-slate-900 tabular-nums">
- ₹{(depositDetails?.paidAmount || depositAmount).toLocaleString("en-IN")}
+ ₹{(paidDep > 0 ? paidDep : expectedDep).toLocaleString("en-IN")}
+ {paidDep > 0 && remainingDep > 0 && (
+ <span className="text-[10px] font-bold text-slate-400"> / ₹{expectedDep.toLocaleString("en-IN")}</span>
+ )}
  </div>
  <span
- className={`px-2 py-0.5 rounded text-[9px] font-extrabold border ${
- depositDetails?.status === "paid" || !depositDetails
+ className={`inline-block px-2 py-0.5 rounded text-[9px] font-extrabold border ${
+ isDepPaid
  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+ : isDepRefunded
+ ? "bg-indigo-50 text-indigo-700 border-indigo-200"
  : "bg-amber-50 text-amber-700 border-amber-200"
  }`}
  >
- {depositDetails?.status === "paid" || !depositDetails ? "Paid & Held Safely" : "Deposit Pending"}
+ {isDepPaid
+ ? "Paid & Held Safely"
+ : isDepRefunded
+ ? "Settled / Refunded"
+ : paidDep > 0
+ ? `₹${remainingDep.toLocaleString("en-IN")} Pending`
+ : hasPendingBalance
+ ? "Pending • To be collected"
+ : "No Deposit Due"}
  </span>
  </div>
  </div>
 
  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
  <span>
- Received by: <strong className="text-slate-800">{depositDetails?.collectedByName || "Warden Ramesh Verma"}</strong>
+ {paidDep > 0 ? (
+ <>
+ Received by: <strong className="text-slate-800">{depositDetails?.collectedByName || "PG Owner"}</strong>
+ </>
+ ) : hasPendingBalance ? (
+ <strong className="text-amber-700">Remaining: ₹{remainingDep.toLocaleString("en-IN")} to be paid</strong>
+ ) : (
+ <span>Recorded by PG Office</span>
+ )}
  </span>
- <span>Date: {depositDetails?.collectedAt || "Nov 01, 2026"}</span>
+ <span>
+ {paidDep > 0
+ ? `Date: ${depositDetails?.collectedAt ? new Date(depositDetails.collectedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Recorded"}`
+ : "Pending Collection"}
+ </span>
  </div>
 
  <DepositReceiptModal
@@ -445,17 +587,31 @@ export function TenantHomeExplorer({
  primaryColor={brandColor}
  tenantName={session.full_name}
  roomNumber={roomNumber}
- receiptNumber={depositDetails?.id || "DEP-202611-001"}
- amount={depositDetails?.paidAmount || depositAmount}
- paymentMode={depositDetails?.paymentMode || "UPI Transfer"}
- paymentDate={depositDetails?.collectedAt || "Nov 01, 2026"}
- collectedByName={depositDetails?.collectedByName || "Warden Ramesh Verma"}
- status={depositDetails?.status === "paid" || !depositDetails ? "Paid • Held Safely" : "Deposit Pending"}
+ receiptNumber={depositDetails?.id || (tenantRecordId ? `DEP-${tenantRecordId.slice(0, 8).toUpperCase()}` : "DEP-PENDING")}
+ amount={paidDep > 0 ? paidDep : expectedDep}
+ paymentMode={paidDep > 0 ? depositDetails?.paymentMode || "Cash / UPI" : "Pending"}
+ paymentDate={
+ paidDep > 0 && depositDetails?.collectedAt
+ ? new Date(depositDetails.collectedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+ : "Pending"
+ }
+ collectedByName={paidDep > 0 ? depositDetails?.collectedByName || "PG Owner" : "Pending Collection"}
+ status={
+ isDepPaid
+ ? "Paid • Held Safely"
+ : isDepRefunded
+ ? "Settled • Refunded"
+ : paidDep > 0
+ ? `Partial (₹${paidDep.toLocaleString("en-IN")} Paid • ₹${remainingDep.toLocaleString("en-IN")} Pending)`
+ : "Pending • To be collected"
+ }
  deductionAmount={depositDetails?.deductionAmount}
  deductionReason={depositDetails?.deductionReason}
  refundedAmount={depositDetails?.refundedAmount}
  />
  </div>
+ );
+ })()}
 
  {/* 5. Rent & Auto-Invoices History Card with PDF Download */}
  <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-3 shadow-sm">
@@ -757,7 +913,7 @@ export function TenantHomeExplorer({
  <div className="flex items-center gap-2">
  <IdCard className="w-5 h-5 text-indigo-600" />
  <h3 className="text-sm font-extrabold text-slate-900">
- Self-Service KYC Upload
+ Aadhaar KYC Verification
  </h3>
  </div>
  <button
@@ -769,33 +925,68 @@ export function TenantHomeExplorer({
  </button>
  </div>
 
- <div className="space-y-2 text-xs">
- <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between font-bold text-slate-800">
- <span>Aadhar Card (Front & Back)</span>
- <span className="text-emerald-600 font-extrabold flex items-center gap-1">
- <Check className="w-3.5 h-3.5" /> Captured
- </span>
+ {kycError && (
+ <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+ {kycError}
  </div>
- <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between font-bold text-slate-800">
- <span>Live Resident Selfie</span>
- <span className="text-emerald-600 font-extrabold flex items-center gap-1">
- <Check className="w-3.5 h-3.5" /> Captured
- </span>
- </div>
+ )}
+
+ <form onSubmit={handleKycSubmit} className="space-y-3 text-xs">
+ <div>
+ <label className="text-[11px] font-bold text-slate-600 block mb-1">
+ 1. 12-Digit Aadhaar Number *
+ </label>
+ <input
+ type="text"
+ inputMode="numeric"
+ required
+ maxLength={14}
+ value={aadhaarInput}
+ onChange={(e) => {
+ const digits = e.target.value.replace(/\D/g, "").slice(0, 12);
+ setAadhaarInput(digits);
+ }}
+ placeholder="e.g. 421890341122"
+ className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:outline-indigo-500"
+ />
+ <p className="text-[10px] text-slate-400 mt-1">
+ Entered: {aadhaarInput.replace(/\D/g, "").length}/12 digits
+ </p>
  </div>
 
- <p className="text-[10px] text-slate-400">
- Verified instantly with government biometric simulation. Synced directly to Owner bed profile.
+ <div>
+ <label className="text-[11px] font-bold text-slate-600 block mb-1">
+ 2. Upload Aadhaar Card Photo / PDF *
+ </label>
+ <input
+ type="file"
+ accept="image/*,.pdf"
+ onChange={(e) => setAadhaarFile(e.target.files?.[0] || null)}
+ className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-extrabold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+ />
+ {aadhaarFile ? (
+ <p className="text-[10px] text-emerald-700 font-bold mt-1 flex items-center gap-1">
+ <Check className="w-3.5 h-3.5" /> Selected: {aadhaarFile.name}
  </p>
+ ) : aadhaarDocUrl ? (
+ <p className="text-[10px] text-sky-700 font-bold mt-1">
+ Already uploaded Aadhaar on file. Choose a new file to replace.
+ </p>
+ ) : null}
+ </div>
+
+ <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[10.5px] text-amber-800 font-semibold">
+ After upload, KYC status shows <strong>Under Review</strong> until the PG Owner reviews & approves your Aadhaar.
+ </div>
 
  <button
- type="button"
+ type="submit"
  disabled={kycLoading}
- onClick={handleKycSubmit}
- className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-xs transition"
+ className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold shadow-xs transition"
  >
- {kycLoading ? "Verifying KYC..." : "Submit & Verify KYC"}
+ {kycLoading ? "Uploading Aadhaar..." : "Submit Aadhaar for Owner Approval"}
  </button>
+ </form>
  </div>
  </div>
  )}
