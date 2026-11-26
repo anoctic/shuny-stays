@@ -25,8 +25,10 @@ export interface PgDetailItem {
  created_at: string;
  upi_id?: string | null;
  owner_initial_password?: string | null;
- meal_poll_enabled?: boolean;
+  meal_poll_enabled?: boolean;
   gate_pass_enabled?: boolean;
+  welcome_message_template?: string | null;
+  custom_message_template?: string | null;
 }
 
 /**
@@ -53,8 +55,11 @@ export const getAllPgs = cache(async (): Promise<PgDetailItem[]> => {
  plan_benefits,
  owner_initial_password,
  city,
+ upi_id,
  meal_poll_enabled,
  gate_pass_enabled,
+ welcome_message_template,
+ custom_message_template,
  created_at
  `)
  .order("created_at", { ascending: false });
@@ -169,8 +174,11 @@ export const getAllPgs = cache(async (): Promise<PgDetailItem[]> => {
  city: d.city || "Bengaluru",
  created_at: d.created_at,
  owner_initial_password: d.owner_initial_password || null,
+ upi_id: d.upi_id || null,
  meal_poll_enabled: d.meal_poll_enabled !== false,
         gate_pass_enabled: d.gate_pass_enabled !== false,
+ welcome_message_template: d.welcome_message_template || null,
+ custom_message_template: d.custom_message_template || null,
  };
  });
 
@@ -402,6 +410,59 @@ export async function updatePgBranding(
  city: "Bengaluru",
  created_at: updatedDb.created_at,
  };
+}
+
+export async function updatePgWifiAndTemplates(params: {
+ pgId: string;
+ welcomeMessageTemplate?: string | null;
+ customMessageTemplate?: string | null;
+ buildings: Array<{ id: string; wifiSsid: string | null; wifiPassword: string | null }>;
+ floors: Array<{ id: string; wifiSsid: string | null; wifiPassword: string | null }>;
+}): Promise<{ success: boolean }> {
+ const admin = createAdminClient();
+ const nowIso = new Date().toISOString();
+
+ const { error: pgErr } = await (admin.from("pgs" as any) as any)
+ .update({
+ welcome_message_template: params.welcomeMessageTemplate?.trim() || null,
+ custom_message_template: params.customMessageTemplate?.trim() || null,
+ updated_at: nowIso,
+ } as any)
+ .eq("id", params.pgId);
+
+ if (pgErr) {
+ throw new Error(`Failed to save message templates: ${pgErr.message}`);
+ }
+
+ for (const b of params.buildings) {
+ const { error: bErr } = await (admin.from("buildings" as any) as any)
+ .update({
+ wifi_ssid: b.wifiSsid?.trim() || null,
+ wifi_password: b.wifiPassword?.trim() || null,
+ updated_at: nowIso,
+ } as any)
+ .eq("id", b.id)
+ .eq("pg_id", params.pgId);
+ if (bErr) {
+ throw new Error(`Failed to update building Wi-Fi: ${bErr.message}`);
+ }
+ }
+
+ for (const f of params.floors) {
+ const { error: fErr } = await (admin.from("floors" as any) as any)
+ .update({
+ wifi_ssid: f.wifiSsid?.trim() || null,
+ wifi_password: f.wifiPassword?.trim() || null,
+ updated_at: nowIso,
+ } as any)
+ .eq("id", f.id)
+ .eq("pg_id", params.pgId);
+ if (fErr) {
+ throw new Error(`Failed to update floor Wi-Fi: ${fErr.message}`);
+ }
+ }
+
+ return { success: true };
 }
 
 /**

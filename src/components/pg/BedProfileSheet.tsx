@@ -44,6 +44,11 @@ import {
 } from "@/app/actions/rooms-and-ops";
 import { RentReceiptModal } from "@/components/tenant/RentReceiptModal";
 import { DepositReceiptModal } from "@/components/tenant/DepositReceiptModal";
+import { computeTenantCycleStatus } from "@/lib/utils/billing-cycle";
+import {
+ DEFAULT_WELCOME_TEMPLATE,
+ DEFAULT_CUSTOM_TEMPLATE,
+} from "@/components/settings/PgWifiAndTemplatesCard";
 
 interface BedProfileSheetProps {
  isOpen: boolean;
@@ -57,6 +62,10 @@ interface BedProfileSheetProps {
  userRole: "owner" | "admin" | "super_admin" | "tenant";
  initialTemplate?: "rent_reminder" | "welcome_info" | "custom";
  allBuildings?: BuildingItem[];
+ pgName?: string;
+ pgUpiId?: string;
+ welcomeTemplate?: string | null;
+ customTemplate?: string | null;
  isDocked?: boolean;
 }
 
@@ -72,12 +81,38 @@ export function BedProfileSheet({
  userRole,
  initialTemplate = "rent_reminder",
  allBuildings = [],
+ pgName = "Royal Stay PG",
+ pgUpiId = "royalstaypg@okicici",
+ welcomeTemplate,
+ customTemplate,
  isDocked = false,
 }: BedProfileSheetProps) {
  const router = useRouter();
  const [whatsappTemplate, setWhatsappTemplate] = useState<"rent_reminder" | "welcome_info" | "custom">(initialTemplate);
  const [whatsappAutoApi, setWhatsappAutoApi] = useState(false);
- const [customMsg, setCustomMsg] = useState("Namaste! Aapke PG room se juda ek zaroori update hai.");
+
+ const tenantInit = bed.tenant;
+ const floorWifiSsidInit = floor.wifiSsid || building.wifiSsid || "Ask PG Desk";
+ const floorWifiPassInit = floor.wifiPassword || building.wifiPassword || "Ask PG Desk";
+ const initPendingRent = tenantInit?.rentPaid ? 0 : (room.rent || tenantInit?.rent || 0);
+ const initExpectedDep = tenantInit?.deposit || 0;
+ const initPaidDep = tenantInit?.depositPaidAmount ?? (tenantInit?.depositStatus === "paid" ? initExpectedDep : 0);
+ const initPendingDep = Math.max(0, initExpectedDep - initPaidDep);
+ const initTotalPending = initPendingRent + initPendingDep;
+
+ const defaultResolvedCustom = (customTemplate?.trim() || DEFAULT_CUSTOM_TEMPLATE)
+ .replace(/\{tenant_name\}/g, tenantInit?.name || "Resident")
+ .replace(/\{pg_name\}/g, pgName)
+ .replace(/\{building_name\}/g, building.name)
+ .replace(/\{floor_name\}/g, floor.name)
+ .replace(/\{room_number\}/g, room.number)
+ .replace(/\{bed_label\}/g, bed.label)
+ .replace(/\{wifi_ssid\}/g, floorWifiSsidInit)
+ .replace(/\{wifi_password\}/g, floorWifiPassInit)
+ .replace(/\{phone\}/g, tenantInit?.phone || "")
+ .replace(/\{pending_total\}|\{total_pending\}/g, `₹${initTotalPending.toLocaleString("en-IN")}`);
+
+ const [customMsg, setCustomMsg] = useState(defaultResolvedCustom);
  const [vacateConfirmStep, setVacateConfirmStep] = useState(false);
  const [isProcessing, setIsProcessing] = useState(false);
  const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -86,7 +121,14 @@ export function BedProfileSheet({
  const [isEditingResident, setIsEditingResident] = useState(false);
  const [editFullName, setEditFullName] = useState(bed.tenant?.name || "");
  const [editPhone, setEditPhone] = useState(bed.tenant?.phone || "");
- const [editEmergencyPhone, setEditEmergencyPhone] = useState(bed.tenant?.parentPhone || "");
+ const [editParentsName, setEditParentsName] = useState(bed.tenant?.parentsName || "");
+ const [editParentsPhone, setEditParentsPhone] = useState(bed.tenant?.parentsPhone || "");
+ const [editEmergencyContactName, setEditEmergencyContactName] = useState(bed.tenant?.emergencyContactName || "");
+ const [editEmergencyPhone, setEditEmergencyPhone] = useState(bed.tenant?.emergencyContact || bed.tenant?.parentPhone || "");
+ const [editEmergencyRelation, setEditEmergencyRelation] = useState(bed.tenant?.emergencyRelation || "");
+ const [editAadhaarNumber, setEditAadhaarNumber] = useState(bed.tenant?.aadhaarNumber || "");
+ const [editPanNumber, setEditPanNumber] = useState(bed.tenant?.panNumber || "");
+ const [editAge, setEditAge] = useState(bed.tenant?.age !== null && bed.tenant?.age !== undefined ? String(bed.tenant.age) : "");
  const [editRent, setEditRent] = useState<number>(bed.tenant?.rent || room.rent || 8500);
  const [editDeposit, setEditDeposit] = useState<number>(bed.tenant?.deposit || 8500);
  const [selectedTargetBedId, setSelectedTargetBedId] = useState<string>(bed.id);
@@ -152,10 +194,23 @@ export function BedProfileSheet({
  e.preventDefault();
  setIsSavingResident(true);
  try {
+ const parsedAge = editAge.trim() ? Number(editAge.trim()) : null;
+ const validAge =
+ parsedAge !== null && !Number.isNaN(parsedAge) && parsedAge >= 10 && parsedAge <= 120
+ ? Math.round(parsedAge)
+ : null;
+
  const res = await updateTenantAndBedAction(t.id, {
  fullName: editFullName,
  phone: editPhone,
+ parentsName: editParentsName,
+ parentsPhone: editParentsPhone,
+ emergencyContactName: editEmergencyContactName,
  emergencyPhone: editEmergencyPhone,
+ emergencyRelation: editEmergencyRelation,
+ aadhaarNumber: editAadhaarNumber,
+ panNumber: editPanNumber,
+ age: validAge,
  rentAmount: editRent,
  depositAmount: editDeposit,
  newBedId: selectedTargetBedId !== bed.id ? selectedTargetBedId : undefined,
@@ -166,7 +221,14 @@ export function BedProfileSheet({
  } else {
  t.name = editFullName;
  t.phone = editPhone;
+ t.parentsName = editParentsName.trim() || null;
+ t.parentsPhone = editParentsPhone.replace(/\D/g, "") || null;
+ t.emergencyContactName = editEmergencyContactName.trim() || null;
  t.emergencyContact = editEmergencyPhone;
+ t.emergencyRelation = editEmergencyRelation.trim() || null;
+ t.aadhaarNumber = editAadhaarNumber.replace(/\D/g, "").slice(0, 12) || null;
+ t.panNumber = editPanNumber.trim().toUpperCase() || null;
+ t.age = validAge;
  t.rent = editRent;
  t.deposit = editDeposit;
  setToastMsg("Resident details & bed allocation saved live!");
@@ -180,13 +242,77 @@ export function BedProfileSheet({
  }
  };
 
+ // Dynamic billing & floor Wi-Fi calculations for this resident
+ const cycleInfo = computeTenantCycleStatus({
+ checkInDate: t.joinDate,
+ rentPaid: t.rentPaid,
+ lastPaidAt: t.lastRentPaidAt,
+ });
+ const monthlyRentVal = room.rent || t.rent || 0;
+ const pendingRentVal = t.rentPaid ? 0 : monthlyRentVal;
+ const expectedDepVal = t.deposit || 0;
+ const paidDepVal = t.depositPaidAmount ?? (t.depositStatus === "paid" ? expectedDepVal : 0);
+ const pendingDepVal = Math.max(0, expectedDepVal - paidDepVal);
+ const totalPendingVal = pendingRentVal + pendingDepVal;
+ const floorWifiSsid = floor.wifiSsid || building.wifiSsid || "Ask PG Desk";
+ const floorWifiPass = floor.wifiPassword || building.wifiPassword || "Ask PG Desk";
+
+ const applyTemplateTokens = (tpl: string) =>
+ tpl
+ .replace(/\{tenant_name\}/g, t.name)
+ .replace(/\{pg_name\}/g, pgName)
+ .replace(/\{building_name\}/g, building.name)
+ .replace(/\{floor_name\}/g, floor.name)
+ .replace(/\{room_number\}/g, room.number)
+ .replace(/\{bed_label\}/g, bed.label)
+ .replace(/\{wifi_ssid\}/g, floorWifiSsid)
+ .replace(/\{wifi_password\}/g, floorWifiPass)
+ .replace(/\{phone\}/g, t.phone)
+ .replace(/\{rent_amount\}/g, `₹${monthlyRentVal.toLocaleString("en-IN")}`)
+ .replace(/\{cycle_start\}/g, cycleInfo.formattedStartDate)
+ .replace(/\{cycle_end\}/g, cycleInfo.formattedEndDate)
+ .replace(/\{pending_rent\}/g, `₹${pendingRentVal.toLocaleString("en-IN")}`)
+ .replace(/\{pending_deposit\}/g, `₹${pendingDepVal.toLocaleString("en-IN")}`)
+ .replace(/\{pending_total\}|\{total_pending\}/g, `₹${totalPendingVal.toLocaleString("en-IN")}`)
+ .replace(/\{upi_id\}/g, pgUpiId);
+
  // Build WhatsApp Message
  const getWhatsappMessage = () => {
  if (whatsappTemplate === "rent_reminder") {
- return `Namaste ${t.name}, Shuny Stays (${building.name}, Room ${room.number}) ka aapka rent ₹${room.rent.toLocaleString("en-IN")} due hai. Kripya UPI ID royalstaypg@okicici par pay karein.`;
+ const cycleLine =
+ cycleInfo.daysLeft < 0
+ ? `Overdue by ${Math.abs(cycleInfo.daysLeft)} day(s)`
+ : cycleInfo.daysLeft === 0
+ ? "Ends Today"
+ : `${cycleInfo.daysLeft} day(s) remaining`;
+
+ const rentLine = t.rentPaid
+ ? `✅ Monthly Rent (₹${monthlyRentVal.toLocaleString("en-IN")}): Paid`
+ : `⏳ Monthly Rent Due: ₹${pendingRentVal.toLocaleString("en-IN")}`;
+
+ const depositLine =
+ pendingDepVal > 0
+ ? `⏳ Security Deposit: Paid ₹${paidDepVal.toLocaleString("en-IN")} / ₹${expectedDepVal.toLocaleString("en-IN")} • Pending ₹${pendingDepVal.toLocaleString("en-IN")}`
+ : expectedDepVal > 0
+ ? `✅ Security Deposit (₹${expectedDepVal.toLocaleString("en-IN")}): Paid`
+ : `ℹ️ Security Deposit: Not Applicable`;
+
+ const totalLine =
+ totalPendingVal > 0
+ ? `💰 *Total Pending Balance: ₹${totalPendingVal.toLocaleString("en-IN")}*\n📲 Pay via UPI: ${pgUpiId}`
+ : `🎉 *All Rent & Deposit dues are clear!*`;
+
+ return [
+ `Namaste *${t.name}*!`,
+ `🏠 ${pgName} • ${building.name}, ${floor.name} (Room ${room.number} - ${bed.label})`,
+ `📅 Billing Cycle: ${cycleInfo.formattedStartDate} to ${cycleInfo.formattedEndDate} (${cycleLine})`,
+ rentLine,
+ depositLine,
+ totalLine,
+ ].join("\n");
  }
  if (whatsappTemplate === "welcome_info") {
- return `Welcome ${t.name} to Shuny Stays (${building.name}, Room ${room.number})! Wi-Fi: ShunyStays_5G | Pass: ShunyStays@2026.`;
+ return applyTemplateTokens(welcomeTemplate?.trim() || DEFAULT_WELCOME_TEMPLATE);
  }
  return customMsg;
  };
@@ -581,14 +707,111 @@ export function BedProfileSheet({
 
  <div>
  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
- Parent / Emergency Phone
+ Parent&apos;s Name (Opt.)
+ </label>
+ <input
+ type="text"
+ value={editParentsName}
+ onChange={(e) => setEditParentsName(e.target.value)}
+ placeholder="e.g. Rajesh Kumar"
+ className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white"
+ />
+ </div>
+
+ <div>
+ <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+ Parent&apos;s Mobile No. (Opt.)
  </label>
  <input
  type="tel"
+ maxLength={10}
+ value={editParentsPhone}
+ onChange={(e) => setEditParentsPhone(e.target.value)}
+ placeholder="e.g. 9811223344"
+ className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white font-mono"
+ />
+ </div>
+
+ <div>
+ <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+ Emergency Contact Name (Opt.)
+ </label>
+ <input
+ type="text"
+ value={editEmergencyContactName}
+ onChange={(e) => setEditEmergencyContactName(e.target.value)}
+ placeholder="e.g. Sunita Devi"
+ className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white"
+ />
+ </div>
+
+ <div>
+ <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+ Emergency Mobile (Opt.)
+ </label>
+ <input
+ type="tel"
+ maxLength={10}
  value={editEmergencyPhone}
  onChange={(e) => setEditEmergencyPhone(e.target.value)}
- placeholder="Parent / Emergency Contact"
+ placeholder="Emergency Number"
  className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white font-mono"
+ />
+ </div>
+
+ <div>
+ <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+ Relation (Opt.)
+ </label>
+ <input
+ type="text"
+ value={editEmergencyRelation}
+ onChange={(e) => setEditEmergencyRelation(e.target.value)}
+ placeholder="e.g. Father / Mother / Guardian"
+ className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white"
+ />
+ </div>
+
+ <div>
+ <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+ Age (Opt.)
+ </label>
+ <input
+ type="number"
+ min={10}
+ max={120}
+ value={editAge}
+ onChange={(e) => setEditAge(e.target.value)}
+ placeholder="e.g. 21"
+ className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white"
+ />
+ </div>
+
+ <div>
+ <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+ Aadhaar Card No. (Opt.)
+ </label>
+ <input
+ type="text"
+ maxLength={12}
+ value={editAadhaarNumber}
+ onChange={(e) => setEditAadhaarNumber(e.target.value)}
+ placeholder="12-digit Aadhaar (Opt.)"
+ className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white font-mono"
+ />
+ </div>
+
+ <div>
+ <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+ PAN Card No. (Opt.)
+ </label>
+ <input
+ type="text"
+ maxLength={10}
+ value={editPanNumber}
+ onChange={(e) => setEditPanNumber(e.target.value.toUpperCase())}
+ placeholder="e.g. ABCDE1234F (Opt.)"
+ className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white font-mono uppercase"
  />
  </div>
 
@@ -655,6 +878,54 @@ export function BedProfileSheet({
  </div>
  </form>
  )}
+
+ {/* Resident Guardian, Emergency & Optional ID Details Card */}
+ <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5 space-y-2">
+ <div className="flex items-center justify-between gap-2">
+ <span className="text-[11px] font-black text-slate-900 uppercase tracking-wider">
+ Guardian, Emergency &amp; Resident Profile
+ </span>
+ {isOwner && !isEditingResident && (
+ <button
+ type="button"
+ onClick={() => setIsEditingResident(true)}
+ className="text-[10px] font-extrabold text-indigo-600 hover:underline cursor-pointer"
+ >
+ Fill / Edit
+ </button>
+ )}
+ </div>
+ <div className="grid grid-cols-2 gap-2 text-[10.5px]">
+ <div className="p-2 rounded-xl bg-white border border-slate-200/70">
+ <span className="text-[9.5px] font-bold text-slate-400 uppercase block">Parent Details</span>
+ <span className="font-bold text-slate-800 block truncate">
+ {t.parentsName || "Not filled"}
+ {t.parentsPhone ? ` • ${t.parentsPhone}` : ""}
+ </span>
+ </div>
+ <div className="p-2 rounded-xl bg-white border border-slate-200/70">
+ <span className="text-[9.5px] font-bold text-slate-400 uppercase block">
+ Emergency ({t.emergencyRelation || "Contact"})
+ </span>
+ <span className="font-bold text-slate-800 block truncate">
+ {t.emergencyContactName || "Not filled"}
+ {(t.emergencyContact || t.parentPhone) ? ` • ${t.emergencyContact || t.parentPhone}` : ""}
+ </span>
+ </div>
+ <div className="p-2 rounded-xl bg-white border border-slate-200/70">
+ <span className="text-[9.5px] font-bold text-slate-400 uppercase block">Age / PAN (Opt.)</span>
+ <span className="font-bold text-slate-800 block truncate font-mono">
+ {t.age ? `${t.age} yrs` : "Age —"} • {t.panNumber || "PAN —"}
+ </span>
+ </div>
+ <div className="p-2 rounded-xl bg-white border border-slate-200/70">
+ <span className="text-[9.5px] font-bold text-slate-400 uppercase block">Month Cycle &amp; Wi-Fi</span>
+ <span className="font-bold text-slate-800 block truncate">
+ {cycleInfo.formattedStartDate} → {cycleInfo.formattedEndDate}
+ </span>
+ </div>
+ </div>
+ </div>
 
  {/* AMBER ALERT BANNER: PENDING CASH HANDOVER TO OWNER */}
  {isHandoverPending && (
@@ -1223,7 +1494,7 @@ export function BedProfileSheet({
  <div className="pt-1 flex items-center gap-2">
  <a
  href={`https://wa.me/91${t.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
- `Namaste ${t.name}! Rent payment of ₹${generatedInvoice.amount.toLocaleString("en-IN")} for Royal Stay PG (${building.name}, Room ${room.number}) has been recorded.\n• Invoice No: ${generatedInvoice.id}\n• Payment Mode: ${generatedInvoice.paymentMode.toUpperCase()}\n• Timestamp: ${generatedInvoice.collectedAt}\n• Status: Confirmed Paid ✅\nThank you!`
+ `Namaste ${t.name}! Rent payment of ₹${generatedInvoice.amount.toLocaleString("en-IN")} for ${pgName} (${building.name}, Room ${room.number}) has been recorded.\n• Invoice No: ${generatedInvoice.id}\n• Payment Mode: ${generatedInvoice.paymentMode.toUpperCase()}\n• Timestamp: ${generatedInvoice.collectedAt}\n• Status: Confirmed Paid ✅\nThank you!`
  )}`}
  target="_blank"
  rel="noreferrer"
@@ -1234,7 +1505,7 @@ export function BedProfileSheet({
  </a>
 
  <RentReceiptModal
- pgName="Royal Stay PG"
+ pgName={pgName}
  primaryColor="#4F46E5"
  tenantName={t.name}
  roomNumber={`Room ${room.number}`}
@@ -1308,15 +1579,27 @@ export function BedProfileSheet({
  </div>
 
  {whatsappTemplate === "custom" ? (
- <input
- type="text"
+ <div className="space-y-1.5">
+ <textarea
+ rows={3}
  value={customMsg}
  onChange={(e) => setCustomMsg(e.target.value)}
- className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-[10.5px] text-slate-900"
+ placeholder="Type custom WhatsApp message for this resident..."
+ className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-[10.5px] text-slate-900 leading-relaxed focus:outline-none focus:border-emerald-500"
  />
+ <div className="flex justify-end">
+ <button
+ type="button"
+ onClick={() => setCustomMsg(applyTemplateTokens(customTemplate?.trim() || DEFAULT_CUSTOM_TEMPLATE))}
+ className="text-[9.5px] font-extrabold text-emerald-700 hover:underline cursor-pointer"
+ >
+ Load PG Saved Custom Template
+ </button>
+ </div>
+ </div>
  ) : (
- <div className="p-2 bg-white/80 rounded-lg text-[10px] text-slate-600 leading-relaxed border border-emerald-100">
- &ldquo;{getWhatsappMessage()}&rdquo;
+ <div className="p-2.5 bg-white/90 rounded-lg text-[10px] text-slate-700 leading-relaxed border border-emerald-100 whitespace-pre-line">
+ {getWhatsappMessage()}
  </div>
  )}
 

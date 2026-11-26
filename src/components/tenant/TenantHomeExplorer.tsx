@@ -84,6 +84,7 @@ interface TenantHomeExplorerProps {
  lastRentPaidAt?: string | null;
  roomNumber?: string;
  buildingName?: string;
+ floorName?: string;
  rentAmount?: number;
  rentPaid?: boolean;
  depositAmount?: number;
@@ -128,14 +129,15 @@ export function TenantHomeExplorer({
  lastRentPaidAt = null,
  roomNumber = "Pending Room",
  buildingName = "Main Block",
+ floorName = "",
  rentAmount = 0,
  rentPaid = false,
  depositAmount = 0,
  depositDetails,
  invoices = [],
  upiId = "royalstay@okicici",
- wifiName = "ROYAL_5G_RESIDENT",
- wifiPass = "StayRoyal@2026",
+ wifiName = "",
+ wifiPass = "",
  broadcasts = [],
  mealPollStatus,
  dinnerPollStatus = null,
@@ -150,6 +152,8 @@ export function TenantHomeExplorer({
  "meal_poll_responses",
  "complaints",
  "rooms",
+ "floors",
+ "buildings",
  "pg_attendance_logs",
  ]);
 
@@ -651,6 +655,63 @@ export function TenantHomeExplorer({
           </div>
           <ArrowRight className="w-4 h-4 text-orange-600 group-hover:translate-x-0.5 transition-transform shrink-0" />
         </Link>
+
+ {/* Floor-Wise Live Wi-Fi Access Card */}
+ <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-2.5">
+ <div className="flex items-center justify-between gap-2">
+ <div className="flex items-center gap-2 min-w-0">
+ <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+ <Wifi className="w-4 h-4" />
+ </div>
+ <div className="min-w-0">
+ <div className="text-xs font-extrabold text-slate-900">
+ Floor Wi-Fi Credentials
+ </div>
+ <div className="text-[10px] text-slate-500 truncate">
+ {floorName || buildingName}
+ </div>
+ </div>
+ </div>
+ <span
+ className={`px-2 py-0.5 rounded-full text-[9.5px] font-extrabold border ${
+ wifiName
+ ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+ : "bg-slate-50 text-slate-500 border-slate-200"
+ }`}
+ >
+ {wifiName ? "Active" : "Not Set"}
+ </span>
+ </div>
+
+ {wifiName ? (
+ <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2 text-xs">
+ <div className="min-w-0 space-y-0.5">
+ <div className="text-[10.5px] font-bold text-slate-500 truncate">
+ Network: <strong className="text-slate-900 font-black">{wifiName}</strong>
+ </div>
+ <div className="text-[10.5px] font-bold text-slate-500 truncate">
+ Password:{" "}
+ <strong className="font-mono text-indigo-700 font-black">
+ {wifiPass || "Open Network"}
+ </strong>
+ </div>
+ </div>
+ {wifiPass && (
+ <button
+ type="button"
+ onClick={() => copyToClipboard(wifiPass, "Wi-Fi Password")}
+ className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-extrabold border border-indigo-200 shrink-0 transition cursor-pointer"
+ >
+ Copy Pass
+ </button>
+ )}
+ </div>
+ ) : (
+ <div className="p-2.5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-[10.5px] text-slate-500 font-medium">
+ Owner ne abhi is floor ka Wi-Fi configure nahi kiya hai.
+ </div>
+ )}
+ </div>
 
  {/* Resident Account & Login Security on Desktop (Column 1 bottom) */}
  <div className="hidden lg:block pt-1">

@@ -12,6 +12,7 @@ import { Building } from "@/types/schema.types";
 import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 import { getPlatformBillingSettings } from "@/lib/data/billing-settings";
 import { RealtimeSyncSubscriber } from "@/components/common/RealtimeSyncSubscriber";
+import { ContactSupportFooter } from "@/components/settings/ContactSupportFooter";
 import { SubscriptionStatusGuard } from "@/components/dashboard/SubscriptionStatusGuard";
 
 export const runtime = "edge";
@@ -116,6 +117,7 @@ export default async function DashboardLayout({
  <RealtimeSyncSubscriber
  tables={[
  "buildings",
+ "floors",
  "rooms",
  "beds",
  "tenants",
@@ -193,6 +195,11 @@ export default async function DashboardLayout({
  }
  >
  {children}
+ <ContactSupportFooter
+ pgName={pgDetails.name}
+ userName={session.full_name}
+ role={session.role as "owner" | "admin"}
+ />
  </DesktopLayoutShell>
  <MobileBottomNav role={session.role} openComplaintsCount={2} pendingDuesCount={3} />
  </div>

@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { LogOut, Sparkles, Building2, Ticket, PhoneCall, ChevronDown, KeyRound } from "lucide-react";
+import { LogOut, PhoneCall, KeyRound } from "lucide-react";
 import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
 import { UserRole, Building, PlatformBroadcast } from "@/types/schema.types";
 import { BuildingSwitcher } from "./BuildingSwitcher";
 import { NotificationCenter } from "./NotificationCenter";
-import { signOutAction, switchDemoPersonaAction } from "@/app/actions/auth";
+import { signOutAction } from "@/app/actions/auth";
 
 interface MobileTopHeaderProps {
  fullName: string;
@@ -26,7 +25,6 @@ export function MobileTopHeader({
  activeBuildingId,
  broadcasts = [],
 }: MobileTopHeaderProps) {
- const [showPersonaMenu, setShowPersonaMenu] = useState(false);
 
  // Fintech Indigo Exact Badge Styling from Blueprint
  const roleBadgeConfig = {
@@ -145,15 +143,14 @@ export function MobileTopHeader({
  <KeyRound className="w-3.5 h-3.5" />
  </Link>
 
- {/* Role Pill with pulsating live dot */}
- <button
- onClick={() => setShowPersonaMenu(!showPersonaMenu)}
- title="Click to test other role personas"
- className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-extrabold transition-all active:scale-95 shadow-xs cursor-pointer apple-liquid-glass-pill focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-600 ${badge.className}`}
+ {/* Current Logged-In Role Pill (Read-only) */}
+ <span
+ title={`Current Role: ${badge.label}`}
+ className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-extrabold shadow-xs apple-liquid-glass-pill ${badge.className}`}
  >
- <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${badge.dot}`} />
+ <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
  <span>{badge.label}</span>
- </button>
+ </span>
 
  {/* Emergency Call Icon for Tenant */}
  {role === "tenant" && (
@@ -184,84 +181,6 @@ export function MobileTopHeader({
  Scope:
  </span>
  <BuildingSwitcher buildings={buildings} activeBuildingId={activeBuildingId} />
- </div>
- )}
-
- {/* Demo Persona Switcher Dropdown (Dev Testing) */}
- {showPersonaMenu && (
- <div className="absolute right-3.5 top-14 w-64 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2.5 z-50 animate-fade-in">
- <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider">
- <span className="flex items-center gap-1">
- <Sparkles className="w-3 h-3 text-amber-500" /> Switch Demo Role
- </span>
- </div>
-
- <div className="space-y-1 mt-1">
- <button
- onClick={() => {
- setShowPersonaMenu(false);
- switchDemoPersonaAction("owner");
- }}
- className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-[#F1F5F9] transition-colors text-left"
- >
- <div>
- <span className="font-extrabold text-emerald-700">PG Owner</span>
- <p className="text-[10px] text-[#64748B]">Full business & financial superset</p>
- </div>
- </button>
-
- <button
- onClick={() => {
- setShowPersonaMenu(false);
- switchDemoPersonaAction("owner", { noPg: true });
- }}
- className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-[#F1F5F9] transition-colors text-left border border-dashed border-emerald-300 bg-emerald-50/50"
- >
- <div>
- <span className="font-extrabold text-emerald-800">New Owner (First-Time)</span>
- <p className="text-[10px] text-emerald-700">Test /onboarding wizard</p>
- </div>
- </button>
-
- <button
- onClick={() => {
- setShowPersonaMenu(false);
- switchDemoPersonaAction("admin");
- }}
- className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-[#F1F5F9] transition-colors text-left"
- >
- <div>
- <span className="font-extrabold text-amber-700">Admin / Warden</span>
- <p className="text-[10px] text-[#64748B]">Assigned building ops & gate passes</p>
- </div>
- </button>
-
- <button
- onClick={() => {
- setShowPersonaMenu(false);
- switchDemoPersonaAction("tenant");
- }}
- className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-[#F1F5F9] transition-colors text-left"
- >
- <div>
- <span className="font-extrabold text-[#4F46E5]">Tenant / Student</span>
- <p className="text-[10px] text-[#64748B]">Bed, rent dues, QR gate passes</p>
- </div>
- </button>
-
- <button
- onClick={() => {
- setShowPersonaMenu(false);
- switchDemoPersonaAction("super_admin");
- }}
- className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-[#F1F5F9] transition-colors text-left"
- >
- <div>
- <span className="font-extrabold text-purple-700">Super Admin</span>
- <p className="text-[10px] text-[#64748B]">Platform governance & subscriptions</p>
- </div>
- </button>
- </div>
  </div>
  )}
  </header>

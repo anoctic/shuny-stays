@@ -500,6 +500,24 @@ export async function processBulkImportChunk(params: {
       bed_id: item.bedId,
       full_name: item.row.tenantName.trim(),
       phone: item.cleanPhone,
+      parents_name: item.row.parentsName?.trim() || null,
+      parents_phone: item.row.parentsPhone ? item.row.parentsPhone.replace(/\D/g, "").slice(-10) || null : null,
+      emergency_contact_name: item.row.emergencyContactName?.trim() || item.row.parentsName?.trim() || null,
+      emergency_contact_phone:
+        (item.row.emergencyContactPhone || item.row.parentsPhone || "").replace(/\D/g, "").slice(-10) ||
+        null,
+      emergency_relation: item.row.emergencyRelation?.trim() || null,
+      id_proof_type: "pending",
+      id_proof_number: item.row.aadhaarNumber ? item.row.aadhaarNumber.replace(/\D/g, "").slice(0, 12) || null : null,
+      pan_number: item.row.panNumber ? item.row.panNumber.trim().toUpperCase() || null : null,
+      age:
+        item.row.age !== undefined &&
+        item.row.age !== "" &&
+        !Number.isNaN(Number(item.row.age)) &&
+        Number(item.row.age) >= 10 &&
+        Number(item.row.age) <= 120
+          ? Math.round(Number(item.row.age))
+          : null,
       rent_amount: item.rent,
       deposit_amount: item.depositAmount,
       check_in_date: item.row.joinDate || nowIso.split("T")[0],

@@ -11,6 +11,14 @@ export interface BulkImportRowInput {
   depositPaid: boolean;
   rentPaidThisMonth: boolean;
   joinDate: string;
+  parentsName?: string;
+  parentsPhone?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyRelation?: string;
+  aadhaarNumber?: string;
+  panNumber?: string;
+  age?: number | string;
 }
 
 export interface ParsedBulkRow extends BulkImportRowInput {
@@ -122,6 +130,32 @@ const HEADER_ALIASES: Record<string, keyof BulkImportRowInput> = {
   join_date: "joinDate",
   check_in_date: "joinDate",
   checkin_date: "joinDate",
+  parents_name: "parentsName",
+  parent_name: "parentsName",
+  father_name: "parentsName",
+  mother_name: "parentsName",
+  parents_phone: "parentsPhone",
+  parent_phone: "parentsPhone",
+  parents_number: "parentsPhone",
+  parent_mobile: "parentsPhone",
+  emergency_name: "emergencyContactName",
+  emergency_contact_name: "emergencyContactName",
+  emergency_phone: "emergencyContactPhone",
+  emergency_number: "emergencyContactPhone",
+  emergency_contact: "emergencyContactPhone",
+  emergency_contact_phone: "emergencyContactPhone",
+  relation: "emergencyRelation",
+  emergency_relation: "emergencyRelation",
+  relationship: "emergencyRelation",
+  aadhaar: "aadhaarNumber",
+  aadhar: "aadhaarNumber",
+  aadhaar_number: "aadhaarNumber",
+  aadhar_number: "aadhaarNumber",
+  aadhaar_card: "aadhaarNumber",
+  pan: "panNumber",
+  pan_number: "panNumber",
+  pan_card: "panNumber",
+  age: "age",
 };
 
 /**
@@ -234,6 +268,34 @@ export function parseBulkSpreadsheetText(
           case "joinDate":
             record.joinDate = val;
             break;
+          case "parentsName":
+            record.parentsName = val;
+            break;
+          case "parentsPhone":
+            record.parentsPhone = normalizeIndianPhone(val) || val;
+            break;
+          case "emergencyContactName":
+            record.emergencyContactName = val;
+            break;
+          case "emergencyContactPhone":
+            record.emergencyContactPhone = normalizeIndianPhone(val) || val;
+            break;
+          case "emergencyRelation":
+            record.emergencyRelation = val;
+            break;
+          case "aadhaarNumber":
+            record.aadhaarNumber = val.replace(/\D/g, "").slice(0, 12);
+            break;
+          case "panNumber":
+            record.panNumber = val.trim().toUpperCase();
+            break;
+          case "age": {
+            const parsedAge = parseInt(val.replace(/\D/g, ""), 10);
+            if (!isNaN(parsedAge) && parsedAge >= 10 && parsedAge <= 120) {
+              record.age = parsedAge;
+            }
+            break;
+          }
         }
       });
     } else {
@@ -365,11 +427,19 @@ export function generateSampleCsvTemplate(): string {
     "deposit_paid",
     "rent_paid_this_month",
     "join_date",
+    "parents_name",
+    "parents_phone",
+    "emergency_contact_name",
+    "emergency_contact_phone",
+    "emergency_relation",
+    "aadhaar_number",
+    "pan_number",
+    "age",
   ];
   const sampleRows = [
-    ["Main Block", "1st Floor", "101", "2", "8500", "Rahul Sharma", "9876543210", "8500", "yes", "yes", new Date().toISOString().split("T")[0]],
-    ["Main Block", "1st Floor", "101", "2", "8500", "Amit Verma", "9876543211", "8500", "yes", "no", new Date().toISOString().split("T")[0]],
-    ["Main Block", "1st Floor", "102", "1", "11000", "Priya Nair", "9876543212", "11000", "yes", "yes", new Date().toISOString().split("T")[0]],
+    ["Main Block", "1st Floor", "101", "2", "8500", "Rahul Sharma", "9876543210", "8500", "yes", "yes", new Date().toISOString().split("T")[0], "Rajesh Sharma", "9876500001", "Rajesh Sharma", "9876500001", "Father", "", "", "21"],
+    ["Main Block", "1st Floor", "101", "2", "8500", "Amit Verma", "9876543211", "8500", "yes", "no", new Date().toISOString().split("T")[0], "Sunita Verma", "9876500002", "Vikram Verma", "9876500003", "Brother", "", "", "22"],
+    ["Main Block", "1st Floor", "102", "1", "11000", "Priya Nair", "9876543212", "11000", "yes", "yes", new Date().toISOString().split("T")[0], "", "", "", "", "", "", "", ""],
   ];
 
   return [headers.join(","), ...sampleRows.map((r) => r.join(","))].join("\r\n");

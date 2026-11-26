@@ -1,23 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import {
- Sparkles,
  Building2,
  PhoneCall,
  KeyRound,
- Crown,
- ChevronDown,
- Shield,
- User,
- ExternalLink,
  Menu,
 } from "lucide-react";
 import { UserRole, Building, PlatformBroadcast } from "@/types/schema.types";
 import { BuildingSwitcher } from "./BuildingSwitcher";
 import { NotificationCenter } from "./NotificationCenter";
-import { switchDemoPersonaAction, signOutAction } from "@/app/actions/auth";
 import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
 import { useSidebar } from "./SidebarContext";
 import { cn } from "@/lib/utils";
@@ -39,7 +31,6 @@ export function DesktopTopBar({
  activeBuildingId,
  broadcasts = [],
 }: DesktopTopBarProps) {
- const [showPersonaMenu, setShowPersonaMenu] = useState(false);
  const { isCollapsed, toggleSidebar, effectiveWidth, isDragging } = useSidebar();
 
  const roleBadgeConfig = {
@@ -150,89 +141,16 @@ export function DesktopTopBar({
  <KeyRound className="w-4 h-4" />
  </Link>
 
- {/* Role Persona Switcher Pill (Interactive dropdown for dev/testing) */}
- <div className="relative">
- <button
- type="button"
- onClick={() => setShowPersonaMenu(!showPersonaMenu)}
- title="Click to switch live persona"
+ {/* Current Logged-In Role Badge (Read-only) */}
+ <div
+ title={`Current Role: ${badge.label}`}
  className={cn(
-        "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-black transition-all hover:scale-105 active:scale-95 shadow-xs cursor-pointer apple-liquid-glass-pill focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-600",
+        "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-black shadow-xs apple-liquid-glass-pill",
         badge.className
       )}
  >
- <span className={`w-2 h-2 rounded-full animate-pulse ${badge.dot}`} />
+ <span className={`w-2 h-2 rounded-full ${badge.dot}`} />
  <span>{badge.label}</span>
- <ChevronDown className="w-3 h-3 opacity-60" />
- </button>
-
- {showPersonaMenu && (
- <div className="absolute right-0 top-11 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 z-50 animate-in fade-in zoom-in-95">
- <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1">
- <span className="flex items-center gap-1.5">
- <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Switch Demo Role Persona
- </span>
- </div>
-
- <div className="space-y-1">
- <button
- type="button"
- onClick={() => {
- setShowPersonaMenu(false);
- switchDemoPersonaAction("owner");
- }}
- className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs hover:bg-slate-50 transition-colors text-left"
- >
- <div>
- <span className="font-extrabold text-emerald-600">PG Owner</span>
- <p className="text-[10px] text-slate-500">Full business & financial superset</p>
- </div>
- </button>
-
- <button
- type="button"
- onClick={() => {
- setShowPersonaMenu(false);
- switchDemoPersonaAction("admin");
- }}
- className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs hover:bg-slate-50 transition-colors text-left"
- >
- <div>
- <span className="font-extrabold text-amber-700">PG Warden / Admin</span>
- <p className="text-[10px] text-slate-500">Attendance, meal poll & cash desk</p>
- </div>
- </button>
-
- <button
- type="button"
- onClick={() => {
- setShowPersonaMenu(false);
- switchDemoPersonaAction("tenant");
- }}
- className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs hover:bg-slate-50 transition-colors text-left"
- >
- <div>
- <span className="font-extrabold text-indigo-600">Resident Tenant</span>
- <p className="text-[10px] text-slate-500">Digital ID, meal poll & UPI dues</p>
- </div>
- </button>
-
- <button
- type="button"
- onClick={() => {
- setShowPersonaMenu(false);
- switchDemoPersonaAction("super_admin");
- }}
- className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs hover:bg-slate-50 transition-colors text-left"
- >
- <div>
- <span className="font-extrabold text-purple-700">Super Admin</span>
- <p className="text-[10px] text-slate-500">Platform SaaS governance & all PGs</p>
- </div>
- </button>
- </div>
- </div>
- )}
  </div>
 
  {/* Tenant Emergency Call Hotline */}

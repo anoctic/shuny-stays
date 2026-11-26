@@ -315,8 +315,115 @@ export function WalkInSheet({
  </div>
  </div>
 
+ {/* Optional Resident, Parent, Emergency & KYC Fields (Can be filled after onboarding too) */}
+ <details open className="rounded-xl bg-slate-50 border border-slate-200 p-3 space-y-2.5">
+ <summary className="text-[11px] font-extrabold text-slate-800 cursor-pointer select-none flex items-center justify-between">
+ <span>5. Parent, Emergency, Aadhaar / PAN &amp; Age (Optional)</span>
+ <span className="text-[9.5px] font-bold text-indigo-600">Can fill after onboarding</span>
+ </summary>
+ <p className="text-[10px] text-slate-500">
+ Optional at onboarding — need not be filled now; can be completed/edited after onboarding.
+ </p>
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+ <div>
+ <label className="text-[10px] font-bold text-slate-600 block mb-0.5">
+ Parent&apos;s Name (Opt.)
+ </label>
+ <input
+ name="parentsName"
+ type="text"
+ placeholder="e.g. Rajesh Kumar"
+ className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none text-xs"
+ />
+ </div>
+ <div>
+ <label className="text-[10px] font-bold text-slate-600 block mb-0.5">
+ Parent&apos;s Mobile No. (Opt.)
+ </label>
+ <input
+ name="parentsPhone"
+ type="tel"
+ maxLength={10}
+ placeholder="e.g. 9811223344"
+ className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none text-xs"
+ />
+ </div>
+ <div>
+ <label className="text-[10px] font-bold text-slate-600 block mb-0.5">
+ Emergency Contact Name (Opt.)
+ </label>
+ <input
+ name="emergencyContactName"
+ type="text"
+ placeholder="e.g. Sunita Devi"
+ className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none text-xs"
+ />
+ </div>
+ <div>
+ <label className="text-[10px] font-bold text-slate-600 block mb-0.5">
+ Emergency Contact No. (Opt.)
+ </label>
+ <input
+ name="emergencyContactPhone"
+ type="tel"
+ maxLength={10}
+ placeholder="e.g. 9811223355"
+ className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none text-xs"
+ />
+ </div>
+ <div>
+ <label className="text-[10px] font-bold text-slate-600 block mb-0.5">
+ Relation (Opt.)
+ </label>
+ <input
+ name="emergencyRelation"
+ type="text"
+ placeholder="e.g. Father / Mother / Guardian"
+ className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none text-xs"
+ />
+ </div>
+ <div>
+ <label className="text-[10px] font-bold text-slate-600 block mb-0.5">
+ Age (Opt.)
+ </label>
+ <input
+ name="age"
+ type="number"
+ min={10}
+ max={120}
+ placeholder="e.g. 21"
+ className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none text-xs"
+ />
+ </div>
+ <div>
+ <label className="text-[10px] font-bold text-slate-600 block mb-0.5">
+ Aadhaar Card No. (Opt.)
+ </label>
+ <input
+ name="aadhaarNumber"
+ type="text"
+ maxLength={12}
+ placeholder="12-digit Aadhaar (Opt.)"
+ className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-mono font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none text-xs"
+ />
+ </div>
+ <div>
+ <label className="text-[10px] font-bold text-slate-600 block mb-0.5">
+ PAN Card No. (Opt.)
+ </label>
+ <input
+ name="panNumber"
+ type="text"
+ maxLength={10}
+ placeholder="e.g. ABCDE1234F (Opt.)"
+ className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-mono font-semibold text-slate-900 uppercase placeholder:text-slate-400 placeholder:normal-case focus:outline-none text-xs"
+ />
+ </div>
+ </div>
+ </details>
+
  <label className="flex items-center justify-between p-2.5 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] cursor-pointer">
- <span className="font-bold text-[#0F172A]">5. Current Month Rent Paid?</span>
+ <span className="font-bold text-[#0F172A]">6. Current Month Rent Paid?</span>
  <input
  name="rentPaid"
  type="checkbox"

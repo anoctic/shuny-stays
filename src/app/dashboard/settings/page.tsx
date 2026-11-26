@@ -5,10 +5,18 @@ export const revalidate = 0;
 import Link from "next/link";
 import { ArrowLeft, ShieldCheck, Building2, User, KeyRound } from "lucide-react";
 import { getCurrentUserSession } from "@/lib/auth/session";
+import { getAllBuildings } from "@/lib/data/rooms";
+import { getPgById } from "@/lib/data/pgs";
 import { AccountSecurityCard } from "@/components/settings/AccountSecurityCard";
+import { PgWifiAndTemplatesCard } from "@/components/settings/PgWifiAndTemplatesCard";
 
 export default async function DashboardSettingsPage() {
  const session = await getCurrentUserSession();
+ const [buildings, dbPg] = await Promise.all([
+ getAllBuildings(),
+ session.pg_id ? getPgById(session.pg_id) : Promise.resolve(null),
+ ]);
+ const canEditTemplates = session.role === "owner" || session.role === "super_admin";
 
  return (
  <div className="space-y-4 max-w-2xl mx-auto pb-8">
@@ -40,6 +48,16 @@ export default async function DashboardSettingsPage() {
  role={session.role}
  currentEmail={session.email}
  currentPhone={session.phone}
+ />
+
+ {/* Floor-Wise Wi-Fi Credentials & Custom WhatsApp Message Templates */}
+ <PgWifiAndTemplatesCard
+ pgId={dbPg?.id || session.pg_id || ""}
+ pgName={dbPg?.name || session.pg_name || "Royal Stay PG"}
+ buildings={buildings}
+ initialWelcomeTemplate={dbPg?.welcome_message_template}
+ initialCustomTemplate={dbPg?.custom_message_template}
+ canEdit={canEditTemplates}
  />
 
  {/* Active Property Scope Card */}

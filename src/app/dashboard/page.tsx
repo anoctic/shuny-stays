@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Utensils } from "lucide-react";
 import { getCurrentUserSession } from "@/lib/auth/session";
 import { getAllBuildings } from "@/lib/data/rooms";
+import { getPgById } from "@/lib/data/pgs";
 import { getPassesForManagement } from "@/lib/data/gate-passes";
 import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 import { getMealPollSummary } from "@/lib/data/meal-polls";
@@ -16,12 +17,13 @@ export default async function DashboardPage() {
  const session = await getCurrentUserSession();
  const pgId = session.pg_id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
 
- const [buildings, passes, broadcasts, lunchSummary, dinnerSummary] = await Promise.all([
+ const [buildings, passes, broadcasts, lunchSummary, dinnerSummary, dbPg] = await Promise.all([
  getAllBuildings(),
  getPassesForManagement({ pgId: session.pg_id || undefined }),
  getActiveBroadcastsForRole(session.role),
  getMealPollSummary(pgId, "lunch"),
  getMealPollSummary(pgId, "dinner"),
+ session.pg_id ? getPgById(session.pg_id) : Promise.resolve(null),
  ]);
 
  const activePasses = passes.map((p) => ({
@@ -70,6 +72,10 @@ export default async function DashboardPage() {
  initialBuildings={buildings}
  userRole={session.role}
  activePasses={activePasses}
+ pgName={dbPg?.name || session.pg_name || "Royal Stay PG"}
+ pgUpiId={dbPg?.upi_id || undefined}
+ welcomeTemplate={dbPg?.welcome_message_template}
+ customTemplate={dbPg?.custom_message_template}
  />
  </div>
  );

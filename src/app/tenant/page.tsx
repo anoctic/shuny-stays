@@ -152,15 +152,20 @@ export default async function TenantDashboardPage() {
  ? `${liveProfile.roomNumber} • ${liveProfile.bedLabel}`
  : "Pending Allocation"
  }
- buildingName={liveProfile?.buildingName || "Main Block"}
+ buildingName={
+ liveProfile?.floorName
+ ? `${liveProfile.buildingName} • ${liveProfile.floorName}`
+ : liveProfile?.buildingName || "Main Block"
+ }
  rentAmount={liveProfile?.rentAmount ?? 0}
  rentPaid={rentPaid}
  depositAmount={expectedDep}
  depositDetails={depositDetails}
  invoices={invoices}
  upiId={liveProfile?.upiId || (pg as any).upi_id || "royalstay@okicici"}
- wifiName="ROYAL_5G_RESIDENT"
- wifiPass="StayRoyal@2026"
+ wifiName={liveProfile?.wifiSsid || ""}
+ wifiPass={liveProfile?.wifiPassword || ""}
+ floorName={liveProfile?.floorName || ""}
  broadcasts={broadcasts}
  mealPollStatus={lunchPollStatus}
  dinnerPollStatus={dinnerPollStatus}

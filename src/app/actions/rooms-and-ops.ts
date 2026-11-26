@@ -210,6 +210,22 @@ export async function walkInAddTenantAction(
  const depositPaymentMode = (formData.get("depositPaymentMode") as "cash" | "upi" | "bank_transfer") || "cash";
  const depositRef = (formData.get("depositRef") as string) || undefined;
 
+ // Optional Extended Resident Details (can also be filled/edited after onboarding)
+ const parentsName = ((formData.get("parentsName") as string) || "").trim() || undefined;
+ const parentsPhoneRaw = ((formData.get("parentsPhone") as string) || "").replace(/\D/g, "");
+ const parentsPhone = parentsPhoneRaw ? parentsPhoneRaw.slice(-10) : undefined;
+ const emergencyContactName = ((formData.get("emergencyContactName") as string) || "").trim() || undefined;
+ const emergencyPhoneRaw = ((formData.get("emergencyContactPhone") as string) || "").replace(/\D/g, "");
+ const emergencyContactPhone = emergencyPhoneRaw ? emergencyPhoneRaw.slice(-10) : undefined;
+ const emergencyRelation = ((formData.get("emergencyRelation") as string) || "").trim() || undefined;
+ const aadhaarRaw = ((formData.get("aadhaarNumber") as string) || "").replace(/\D/g, "").slice(0, 12);
+ const aadhaarNumber = aadhaarRaw || undefined;
+ const panRaw = ((formData.get("panNumber") as string) || "").trim().toUpperCase();
+ const panNumber = panRaw || undefined;
+ const ageRaw = ((formData.get("age") as string) || "").trim();
+ const parsedAge = ageRaw ? parseInt(ageRaw, 10) : NaN;
+ const age = !Number.isNaN(parsedAge) && parsedAge >= 10 && parsedAge <= 120 ? parsedAge : undefined;
+
  const profilePhotoFile = formData.get("profilePhoto") as File | null;
  if (!profilePhotoFile || typeof profilePhotoFile !== "object" || !("size" in profilePhotoFile) || profilePhotoFile.size === 0) {
  return { error: "Please upload Resident Profile Photo (mandatory for manual onboarding)." };
@@ -237,6 +253,14 @@ export async function walkInAddTenantAction(
  depositPaymentMode,
  depositRef,
  profilePhotoUrl,
+ parentsName,
+ parentsPhone,
+ emergencyContactName,
+ emergencyContactPhone,
+ emergencyRelation,
+ aadhaarNumber,
+ panNumber,
+ age,
  collectorName: session.full_name,
  collectorId: session.id,
  });
@@ -796,7 +820,14 @@ export async function updateTenantAndBedAction(
  data: {
  fullName: string;
  phone: string;
+ parentsName?: string;
+ parentsPhone?: string;
+ emergencyContactName?: string;
  emergencyPhone?: string;
+ emergencyRelation?: string;
+ aadhaarNumber?: string;
+ panNumber?: string;
+ age?: number | null;
  rentAmount: number;
  depositAmount: number;
  newBedId?: string;

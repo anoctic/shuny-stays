@@ -15,6 +15,12 @@ export interface TenantProfileItem {
  phone: string;
  parentPhone: string;
  emergencyContact?: string;
+ parentsName?: string | null;
+ parentsPhone?: string | null;
+ emergencyContactName?: string | null;
+ emergencyRelation?: string | null;
+ panNumber?: string | null;
+ age?: number | null;
  college: string;
  joinDate: string;
  deposit: number;
@@ -56,6 +62,8 @@ export interface RoomItem {
 export interface FloorItem {
  id: string;
  name: string;
+ wifiSsid?: string | null;
+ wifiPassword?: string | null;
  rooms: RoomItem[];
 }
 
@@ -64,6 +72,8 @@ export interface BuildingItem {
  pgId: string;
  name: string;
  type: string;
+ wifiSsid?: string | null;
+ wifiPassword?: string | null;
  floors: FloorItem[];
 }
 
@@ -199,15 +209,15 @@ export const getAllBuildings = cache(async (selectedBuildingId?: string | null):
  const session = await getCurrentUserSession();
  const admin = createAdminClient();
  let query = db(admin, "buildings").select(`
- id, pg_id, name, gender_type,
+ id, pg_id, name, gender_type, wifi_ssid, wifi_password,
  floors (
- id, floor_number, floor_name,
+ id, floor_number, floor_name, wifi_ssid, wifi_password,
  rooms (
  id, room_number, sharing_type, base_rent_monthly,
  beds (
  id, bed_name, status, monthly_rent,
  tenants (
- id, full_name, phone, emergency_contact_phone, work_or_college, check_in_date, rent_amount, deposit_amount, is_active, kyc_status, id_proof_type, id_proof_number, id_proof_doc_url, kyc_rejection_reason, profile_photo_url, created_at
+ id, full_name, phone, parents_name, parents_phone, emergency_contact_name, emergency_contact_phone, emergency_relation, work_or_college, check_in_date, rent_amount, deposit_amount, is_active, kyc_status, id_proof_type, id_proof_number, pan_number, age, id_proof_doc_url, kyc_rejection_reason, profile_photo_url, created_at
  )
  )
  )
@@ -287,6 +297,8 @@ export const getAllBuildings = cache(async (selectedBuildingId?: string | null):
  pgId: b.pg_id,
  name: b.name,
  type: b.gender_type === "boys" ? "Boys Hostel" : b.gender_type === "girls" ? "Girls Hostel" : "Co-living PG",
+ wifiSsid: b.wifi_ssid || null,
+ wifiPassword: b.wifi_password || null,
  floors: sortedFloors.map((f: any) => {
  const sortedRooms = (f.rooms || []).sort((r1: any, r2: any) =>
  String(r1.room_number).localeCompare(String(r2.room_number), undefined, { numeric: true })
@@ -295,6 +307,8 @@ export const getAllBuildings = cache(async (selectedBuildingId?: string | null):
  return {
  id: f.id,
  name: f.floor_name || `Floor ${f.floor_number}`,
+ wifiSsid: f.wifi_ssid || null,
+ wifiPassword: f.wifi_password || null,
  rooms: sortedRooms.map((r: any) => {
  const sortedBeds = (r.beds || []).sort((b1: any, b2: any) =>
  String(b1.bed_name).localeCompare(String(b2.bed_name))
@@ -344,7 +358,14 @@ export const getAllBuildings = cache(async (selectedBuildingId?: string | null):
  pgId: b.pg_id,
  name: rawTenant.full_name,
  phone: rawTenant.phone,
- parentPhone: rawTenant.emergency_contact_phone || "",
+ parentPhone: rawTenant.parents_phone || rawTenant.emergency_contact_phone || "",
+ emergencyContact: rawTenant.emergency_contact_phone || "",
+ parentsName: rawTenant.parents_name || null,
+ parentsPhone: rawTenant.parents_phone || null,
+ emergencyContactName: rawTenant.emergency_contact_name || null,
+ emergencyRelation: rawTenant.emergency_relation || null,
+ panNumber: rawTenant.pan_number || null,
+ age: rawTenant.age !== null && rawTenant.age !== undefined ? Number(rawTenant.age) : null,
  college: rawTenant.work_or_college || "",
  joinDate: rawTenant.check_in_date || new Date().toISOString().split("T")[0],
  rent: Number(rawTenant.rent_amount) || Number(bed.monthly_rent) || 0,
@@ -786,6 +807,14 @@ export async function walkInAddTenant(
  depositPaymentMode?: "cash" | "upi" | "bank_transfer";
  depositRef?: string;
  profilePhotoUrl?: string | null;
+ parentsName?: string;
+ parentsPhone?: string;
+ emergencyContactName?: string;
+ emergencyContactPhone?: string;
+ emergencyRelation?: string;
+ aadhaarNumber?: string;
+ panNumber?: string;
+ age?: number;
  collectorName?: string;
  collectorId?: string;
  }
@@ -835,6 +864,14 @@ export async function walkInAddTenant(
  bed_id: targetBedId,
  full_name: data.name.trim(),
  phone: data.phone.trim(),
+ parents_name: data.parentsName?.trim() || null,
+ parents_phone: data.parentsPhone?.trim() || null,
+ emergency_contact_name: data.emergencyContactName?.trim() || data.parentsName?.trim() || null,
+ emergency_contact_phone: data.emergencyContactPhone?.trim() || data.parentsPhone?.trim() || null,
+ emergency_relation: data.emergencyRelation?.trim() || null,
+ id_proof_number: data.aadhaarNumber?.trim() || null,
+ pan_number: data.panNumber?.trim().toUpperCase() || null,
+ age: data.age && data.age >= 10 && data.age <= 120 ? data.age : null,
  rent_amount: roomRent,
  deposit_amount: depAmount,
  check_in_date: data.joinDate || new Date().toISOString().split("T")[0],
@@ -2332,7 +2369,14 @@ export async function updateTenantAndBed(
  params: {
  fullName: string;
  phone: string;
+ parentsName?: string;
+ parentsPhone?: string;
+ emergencyContactName?: string;
  emergencyPhone?: string;
+ emergencyRelation?: string;
+ aadhaarNumber?: string;
+ panNumber?: string;
+ age?: number | null;
  rentAmount: number;
  depositAmount: number;
  newBedId?: string;
@@ -2387,8 +2431,35 @@ export async function updateTenantAndBed(
  updated_at: new Date().toISOString(),
  };
 
+ if (params.parentsName !== undefined) {
+ updatePayload.parents_name = params.parentsName.trim() || null;
+ }
+ if (params.parentsPhone !== undefined) {
+ updatePayload.parents_phone = params.parentsPhone.replace(/[^0-9]/g, "") || null;
+ }
+ if (params.emergencyContactName !== undefined) {
+ updatePayload.emergency_contact_name = params.emergencyContactName.trim() || null;
+ }
  if (params.emergencyPhone !== undefined) {
- updatePayload.emergency_contact_phone = params.emergencyPhone.replace(/[^0-9]/g, "");
+ updatePayload.emergency_contact_phone = params.emergencyPhone.replace(/[^0-9]/g, "") || null;
+ }
+ if (params.emergencyRelation !== undefined) {
+ updatePayload.emergency_relation = params.emergencyRelation.trim() || null;
+ }
+ if (params.aadhaarNumber !== undefined) {
+ const cleanAadhaar = params.aadhaarNumber.replace(/\D/g, "").slice(0, 12);
+ updatePayload.id_proof_number = cleanAadhaar || null;
+ }
+ if (params.panNumber !== undefined) {
+ const cleanPan = params.panNumber.trim().toUpperCase();
+ updatePayload.pan_number = cleanPan || null;
+ }
+ if (params.age !== undefined) {
+ const parsedAge = typeof params.age === "number" ? params.age : Number(params.age);
+ updatePayload.age =
+ !Number.isNaN(parsedAge) && parsedAge >= 10 && parsedAge <= 120
+ ? Math.round(parsedAge)
+ : null;
  }
 
  const { error: tenantErr } = await db(admin, "tenants")
@@ -2422,15 +2493,19 @@ export interface TenantLiveProfile {
   roomNumber: string;
   bedLabel: string;
   buildingName: string;
+  floorName: string | null;
   rentAmount: number;
   depositAmount: number;
   joinDate: string;
   kycStatus: "Verified" | "Under Review" | "Pending" | "Rejected";
   aadhaarNumber: string | null;
+  panNumber: string | null;
   kycDocUrl: string | null;
   kycRejectionReason: string | null;
   profilePhotoUrl: string | null;
   upiId: string | null;
+  wifiSsid: string | null;
+  wifiPassword: string | null;
 }
 
 export async function getTenantLiveProfile(
@@ -2442,9 +2517,9 @@ export async function getTenantLiveProfile(
     const admin = createAdminClient();
     const selectStr = `
       id, pg_id, building_id, full_name, phone, email, rent_amount, deposit_amount, check_in_date,
-      kyc_status, id_proof_type, id_proof_number, id_proof_doc_url, kyc_rejection_reason, profile_photo_url,
-      buildings(name),
-      rooms(room_number),
+      kyc_status, id_proof_type, id_proof_number, pan_number, id_proof_doc_url, kyc_rejection_reason, profile_photo_url,
+      buildings(name, wifi_ssid, wifi_password),
+      rooms(room_number, floor_id),
       beds(bed_name),
       pgs(id, upi_id)
     `;
@@ -2477,6 +2552,15 @@ export async function getTenantLiveProfile(
 
     if (!tenant) return null;
 
+    let floorRow: { floor_name?: string | null; wifi_ssid?: string | null; wifi_password?: string | null } | null = null;
+    if (tenant.rooms?.floor_id) {
+      const { data: fl } = await db(admin, "floors")
+        .select("floor_name, wifi_ssid, wifi_password")
+        .eq("id", tenant.rooms.floor_id)
+        .maybeSingle();
+      floorRow = fl || null;
+    }
+
     const rawKyc = (tenant.kyc_status || "").toLowerCase();
     let kycStatus: "Verified" | "Under Review" | "Pending" | "Rejected" = "Pending";
     if (rawKyc === "verified" || tenant.id_proof_type === "verified") {
@@ -2497,15 +2581,19 @@ export async function getTenantLiveProfile(
       roomNumber: tenant.rooms?.room_number ? `Room ${tenant.rooms.room_number}` : "Pending Room",
       bedLabel: tenant.beds?.bed_name || "Bed 1",
       buildingName: tenant.buildings?.name || "Main Block",
+      floorName: floorRow?.floor_name || null,
       rentAmount: Number(tenant.rent_amount) || 0,
       depositAmount: Number(tenant.deposit_amount) || 0,
       joinDate: tenant.check_in_date || new Date().toISOString().split("T")[0],
       kycStatus,
       aadhaarNumber: tenant.id_proof_number || null,
+      panNumber: tenant.pan_number || null,
       kycDocUrl: tenant.id_proof_doc_url || null,
       kycRejectionReason: tenant.kyc_rejection_reason || null,
       profilePhotoUrl: tenant.profile_photo_url || null,
       upiId: tenant.pgs?.upi_id || null,
+      wifiSsid: floorRow?.wifi_ssid || tenant.buildings?.wifi_ssid || null,
+      wifiPassword: floorRow?.wifi_password || tenant.buildings?.wifi_password || null,
     };
   } catch (err) {
     console.error("getTenantLiveProfile error:", err);

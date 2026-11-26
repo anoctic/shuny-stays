@@ -377,3 +377,52 @@ export async function resetPgOwnerPasswordAction(pgId: string, customPassword?: 
  return { error: err?.message || "Failed to reset PG owner password." };
  }
 }
+
+/**
+ * PG Owner Action: Save per-building & per-floor Wi-Fi credentials + Welcome/Custom WhatsApp templates
+ */
+export async function updateOwnerWifiAndTemplatesAction(payload: {
+ pgId?: string;
+ welcomeMessageTemplate: string;
+ customMessageTemplate: string;
+ buildings: Array<{ id: string; wifiSsid: string; wifiPassword: string }>;
+ floors: Array<{ id: string; wifiSsid: string; wifiPassword: string }>;
+}) {
+ const session = await getCurrentUserSession();
+ if (session.role !== "owner" && session.role !== "super_admin" && !session.is_super_admin) {
+ return { error: "Unauthorized: Only PG Owner can configure Wi-Fi & message templates." };
+ }
+
+ const targetPgId =
+ session.role === "super_admin" && payload.pgId ? payload.pgId : session.pg_id;
+ if (!targetPgId) {
+ return { error: "PG ID missing in active session." };
+ }
+
+ try {
+ const { updatePgWifiAndTemplates } = await import("@/lib/data/pgs");
+ await updatePgWifiAndTemplates({
+ pgId: targetPgId,
+ welcomeMessageTemplate: payload.welcomeMessageTemplate,
+ customMessageTemplate: payload.customMessageTemplate,
+ buildings: payload.buildings.map((b) => ({
+ id: b.id,
+ wifiSsid: b.wifiSsid || null,
+ wifiPassword: b.wifiPassword || null,
+ })),
+ floors: payload.floors.map((f) => ({
+ id: f.id,
+ wifiSsid: f.wifiSsid || null,
+ wifiPassword: f.wifiPassword || null,
+ })),
+ });
+
+ revalidatePath("/dashboard/settings");
+ revalidatePath("/dashboard/rooms");
+ revalidatePath("/dashboard");
+ revalidatePath("/tenant");
+ return { success: true };
+ } catch (err: any) {
+ return { error: err?.message || "Failed to save Wi-Fi & message templates." };
+ }
+}

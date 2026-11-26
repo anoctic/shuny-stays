@@ -174,7 +174,7 @@ export function Header({ session }: HeaderProps) {
  className="w-full flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors text-left"
  >
  <LogOut className="h-3.5 w-3.5" />
- Sign Out / Switch Persona
+ Sign Out
  </button>
  </form>
  </div>

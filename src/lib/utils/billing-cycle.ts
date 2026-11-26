@@ -1,4 +1,6 @@
 export interface TenantCycleStatus {
+  cycleStartDate: string;
+  formattedStartDate: string;
   cycleEndDate: string;
   formattedEndDate: string;
   daysLeft: number;
@@ -126,7 +128,12 @@ export function computeTenantCycleStatus(params: {
     badgeText = `${daysLeft} Days Left`;
   }
 
+  const endParts = parseYmd(cycleEndDate);
+  const cycleStartDate = formatYmd(endParts.year, endParts.month - 1, checkParts.day);
+
   return {
+    cycleStartDate,
+    formattedStartDate: formatReadableDate(cycleStartDate),
     cycleEndDate,
     formattedEndDate: formatReadableDate(cycleEndDate),
     daysLeft,

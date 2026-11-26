@@ -54,6 +54,14 @@ function createEmptyGridRow(roomNo = "", rent = 8500, buildingName = "Main Block
     depositPaid: true,
     rentPaidThisMonth: true,
     joinDate: new Date().toISOString().split("T")[0],
+    parentsName: "",
+    parentsPhone: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
+    emergencyRelation: "",
+    aadhaarNumber: "",
+    panNumber: "",
+    age: "",
   };
 }
 
@@ -93,6 +101,7 @@ export function BulkSetupModal({
   const [csvRawText, setCsvRawText] = useState("");
   const [csvParsedRows, setCsvParsedRows] = useState<ParsedBulkRow[]>([]);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [showOptionalColumns, setShowOptionalColumns] = useState(true);
 
   // Shared Import Execution State
   const [createLogins, setCreateLogins] = useState(true);
@@ -732,6 +741,22 @@ export function BulkSetupModal({
                     <ClipboardPaste className="w-3.5 h-3.5 text-amber-600" />
                     <span>Paste from Excel / Sheets</span>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowOptionalColumns((v) => !v)}
+                    className={`px-3 py-1.5 rounded-xl border text-[11px] font-extrabold flex items-center gap-1.5 transition cursor-pointer ${
+                      showOptionalColumns
+                        ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span>
+                      {showOptionalColumns
+                        ? "✓ Optional Parent / Emergency / KYC / Age Shown"
+                        : "+ Optional Parent / Emergency / KYC / Age"}
+                    </span>
+                  </button>
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -786,16 +811,28 @@ export function BulkSetupModal({
 
               {/* Editable Spreadsheet Table */}
               <div className="rounded-2xl border border-slate-200 overflow-x-auto max-h-[330px] overflow-y-auto">
-                <table className="w-full text-left text-[11px] min-w-[660px]">
+                <table className={`w-full text-left text-[11px] ${showOptionalColumns ? "min-w-[1460px]" : "min-w-[660px]"}`}>
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-extrabold uppercase text-[9.5px] sticky top-0 z-10">
                     <tr>
                       <th className="px-2.5 py-2 w-8">#</th>
                       <th className="px-2 py-2 w-24">Room No *</th>
-                      <th className="px-2 py-2">Student Full Name *</th>
+                      <th className="px-2 py-2 w-40">Student Full Name *</th>
                       <th className="px-2 py-2 w-32">Mobile (10-digit) *</th>
                       <th className="px-2 py-2 w-24">Rent (₹)</th>
                       <th className="px-2 py-2 w-24">Deposit (₹)</th>
                       <th className="px-2 py-2 w-20 text-center">Rent Paid?</th>
+                      {showOptionalColumns && (
+                        <>
+                          <th className="px-2 py-2 w-36">Parent&apos;s Name (Opt.)</th>
+                          <th className="px-2 py-2 w-32">Parent&apos;s No. (Opt.)</th>
+                          <th className="px-2 py-2 w-36">Emergency Name (Opt.)</th>
+                          <th className="px-2 py-2 w-32">Emergency No. (Opt.)</th>
+                          <th className="px-2 py-2 w-28">Relation (Opt.)</th>
+                          <th className="px-2 py-2 w-20">Age (Opt.)</th>
+                          <th className="px-2 py-2 w-36">Aadhaar No. (Opt.)</th>
+                          <th className="px-2 py-2 w-32">PAN Card (Opt.)</th>
+                        </>
+                      )}
                       <th className="px-2 py-2 w-9"></th>
                     </tr>
                   </thead>
@@ -863,6 +900,88 @@ export function BulkSetupModal({
                               className="w-4 h-4 accent-emerald-600 cursor-pointer"
                             />
                           </td>
+                          {showOptionalColumns && (
+                            <>
+                              <td className="px-1.5 py-1.5">
+                                <input
+                                  type="text"
+                                  value={row.parentsName || ""}
+                                  onChange={(e) => updateGridRow(row.id, "parentsName", e.target.value)}
+                                  placeholder="Optional"
+                                  className="w-full px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:outline-none"
+                                />
+                              </td>
+                              <td className="px-1.5 py-1.5">
+                                <input
+                                  type="tel"
+                                  maxLength={10}
+                                  value={row.parentsPhone || ""}
+                                  onChange={(e) => updateGridRow(row.id, "parentsPhone", e.target.value)}
+                                  placeholder="Optional"
+                                  className="w-full px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 font-mono font-medium text-slate-900 placeholder:text-slate-400 placeholder:font-sans focus:bg-white focus:border-indigo-500 focus:outline-none"
+                                />
+                              </td>
+                              <td className="px-1.5 py-1.5">
+                                <input
+                                  type="text"
+                                  value={row.emergencyContactName || ""}
+                                  onChange={(e) => updateGridRow(row.id, "emergencyContactName", e.target.value)}
+                                  placeholder="Optional"
+                                  className="w-full px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:outline-none"
+                                />
+                              </td>
+                              <td className="px-1.5 py-1.5">
+                                <input
+                                  type="tel"
+                                  maxLength={10}
+                                  value={row.emergencyContactPhone || ""}
+                                  onChange={(e) => updateGridRow(row.id, "emergencyContactPhone", e.target.value)}
+                                  placeholder="Optional"
+                                  className="w-full px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 font-mono font-medium text-slate-900 placeholder:text-slate-400 placeholder:font-sans focus:bg-white focus:border-indigo-500 focus:outline-none"
+                                />
+                              </td>
+                              <td className="px-1.5 py-1.5">
+                                <input
+                                  type="text"
+                                  value={row.emergencyRelation || ""}
+                                  onChange={(e) => updateGridRow(row.id, "emergencyRelation", e.target.value)}
+                                  placeholder="Father / Mother"
+                                  className="w-full px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:outline-none"
+                                />
+                              </td>
+                              <td className="px-1.5 py-1.5">
+                                <input
+                                  type="number"
+                                  min={10}
+                                  max={120}
+                                  value={row.age ?? ""}
+                                  onChange={(e) => updateGridRow(row.id, "age", e.target.value)}
+                                  placeholder="Age"
+                                  className="w-full px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:outline-none"
+                                />
+                              </td>
+                              <td className="px-1.5 py-1.5">
+                                <input
+                                  type="text"
+                                  maxLength={12}
+                                  value={row.aadhaarNumber || ""}
+                                  onChange={(e) => updateGridRow(row.id, "aadhaarNumber", e.target.value)}
+                                  placeholder="Aadhaar (Opt.)"
+                                  className="w-full px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 font-mono font-medium text-slate-900 placeholder:text-slate-400 placeholder:font-sans focus:bg-white focus:border-indigo-500 focus:outline-none"
+                                />
+                              </td>
+                              <td className="px-1.5 py-1.5">
+                                <input
+                                  type="text"
+                                  maxLength={10}
+                                  value={row.panNumber || ""}
+                                  onChange={(e) => updateGridRow(row.id, "panNumber", e.target.value.toUpperCase())}
+                                  placeholder="PAN (Opt.)"
+                                  className="w-full px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 font-mono font-medium uppercase text-slate-900 placeholder:text-slate-400 placeholder:normal-case placeholder:font-sans focus:bg-white focus:border-indigo-500 focus:outline-none"
+                                />
+                              </td>
+                            </>
+                          )}
                           <td className="px-1.5 py-1.5 text-center">
                             <button
                               type="button"

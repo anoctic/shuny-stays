@@ -1,5 +1,6 @@
 import { getCurrentUserSession } from "@/lib/auth/session";
 import { getAllBuildings } from "@/lib/data/rooms";
+import { getPgById } from "@/lib/data/pgs";
 import { getPassesForManagement } from "@/lib/data/gate-passes";
 import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 import { ActiveBroadcastBanner } from "@/components/broadcasts/ActiveBroadcastBanner";
@@ -11,10 +12,11 @@ export const revalidate = 0;
 
 export default async function RoomsPage() {
  const session = await getCurrentUserSession();
- const [buildings, passes, broadcasts] = await Promise.all([
+ const [buildings, passes, broadcasts, dbPg] = await Promise.all([
  getAllBuildings(),
  getPassesForManagement({ pgId: session.pg_id || undefined }),
  getActiveBroadcastsForRole(session.role),
+ session.pg_id ? getPgById(session.pg_id) : Promise.resolve(null),
  ]);
 
  const activePasses = passes.map((p) => ({
@@ -33,6 +35,10 @@ export default async function RoomsPage() {
  initialBuildings={buildings}
  userRole={session.role}
  activePasses={activePasses}
+ pgName={dbPg?.name || session.pg_name || "Royal Stay PG"}
+ pgUpiId={dbPg?.upi_id || undefined}
+ welcomeTemplate={dbPg?.welcome_message_template}
+ customTemplate={dbPg?.custom_message_template}
  />
  </div>
  );

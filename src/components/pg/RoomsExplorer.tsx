@@ -39,12 +39,20 @@ interface RoomsExplorerProps {
  initialBuildings: BuildingItem[];
  userRole: "owner" | "admin" | "super_admin" | "tenant";
  activePasses?: { tenantId: string; passType: "day_pass" | "night_pass"; status: string }[];
+ pgName?: string;
+ pgUpiId?: string;
+ welcomeTemplate?: string | null;
+ customTemplate?: string | null;
 }
 
 export function RoomsExplorer({
  initialBuildings,
  userRole,
  activePasses = [],
+ pgName,
+ pgUpiId,
+ welcomeTemplate,
+ customTemplate,
 }: RoomsExplorerProps) {
  const router = useRouter();
  useRealtimeSync(["buildings", "floors", "rooms", "beds", "tenants", "rent_payments", "security_deposits", "gate_passes", "complaints", "pgs"]);
@@ -178,8 +186,9 @@ export function RoomsExplorer({
  (item) => item.cycle.daysLeft >= 0 && item.cycle.daysLeft <= 3
  );
  const sevenDayCycles = tenantCycleList.filter(
- (item) => item.cycle.daysLeft >= 0 && item.cycle.daysLeft <= 7
+ (item) => item.cycle.daysLeft >= 4 && item.cycle.daysLeft <= 7
  );
+ const activeSafeCycles = tenantCycleList.filter((item) => item.cycle.daysLeft > 7);
  const vacantBeds = totalBeds - occupiedBeds;
 
  const getActivePassForTenant = (tenantId?: string) => {
@@ -387,7 +396,7 @@ export function RoomsExplorer({
  }`}
  >
  <div className="text-[9.5px] font-extrabold text-sky-800 uppercase">
- 📅 ≤ 7 Days Left
+ 📅 4–7 Days Left
  </div>
  <div className="text-sm font-black text-sky-900 tabular-nums mt-0.5">
  {sevenDayCycles.length} Tenants
@@ -427,10 +436,10 @@ export function RoomsExplorer({
  }`}
  >
  <div className="text-[9.5px] font-extrabold text-slate-600 uppercase">
- 📋 All Active Cycles
+ 📋 Active (&gt;7 Days)
  </div>
  <div className="text-sm font-black text-slate-900 tabular-nums mt-0.5">
- {tenantCycleList.length} Tenants
+ {activeSafeCycles.length} Tenants
  </div>
  </button>
  </div>
@@ -509,7 +518,7 @@ export function RoomsExplorer({
  </div>
  )}
 
- {/* FILTERED VIEW 2: EXPIRY WATCH LIST (<= 3 DAYS, <= 7 DAYS, EXPIRED, ALL) */}
+ {/* FILTERED VIEW 2: EXPIRY WATCH LIST (<= 3 DAYS, 4-7 DAYS, EXPIRED, ACTIVE >7D) */}
  {(activeDirectoryFilter === "3days" ||
  activeDirectoryFilter === "7days" ||
  activeDirectoryFilter === "expired" ||
@@ -521,15 +530,15 @@ export function RoomsExplorer({
  ? sevenDayCycles
  : activeDirectoryFilter === "expired"
  ? expiredCycles
- : tenantCycleList;
+ : activeSafeCycles;
  const headingTitle =
  activeDirectoryFilter === "3days"
  ? `Expiring in ≤ 3 Days (${activeList.length})`
  : activeDirectoryFilter === "7days"
- ? `Expiring in ≤ 7 Days (${activeList.length})`
+ ? `Expiring in 4–7 Days (${activeList.length})`
  : activeDirectoryFilter === "expired"
  ? `Expired / Overdue Month Cycles (${activeList.length})`
- : `All Residents Monthly Cycle Tracker (${activeList.length})`;
+ : `All Active Cycles (>7 Days Left) (${activeList.length})`;
 
  return (
  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
@@ -1112,6 +1121,10 @@ export function RoomsExplorer({
  bedIdx={resolvedProfileBed.bedIdx}
  userRole={userRole}
  allBuildings={initialBuildings}
+ pgName={pgName}
+ pgUpiId={pgUpiId}
+ welcomeTemplate={welcomeTemplate}
+ customTemplate={customTemplate}
  isDocked={true}
  />
  </div>
@@ -1132,6 +1145,10 @@ export function RoomsExplorer({
  bedIdx={resolvedProfileBed.bedIdx}
  userRole={userRole}
  allBuildings={initialBuildings}
+ pgName={pgName}
+ pgUpiId={pgUpiId}
+ welcomeTemplate={welcomeTemplate}
+ customTemplate={customTemplate}
  isDocked={false}
  />
  )}

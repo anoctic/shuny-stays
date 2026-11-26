@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { UserRole, Building } from "@/types/schema.types";
 import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
-import { signOutAction, switchDemoPersonaAction } from "@/app/actions/auth";
+import { signOutAction } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "./SidebarContext";
 
