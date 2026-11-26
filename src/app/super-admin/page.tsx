@@ -22,11 +22,13 @@ export default async function SuperAdminPage({
  (resolvedParams?.tab as "overview" | "pgs" | "broadcast" | "billing" | "settings") ||
  "overview";
 
- const broadcasts = await getAllBroadcasts();
- const pgs = await getAllPgs();
- const plans = await getAllSubscriptionPlans();
- const billingSettings = await getPlatformBillingSettings();
- const subscriptionRequests = await getAllSubscriptionRequests();
+ const [broadcasts, pgs, plans, billingSettings, subscriptionRequests] = await Promise.all([
+ getAllBroadcasts(),
+ getAllPgs(),
+ getAllSubscriptionPlans(),
+ getPlatformBillingSettings(),
+ getAllSubscriptionRequests(),
+ ]);
 
  return (
  <Suspense fallback={null}>

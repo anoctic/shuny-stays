@@ -13,7 +13,6 @@ import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 import { getPlatformBillingSettings } from "@/lib/data/billing-settings";
 import { RealtimeSyncSubscriber } from "@/components/common/RealtimeSyncSubscriber";
 import { SubscriptionStatusGuard } from "@/components/dashboard/SubscriptionStatusGuard";
-import { exitSuperAdminPgSetupAction } from "@/app/actions/auth";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -142,14 +141,12 @@ export default async function DashboardLayout({
                 Managing <strong className="text-white font-black">{session.pg_name || pgDetails.name}</strong>
               </span>
             </div>
-            <form action={exitSuperAdminPgSetupAction}>
-              <button
-                type="submit"
-                className="px-3 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-white font-extrabold text-[11px] border border-white/20 transition shrink-0 cursor-pointer"
-              >
-                ← Back to Super Admin
-              </button>
-            </form>
+            <a
+              href="/api/super-admin/exit-setup"
+              className="px-3 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-white font-extrabold text-[11px] border border-white/20 transition shrink-0 cursor-pointer inline-block"
+            >
+              ← Back to Super Admin
+            </a>
           </div>
         ) : (
           <SubscriptionStatusGuard

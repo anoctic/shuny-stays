@@ -19,7 +19,6 @@ import {
  X,
 } from "lucide-react";
 import { onboardPgAction } from "@/app/actions/branding";
-import { enterSuperAdminPgSetupAction } from "@/app/actions/auth";
 import { CredentialsGeneratedCard } from "@/components/auth/CredentialsGeneratedCard";
 import { cn } from "@/lib/utils";
 
@@ -194,13 +193,8 @@ export function OnboardPgModal({ triggerButton }: { triggerButton?: React.ReactN
  {createdPgId && (
  <button
  type="button"
- onClick={async () => {
- const res = await enterSuperAdminPgSetupAction(createdPgId, "/dashboard/rooms");
- if (res?.error) {
- setError(res.error);
- return;
- }
- window.location.href = res?.redirectTo || "/dashboard/rooms";
+ onClick={() => {
+ window.location.href = `/api/super-admin/setup-pg?pgId=${encodeURIComponent(createdPgId)}`;
  }}
  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer"
  >

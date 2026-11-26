@@ -12,7 +12,7 @@ export default async function RootPage() {
  redirect("/login");
  }
 
- if (session.role === "super_admin") {
+ if (session.is_super_admin || session.role === "super_admin") {
  redirect("/super-admin");
  } else if (session.role === "owner") {
  if (!session.has_pg) {

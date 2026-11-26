@@ -57,7 +57,6 @@ import {
  toggleBroadcastAction,
  deleteBroadcastAction,
 } from "@/app/actions/passes-and-broadcasts";
-import { enterSuperAdminPgSetupAction } from "@/app/actions/auth";
 
 interface SuperAdminDashboardProps {
  pgs: PgDetailItem[];
@@ -259,18 +258,9 @@ export function SuperAdminDashboard({
  };
 
  // Impersonate / switch to owner
- const handleViewAsOwner = async (pgId: string, pgName: string) => {
+ const handleViewAsOwner = (pgId: string, pgName: string) => {
  showToast(`Opening ${pgName} Setup & Owner Dashboard...`);
- try {
- const res = await enterSuperAdminPgSetupAction(pgId, "/dashboard/rooms");
- if (res?.error) {
- showToast(`Error: ${res.error}`);
- return;
- }
- window.location.href = res?.redirectTo || "/dashboard/rooms";
- } catch {
- window.location.href = "/dashboard/rooms";
- }
+ window.location.href = `/api/super-admin/setup-pg?pgId=${encodeURIComponent(pgId)}`;
  };
 
  // Push targeted broadcast

@@ -110,17 +110,27 @@ export async function middleware(request: NextRequest) {
  return "/tenant";
  };
 
+ const hasSetupPgCookie = Boolean(request.cookies.get("pg_super_admin_viewing_pg_id")?.value);
+
  // If user is on Root ("/")
  if (isRootPage) {
  if (hasSession && userRole) {
- return NextResponse.redirect(new URL(getDestinationForRole(userRole), request.url));
+ const destRes = NextResponse.redirect(new URL(getDestinationForRole(userRole), request.url));
+ if (userRole === "super_admin" && hasSetupPgCookie) {
+ destRes.cookies.delete("pg_super_admin_viewing_pg_id");
+ }
+ return destRes;
  }
  return NextResponse.redirect(new URL("/login", request.url));
  }
 
  // If user is on Auth page (/login, /signup) but already authenticated
  if (isAuthPage && hasSession && userRole) {
- return NextResponse.redirect(new URL(getDestinationForRole(userRole), request.url));
+ const authDest = NextResponse.redirect(new URL(getDestinationForRole(userRole), request.url));
+ if (userRole === "super_admin" && hasSetupPgCookie) {
+ authDest.cookies.delete("pg_super_admin_viewing_pg_id");
+ }
+ return authDest;
  }
 
  // If user is accessing protected routes without session
@@ -136,8 +146,14 @@ export async function middleware(request: NextRequest) {
  return NextResponse.redirect(new URL(getDestinationForRole(userRole), request.url));
  }
 
- // 2. Owner / Admin Dashboard
- if (isDashboardPage && userRole !== "owner" && userRole !== "admin") {
+ // If Super Admin lands directly on /super-admin (e.g. browser Back), clear any active PG setup cookie
+ if (isSuperAdminPage && userRole === "super_admin" && hasSetupPgCookie) {
+ response.cookies.delete("pg_super_admin_viewing_pg_id");
+ }
+
+ // 2. Owner / Admin Dashboard (also allow Super Admin in active PG Setup Mode!)
+ const isSuperAdminSetup = userRole === "super_admin" && hasSetupPgCookie;
+ if (isDashboardPage && userRole !== "owner" && userRole !== "admin" && !isSuperAdminSetup) {
  return NextResponse.redirect(new URL(getDestinationForRole(userRole), request.url));
  }
 

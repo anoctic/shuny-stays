@@ -41,7 +41,6 @@ import {
  togglePgStatusAction,
 } from "@/app/actions/branding";
 import { updatePgPlanDetailsAction } from "@/app/actions/billing";
-import { enterSuperAdminPgSetupAction } from "@/app/actions/auth";
 import { togglePgMealPollFacilityAction } from "@/app/actions/meal-polls";
 import { togglePgGatePassFacilityAction } from "@/app/actions/passes-and-broadcasts";
 
@@ -243,17 +242,8 @@ export function PgDetailsModal({
  }
  };
 
- const handleViewAsOwner = async () => {
- try {
- const res = await enterSuperAdminPgSetupAction(pg.id, "/dashboard/rooms");
- if (res?.error) {
- alert(res.error);
- return;
- }
- window.location.href = res?.redirectTo || "/dashboard/rooms";
- } catch {
- window.location.href = "/dashboard/rooms";
- }
+ const handleViewAsOwner = () => {
+ window.location.href = `/api/super-admin/setup-pg?pgId=${encodeURIComponent(pg.id)}`;
  };
 
  // Expiry calculation

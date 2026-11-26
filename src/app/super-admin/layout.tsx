@@ -25,7 +25,7 @@ export default async function SuperAdminLayout({
  redirect("/login");
  }
 
- if (session.role !== "super_admin") {
+ if (!session.is_super_admin && session.role !== "super_admin") {
  if (session.role === "owner" || session.role === "admin") {
  redirect("/dashboard");
  } else {
