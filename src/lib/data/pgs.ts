@@ -200,12 +200,90 @@ export const getPgBySlug = cache(async (slug: string): Promise<PgDetailItem | nu
 });
 
 /**
- * Get PG by ID
+ * Get PG by ID (Direct single-row query — avoids full SaaS scan in dashboard SSR)
  */
 export const getPgById = cache(async (id: string): Promise<PgDetailItem | null> => {
- const all = await getAllPgs();
- const match = all.find((p) => p.id === id) || null;
- return match;
+ if (!id) return null;
+ try {
+ const admin = createAdminClient();
+ const { data: d, error } = await (admin.from("pgs" as any) as any)
+ .select(`
+ id,
+ name,
+ slug,
+ logo_url,
+ primary_color,
+ contact_email,
+ contact_phone,
+ owner_id,
+ status,
+ subscription_tier,
+ subscription_valid_until,
+ plan_expires_at,
+ plan_price,
+ plan_benefits,
+ owner_initial_password,
+ city,
+ upi_id,
+ meal_poll_enabled,
+ gate_pass_enabled,
+ welcome_message_template,
+ custom_message_template,
+ created_at
+ `)
+ .eq("id", id)
+ .maybeSingle();
+
+ if (error || !d) return null;
+
+ const rawTier = (d.subscription_tier || "starter").toLowerCase();
+ let tier: "Free Trial" | "Starter" | "Pro" | "Enterprise" = "Starter";
+ if (rawTier === "free_trial" || rawTier === "free trial") tier = "Free Trial";
+ else if (rawTier === "pro") tier = "Pro";
+ else if (rawTier === "enterprise") tier = "Enterprise";
+
+ return {
+ id: d.id,
+ name: d.name,
+ slug: d.slug,
+ logo_url: d.logo_url || null,
+ primary_color: d.primary_color || "#4F46E5",
+ contact_email: d.contact_email,
+ contact_phone: d.contact_phone,
+ owner_id: d.owner_id,
+ owner_name: "PG Owner",
+ status: (d.status || "active") as any,
+ subscription_tier: tier,
+ subscription_valid_until: d.subscription_valid_until,
+ plan_expires_at: d.plan_expires_at || d.subscription_valid_until || null,
+ plan_price: Number(d.plan_price) || 1999,
+ plan_benefits: Array.isArray(d.plan_benefits)
+ ? d.plan_benefits
+ : typeof d.plan_benefits === "string"
+ ? JSON.parse(d.plan_benefits || "[]")
+ : [
+ "Full White-label Branding",
+ "Automated WhatsApp Rent Reminders",
+ "Live Attendance & Gate Pass System",
+ "2-Step Cash & UPI Ledger Settlement",
+ "Instant Real-Time Multi-Building Management",
+ ],
+ buildings_count: 1,
+ beds_count: 12,
+ residents_count: 0,
+ city: d.city || "Bengaluru",
+ created_at: d.created_at,
+ owner_initial_password: d.owner_initial_password || null,
+ upi_id: d.upi_id || null,
+ meal_poll_enabled: d.meal_poll_enabled !== false,
+ gate_pass_enabled: d.gate_pass_enabled !== false,
+ welcome_message_template: d.welcome_message_template || null,
+ custom_message_template: d.custom_message_template || null,
+ };
+ } catch (err) {
+ console.error("getPgById direct query error:", err);
+ return null;
+ }
 });
 
 /**

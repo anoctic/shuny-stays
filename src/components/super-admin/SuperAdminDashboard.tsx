@@ -110,6 +110,7 @@ export function SuperAdminDashboard({
  // PG deletion modal state
  const [pgToDelete, setPgToDelete] = useState<PgDetailItem | null>(null);
  const [isDeletingPg, setIsDeletingPg] = useState(false);
+ const [enteringPgId, setEnteringPgId] = useState<string | null>(null);
 
  // PG details and credentials modal state
  const [selectedPgForDetails, setSelectedPgForDetails] = useState<PgDetailItem | null>(null);
@@ -260,6 +261,7 @@ export function SuperAdminDashboard({
 
  // Impersonate / switch to owner
  const handleViewAsOwner = (pgId: string, pgName: string) => {
+ setEnteringPgId(pgId);
  showToast(`Opening ${pgName} Setup & Owner Dashboard...`);
  window.location.href = `/api/super-admin/setup-pg?pgId=${encodeURIComponent(pgId)}`;
  };
@@ -738,10 +740,11 @@ export function SuperAdminDashboard({
 
  <button
  type="button"
+ disabled={enteringPgId === pg.id}
  onClick={() => handleViewAsOwner(pg.id, pg.name)}
- className="py-2.5 sm:py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-[11px] font-extrabold transition flex items-center justify-center gap-1 shadow-xs"
+ className="py-2.5 sm:py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-[11px] font-extrabold transition flex items-center justify-center gap-1 shadow-xs disabled:opacity-60"
  >
- <span>🚀 Setup PG</span>
+ <span>{enteringPgId === pg.id ? "Opening..." : "🚀 Setup PG"}</span>
  <ArrowRight className="w-3 h-3 text-white" />
  </button>
  </div>
@@ -923,11 +926,12 @@ export function SuperAdminDashboard({
 
  <button
  type="button"
+ disabled={enteringPgId === pg.id}
  onClick={() => handleViewAsOwner(pg.id, pg.name)}
- className="py-1 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10.5px] font-extrabold transition flex items-center gap-1 cursor-pointer shadow-xs"
+ className="py-1 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10.5px] font-extrabold transition flex items-center gap-1 cursor-pointer shadow-xs disabled:opacity-60"
  title="Setup Rooms, 80+ Tenants & Manage This PG"
  >
- <span>Setup PG</span>
+ <span>{enteringPgId === pg.id ? "Opening..." : "Setup PG"}</span>
  <ArrowRight className="w-3 h-3" />
  </button>
 
