@@ -144,32 +144,36 @@ export function WalkInSheet({
 
  <form onSubmit={handleSubmit} className="space-y-2.5 text-xs">
  <div>
- <label className="font-bold text-[#64748B] block mb-1">1. Tenant Full Name</label>
+ <label className="font-bold text-[#64748B] block mb-1">1. Tenant Full Name *</label>
  <input
  name="name"
  type="text"
  required
- defaultValue="Kabir Malhotra"
- className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A] focus:outline-none"
+ autoComplete="off"
+ placeholder="e.g. Sakshi Verma"
+ className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A] placeholder:text-slate-400 placeholder:font-medium focus:outline-none focus:border-indigo-500"
  />
  </div>
  <div>
- <label className="font-bold text-[#64748B] block mb-1">2. Phone / WhatsApp</label>
+ <label className="font-bold text-[#64748B] block mb-1">2. Phone / WhatsApp (Login ID) *</label>
  <input
  name="phone"
  type="tel"
  required
- defaultValue="9871234560"
- className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A] focus:outline-none"
+ autoComplete="off"
+ placeholder="e.g. 8273138872"
+ className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A] placeholder:text-slate-400 placeholder:font-medium focus:outline-none focus:border-indigo-500"
  />
+ <p className="text-[10px] text-indigo-600 font-semibold mt-1">
+ 🔑 Auto Login ID = Mobile No. • Password = FirstName@Last4Digits (e.g. Sakshi@8872)
+ </p>
  </div>
  <div>
- <label className="font-bold text-[#64748B] block mb-1">3. Joining Date</label>
+ <label className="font-bold text-[#64748B] block mb-1">3. Joining Date (Leave blank for Today)</label>
  <input
  name="joinDate"
- type="text"
- defaultValue="18 Nov 2026"
- className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A] focus:outline-none"
+ type="date"
+ className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
  />
  </div>
 
@@ -190,9 +194,10 @@ export function WalkInSheet({
  <input
  name="depositAmount"
  type="number"
+ min="0"
  required
- defaultValue={room.rent || 8500}
- className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-slate-900 focus:outline-none text-xs"
+ placeholder={`e.g. ${room.rent || 8500}`}
+ className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-medium focus:outline-none focus:border-indigo-500 text-xs"
  />
  </div>
 

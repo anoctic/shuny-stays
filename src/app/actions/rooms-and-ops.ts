@@ -183,11 +183,18 @@ export async function walkInAddTenantAction(
  const session = await getCurrentUserSession();
  if (session.role !== "owner" && session.role !== "admin" && session.role !== "super_admin" && !session.is_super_admin) return { error: "Unauthorized" };
 
- const name = formData.get("name") as string;
- const phone = formData.get("phone") as string;
- const joinDate = (formData.get("joinDate") as string) || "18 Nov 2026";
+ const name = ((formData.get("name") as string) || "").trim();
+ const rawPhone = ((formData.get("phone") as string) || "").trim();
+ const phoneDigits = rawPhone.replace(/\D/g, "");
+ const phone = (phoneDigits.startsWith("91") && phoneDigits.length === 12 ? phoneDigits.slice(2) : phoneDigits.startsWith("0") && phoneDigits.length === 11 ? phoneDigits.slice(1) : phoneDigits).slice(-10);
+ if (!name || phone.length !== 10) {
+ return { error: "Please enter Tenant Full Name and a valid 10-digit Mobile Number." };
+ }
+ const joinDate = ((formData.get("joinDate") as string) || "").trim() || new Date().toISOString().split("T")[0];
  const rentPaid = formData.get("rentPaid") === "on" || formData.get("rentPaid") === "true";
- const depositAmount = parseInt(formData.get("depositAmount") as string) || 8500;
+ const rawDep = formData.get("depositAmount") as string;
+ const parsedDep = rawDep !== null && rawDep !== "" ? parseInt(rawDep, 10) : NaN;
+ const depositAmount = !Number.isNaN(parsedDep) && parsedDep >= 0 ? parsedDep : 0;
  const depositStatus = (formData.get("depositStatus") as "paid" | "pending") || "paid";
  const depositPaymentMode = (formData.get("depositPaymentMode") as "cash" | "upi" | "bank_transfer") || "cash";
  const depositRef = (formData.get("depositRef") as string) || undefined;

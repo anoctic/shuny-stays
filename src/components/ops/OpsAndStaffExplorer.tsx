@@ -65,8 +65,8 @@ export function OpsAndStaffExplorer({
  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
  // Warden Credential Generation State
- const [wardenName, setWardenName] = useState("Sunita Devi");
- const [wardenPhone, setWardenPhone] = useState("9810998877");
+ const [wardenName, setWardenName] = useState("");
+ const [wardenPhone, setWardenPhone] = useState("");
  const [wardenBuilding, setWardenBuilding] = useState("Block A - Krishna Bhawan");
  const [createdWardenCreds, setCreatedWardenCreds] = useState<{
  name: string;
@@ -79,6 +79,11 @@ export function OpsAndStaffExplorer({
  const [isCreatingWarden, setIsCreatingWarden] = useState(false);
 
  const handleCreateWarden = async () => {
+ if (!wardenName.trim() || wardenPhone.replace(/\D/g, "").length < 10) {
+ setToastMsg("Please enter Warden Name and valid 10-digit Phone.");
+ setTimeout(() => setToastMsg(null), 3500);
+ return;
+ }
  setIsCreatingWarden(true);
  try {
  const res = await fetch("/api/create-credentials", {
@@ -103,6 +108,8 @@ export function OpsAndStaffExplorer({
  phone: data.phone,
  pgName: data.pgName || "Royal Stay PG",
  });
+ setWardenName("");
+ setWardenPhone("");
  setToastMsg(`Warden credentials provisioned for ${data.name}!`);
  setTimeout(() => setToastMsg(null), 3500);
  } else {
@@ -588,7 +595,8 @@ export function OpsAndStaffExplorer({
  type="text"
  value={wardenName}
  onChange={(e) => setWardenName(e.target.value)}
- className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A]"
+ placeholder="e.g. Sunita Devi"
+ className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A] placeholder:text-slate-400 placeholder:font-medium focus:outline-none focus:border-indigo-500"
  />
  </div>
  <div>
@@ -597,7 +605,8 @@ export function OpsAndStaffExplorer({
  type="tel"
  value={wardenPhone}
  onChange={(e) => setWardenPhone(e.target.value)}
- className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A]"
+ placeholder="e.g. 9810998877"
+ className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A] placeholder:text-slate-400 placeholder:font-medium focus:outline-none focus:border-indigo-500"
  />
  </div>
  <div>

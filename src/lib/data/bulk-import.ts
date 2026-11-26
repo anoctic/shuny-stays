@@ -383,7 +383,7 @@ export async function processBulkImportChunk(params: {
     await Promise.all(
       validAssignments.map(async (item) => {
         const loginEmail = `${item.cleanPhone}@login.shunystays.app`;
-        const password = generateReadablePassword();
+        const password = generateReadablePassword(item.row.tenantName, item.cleanPhone);
         const existingUserId = existingProfMap.get(item.cleanPhone);
 
         try {

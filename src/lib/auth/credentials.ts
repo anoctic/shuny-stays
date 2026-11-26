@@ -29,9 +29,33 @@ export interface GeneratedCredentials {
 }
 
 /**
- * Generates a clean, readable password like "Shuny@4821"
+ * Generates a clean, readable initial password:
+ * When name & phone are supplied (e.g. Tenant onboarding):
+ * FirstName (Initial Cap) + "@" + last 4 digits of phone
+ * Example: ("sakshi", "8273138872") -> "Sakshi@8872"
+ * Fallback: random "Shuny@4821"
  */
-export function generateReadablePassword(): string {
+export function generateReadablePassword(name?: string | null, phone?: string | null): string {
+ const cleanDigits = (phone || "").replace(/\D/g, "");
+ const last4 = cleanDigits.length >= 4 ? cleanDigits.slice(-4) : "";
+
+ if (name && last4.length === 4) {
+ const words = name.trim().split(/\s+/);
+ let firstAlpha = "";
+ for (const w of words) {
+ const alpha = w.replace(/[^a-zA-Z]/g, "");
+ if (alpha.length > 0) {
+ firstAlpha = alpha;
+ break;
+ }
+ }
+ if (firstAlpha.length > 0) {
+ const formattedName = firstAlpha.charAt(0).toUpperCase() + firstAlpha.slice(1).toLowerCase();
+ return `${formattedName}@${last4}`;
+ }
+ return `Shuny@${last4}`;
+ }
+
  const digits = Math.floor(1000 + Math.random() * 9000);
  return `Shuny@${digits}`;
 }
@@ -64,7 +88,7 @@ export async function createOrUpdateCredentials(
  const { name, phone, email, role, pgId, pgName, permissions } = params;
 
  const cleanPhone = normalizePhone(phone);
- const password = generateReadablePassword();
+ const password = role === "tenant" ? generateReadablePassword(name, cleanPhone) : generateReadablePassword();
 
  // Strict Phone-First Authentication Identifier:
  // When a 10-digit phone number is available, ALWAYS provision Supabase Auth using
