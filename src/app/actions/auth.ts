@@ -318,6 +318,45 @@ export async function signOutAction(): Promise<void> {
  cookieStore.delete("pg_demo_role");
  cookieStore.delete("pg_demo_no_pg");
  cookieStore.delete("pg_active_building_id");
+ cookieStore.delete("pg_super_admin_viewing_pg_id");
 
  redirect("/login");
+}
+
+/**
+ * Super Admin White-Glove Setup Mode: step directly into a specific PG's dashboard
+ */
+export async function enterSuperAdminPgSetupAction(
+  pgId: string,
+  destination: "/dashboard/rooms" | "/dashboard" = "/dashboard/rooms"
+): Promise<{ success?: boolean; redirectTo?: string; error?: string }> {
+  const session = await getCurrentUserSession();
+  if (!session.is_super_admin && session.role !== "super_admin") {
+    return { error: "Unauthorized: Super Admin access required." };
+  }
+  if (!pgId) {
+    return { error: "Missing PG identifier." };
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set("pg_super_admin_viewing_pg_id", pgId, {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+  });
+  cookieStore.delete("pg_active_building_id");
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/rooms");
+  return { success: true, redirectTo: destination };
+}
+
+/**
+ * Exit Super Admin PG Setup Mode back to /super-admin
+ */
+export async function exitSuperAdminPgSetupAction(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete("pg_super_admin_viewing_pg_id");
+  cookieStore.delete("pg_active_building_id");
+  redirect("/super-admin");
 }

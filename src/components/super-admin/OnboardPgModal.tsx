@@ -19,6 +19,7 @@ import {
  X,
 } from "lucide-react";
 import { onboardPgAction } from "@/app/actions/branding";
+import { enterSuperAdminPgSetupAction } from "@/app/actions/auth";
 import { CredentialsGeneratedCard } from "@/components/auth/CredentialsGeneratedCard";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,7 @@ export function OnboardPgModal({ triggerButton }: { triggerButton?: React.ReactN
  const [isPending, startTransition] = useTransition();
  const [error, setError] = useState<string | null>(null);
  const [success, setSuccess] = useState<string | null>(null);
+ const [createdPgId, setCreatedPgId] = useState<string | null>(null);
  const [createdCreds, setCreatedCreds] = useState<{
  name: string;
  role: "owner";
@@ -96,6 +98,7 @@ export function OnboardPgModal({ triggerButton }: { triggerButton?: React.ReactN
  setError(res.error);
  } else if (res?.success) {
  router.refresh();
+ if (res.pg?.id) setCreatedPgId(res.pg.id);
  setSuccess(`Successfully onboarded "${res.pg.name}" on Shuny Stays!`);
  if (res.credentials) {
  setCreatedCreds(res.credentials);
@@ -116,6 +119,7 @@ export function OnboardPgModal({ triggerButton }: { triggerButton?: React.ReactN
  const handleResetAndClose = () => {
  setIsOpen(false);
  setCreatedCreds(null);
+ setCreatedPgId(null);
  setSuccess(null);
  setError(null);
  setPgName("");
@@ -187,10 +191,27 @@ export function OnboardPgModal({ triggerButton }: { triggerButton?: React.ReactN
  onClose={handleResetAndClose}
  />
 
+ {createdPgId && (
+ <button
+ type="button"
+ onClick={async () => {
+ const res = await enterSuperAdminPgSetupAction(createdPgId, "/dashboard/rooms");
+ if (res?.error) {
+ setError(res.error);
+ return;
+ }
+ window.location.href = res?.redirectTo || "/dashboard/rooms";
+ }}
+ className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer"
+ >
+ <span>🚀 Setup 80+ Rooms & Tenants for This PG Now ➔</span>
+ </button>
+ )}
+
  <button
  type="button"
  onClick={handleResetAndClose}
- className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black shadow-sm transition active:scale-98"
+ className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black shadow-sm transition active:scale-98 cursor-pointer"
  >
  Done & Return to Directory
  </button>

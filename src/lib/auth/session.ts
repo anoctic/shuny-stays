@@ -23,6 +23,7 @@ export interface CurrentUserSession {
  bed_id?: string | null;
  // Governance & Multi-tenant helpers
  is_super_admin?: boolean;
+ is_super_admin_setup_mode?: boolean;
  organization_id?: string | null;
 }
 
@@ -96,6 +97,28 @@ export const getCurrentUserSession = cache(async (): Promise<CurrentUserSession>
  };
  }
     const base = { ...DEMO_USERS[demoRole] };
+    const setupPgId = cookieStore.get("pg_super_admin_viewing_pg_id")?.value;
+    if (demoRole === "super_admin" && setupPgId) {
+      try {
+        const admin = createAdminClient();
+        const { data: pgData } = await (admin.from("pgs" as any) as any)
+          .select("id, name")
+          .eq("id", setupPgId)
+          .maybeSingle();
+        if (pgData?.id) {
+          return {
+            ...base,
+            role: "owner",
+            pg_id: pgData.id,
+            pg_name: pgData.name,
+            has_pg: true,
+            is_super_admin: true,
+            is_super_admin_setup_mode: true,
+            organization_id: pgData.id,
+          };
+        }
+      } catch {}
+    }
     try {
       const admin = createAdminClient();
       if (base.pg_id) {
@@ -233,6 +256,29 @@ export const getCurrentUserSession = cache(async (): Promise<CurrentUserSession>
  hasPg = true;
  }
 
+ // Check if Super Admin explicitly activated White-Glove Setup Mode for a specific PG
+ const setupPgId = cookieStore.get("pg_super_admin_viewing_pg_id")?.value;
+ let isSetupMode = false;
+ let effectiveRole: UserRole = role;
+ if (role === "super_admin" && setupPgId) {
+ try {
+ const admin = createAdminClient();
+ const { data: targetPg } = await (admin.from("pgs" as any) as any)
+ .select("id, name")
+ .eq("id", setupPgId)
+ .maybeSingle();
+ if (targetPg?.id) {
+ pgId = targetPg.id;
+ pgName = targetPg.name;
+ hasPg = true;
+ effectiveRole = "owner";
+ isSetupMode = true;
+ }
+ } catch (e) {
+ console.warn("Failed to resolve super admin setup PG:", e);
+ }
+ }
+
     // Resolve dynamic PG name from database if not yet populated
     if (pgId && !pgName) {
       try {
@@ -253,7 +299,7 @@ export const getCurrentUserSession = cache(async (): Promise<CurrentUserSession>
  id: user.id,
  email: user.email || "",
  full_name: fullName,
- role,
+ role: effectiveRole,
  phone: profile?.phone || user.user_metadata?.phone,
  pg_id: pgId,
  pg_name: pgName,
@@ -264,6 +310,7 @@ export const getCurrentUserSession = cache(async (): Promise<CurrentUserSession>
  room_id: roomId,
  bed_id: bedId,
  is_super_admin: role === "super_admin",
+ is_super_admin_setup_mode: isSetupMode,
  organization_id: pgId,
  };
  }

@@ -20,8 +20,8 @@ import {
  AddFloorSheet,
  AddRoomSheet,
  AddBedSheet,
- CsvImportModal,
 } from "./RoomsSheets";
+import { BulkSetupModal } from "./BulkSetupModal";
 import {
  deleteBuildingAction,
  deleteFloorAction,
@@ -252,8 +252,8 @@ export function RoomsExplorer({
  onClick={() => setIsCsvImportOpen(true)}
  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[10.5px] font-extrabold flex items-center gap-1 transition"
  >
- <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" />
- <span>Import CSV</span>
+ <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+ <span>Bulk Setup (80+)</span>
  </button>
  </div>
  </div>
@@ -304,13 +304,22 @@ export function RoomsExplorer({
  </p>
  </div>
  {isOwner && (
+ <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+ <button
+ onClick={() => setIsCsvImportOpen(true)}
+ className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-md active:scale-95 transition cursor-pointer"
+ >
+ <FileSpreadsheet className="w-4 h-4" />
+ <span>⚡ Bulk Setup (80+ Rooms & Tenants)</span>
+ </button>
  <button
  onClick={() => setIsAutoBuildingOpen(true)}
- className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold shadow-sm active:scale-95 transition"
+ className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold shadow-sm active:scale-95 transition cursor-pointer"
  >
  <Plus className="w-4 h-4" />
- <span>Add First Building Block</span>
+ <span>Add Single Block</span>
  </button>
+ </div>
  )}
  </div>
  ) : (
@@ -678,9 +687,10 @@ export function RoomsExplorer({
  )}
 
  {/* CSV Import Modal */}
- <CsvImportModal
+ <BulkSetupModal
  isOpen={isCsvImportOpen}
  onClose={() => setIsCsvImportOpen(false)}
+ buildings={initialBuildings}
  />
  </div>
  );

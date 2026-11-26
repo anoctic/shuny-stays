@@ -41,7 +41,7 @@ import {
  togglePgStatusAction,
 } from "@/app/actions/branding";
 import { updatePgPlanDetailsAction } from "@/app/actions/billing";
-import { switchDemoPersonaAction } from "@/app/actions/auth";
+import { enterSuperAdminPgSetupAction } from "@/app/actions/auth";
 import { togglePgMealPollFacilityAction } from "@/app/actions/meal-polls";
 import { togglePgGatePassFacilityAction } from "@/app/actions/passes-and-broadcasts";
 
@@ -245,10 +245,14 @@ export function PgDetailsModal({
 
  const handleViewAsOwner = async () => {
  try {
- await switchDemoPersonaAction("owner");
- window.location.href = "/dashboard";
+ const res = await enterSuperAdminPgSetupAction(pg.id, "/dashboard/rooms");
+ if (res?.error) {
+ alert(res.error);
+ return;
+ }
+ window.location.href = res?.redirectTo || "/dashboard/rooms";
  } catch {
- window.location.href = "/dashboard";
+ window.location.href = "/dashboard/rooms";
  }
  };
 
@@ -913,7 +917,7 @@ export function PgDetailsModal({
  onClick={handleViewAsOwner}
  className="flex-1 sm:flex-none px-3.5 py-2.5 sm:py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-extrabold flex items-center justify-center gap-1.5 transition active:scale-95"
  >
- <span>Login as Owner</span>
+ <span>🚀 Setup Rooms & Bulk Import</span>
  <ArrowRight className="w-3.5 h-3.5 text-indigo-500" />
  </button>
  </div>

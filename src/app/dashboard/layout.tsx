@@ -13,6 +13,7 @@ import { getActiveBroadcastsForRole } from "@/lib/data/broadcasts";
 import { getPlatformBillingSettings } from "@/lib/data/billing-settings";
 import { RealtimeSyncSubscriber } from "@/components/common/RealtimeSyncSubscriber";
 import { SubscriptionStatusGuard } from "@/components/dashboard/SubscriptionStatusGuard";
+import { exitSuperAdminPgSetupAction } from "@/app/actions/auth";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -48,8 +49,8 @@ export default async function DashboardLayout({
   // Fetch real buildings for this PG from Supabase
   const buildingsPromise = (async (): Promise<Building[]> => {
     try {
-      const supabase = await createClient();
-      let query = supabase.from("buildings").select("*");
+      const client = session.is_super_admin_setup_mode ? createAdminClient() : await createClient();
+      let query = (client.from("buildings" as any) as any).select("*");
       if (session.pg_id) {
         query = query.eq("pg_id", session.pg_id);
       }
@@ -131,11 +132,32 @@ export default async function DashboardLayout({
  "pg_subscription_requests",
  ]}
  />
- <SubscriptionStatusGuard
- pg={pgDetails}
- platformSettings={platformSettings}
- userRole={session.role as "owner" | "admin"}
- />
+ {session.is_super_admin_setup_mode ? (
+          <div className="bg-gradient-to-r from-indigo-950 via-purple-900 to-indigo-900 text-white px-4 py-2 text-xs flex items-center justify-between gap-3 border-b border-indigo-500/30 z-[60]">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] uppercase tracking-wider shrink-0">
+                Super Admin Setup Mode
+              </span>
+              <span className="truncate font-semibold text-indigo-100">
+                Managing <strong className="text-white font-black">{session.pg_name || pgDetails.name}</strong>
+              </span>
+            </div>
+            <form action={exitSuperAdminPgSetupAction}>
+              <button
+                type="submit"
+                className="px-3 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-white font-extrabold text-[11px] border border-white/20 transition shrink-0 cursor-pointer"
+              >
+                ← Back to Super Admin
+              </button>
+            </form>
+          </div>
+        ) : (
+          <SubscriptionStatusGuard
+            pg={pgDetails}
+            platformSettings={platformSettings}
+            userRole={session.role as "owner" | "admin"}
+          />
+        )}
  {/* Responsive App Shell: Desktop Collapsible Sidebar + Desktop TopBar + Mobile TopHeader */}
  <DesktopLayoutShell
  sidebar={

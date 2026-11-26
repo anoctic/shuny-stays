@@ -370,8 +370,8 @@ export function AutoBuildingSheet({
  name="floorsCount"
  type="number"
  min="1"
- max="8"
- defaultValue="3"
+ max="20"
+ defaultValue="4"
  className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-extrabold text-[#0F172A]"
  />
  </div>
@@ -381,8 +381,8 @@ export function AutoBuildingSheet({
  name="roomsPerFloor"
  type="number"
  min="1"
- max="20"
- defaultValue="3"
+ max="50"
+ defaultValue="10"
  className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-extrabold text-[#0F172A]"
  />
  </div>
@@ -822,63 +822,4 @@ export function AddBedSheet({
  );
 }
 
-// ==============================================================================
-// 6. CSV IMPORT MODAL
-// ==============================================================================
-export function CsvImportModal({
- isOpen,
- onClose,
-}: {
- isOpen: boolean;
- onClose: () => void;
-}) {
- const [imported, setImported] = useState(false);
- if (!isOpen) return null;
-
- return (
- <div
- className="fixed inset-0 z-[100] bg-slate-950/65 backdrop-blur-[2px] flex flex-col justify-end animate-fade-in"
- onClick={onClose}
- >
- <div
- className="w-full max-w-[480px] mx-auto rounded-t-[28px] p-5 pb-8 shadow-2xl border-t border-[#E2E8F0] bg-white text-[#0F172A] animate-slide-up"
- onClick={(e) => e.stopPropagation()}
- >
- <div className="space-y-3.5">
- <div className="flex items-center justify-between">
- <h3 className="text-sm font-extrabold text-[#0F172A]">Bulk CSV / Excel Migration</h3>
- <button
- onClick={onClose}
- className="p-1.5 rounded-full bg-[#F1F5F9] text-[#64748B] hover:text-[#0F172A]"
- >
- <X className="w-4 h-4" />
- </button>
- </div>
-
- <p className="text-xs text-[#64748B]">
- Upload or paste CSV rows containing your resident directory:
- </p>
-
- <div className="p-3 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] text-[10px] font-mono text-[#64748B] overflow-x-auto leading-relaxed">
- building, floor, room, sharing, rent, tenant_name, phone, rent_paid, deposit_amt, deposit_status, deposit_mode<br />
- Block A, Ground, G-01, 2, 8500, Harsh Vardhan, 9811776655, true, 8500, paid, cash
- </div>
-
- {imported ? (
- <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 text-xs font-bold text-center">
- ✓ Sample CSV row parsed and added to vacant bed!
- </div>
- ) : (
- <button
- type="button"
- onClick={() => setImported(true)}
- className="w-full py-3 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs font-extrabold shadow-sm transition active:scale-95"
- >
- Import Sample CSV Row to Vacant Bed
- </button>
- )}
- </div>
- </div>
- </div>
- );
-}
+export { BulkSetupModal as CsvImportModal } from "./BulkSetupModal";

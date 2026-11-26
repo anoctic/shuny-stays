@@ -57,7 +57,7 @@ import {
  toggleBroadcastAction,
  deleteBroadcastAction,
 } from "@/app/actions/passes-and-broadcasts";
-import { switchDemoPersonaAction } from "@/app/actions/auth";
+import { enterSuperAdminPgSetupAction } from "@/app/actions/auth";
 
 interface SuperAdminDashboardProps {
  pgs: PgDetailItem[];
@@ -259,13 +259,17 @@ export function SuperAdminDashboard({
  };
 
  // Impersonate / switch to owner
- const handleViewAsOwner = async (pgName: string) => {
- showToast(`Impersonating ${pgName} Owner View...`);
+ const handleViewAsOwner = async (pgId: string, pgName: string) => {
+ showToast(`Opening ${pgName} Setup & Owner Dashboard...`);
  try {
- await switchDemoPersonaAction("owner");
- window.location.href = "/dashboard";
+ const res = await enterSuperAdminPgSetupAction(pgId, "/dashboard/rooms");
+ if (res?.error) {
+ showToast(`Error: ${res.error}`);
+ return;
+ }
+ window.location.href = res?.redirectTo || "/dashboard/rooms";
  } catch {
- window.location.href = "/dashboard";
+ window.location.href = "/dashboard/rooms";
  }
  };
 
@@ -680,11 +684,11 @@ export function SuperAdminDashboard({
 
  <button
  type="button"
- onClick={() => handleViewAsOwner(pg.name)}
- className="py-2.5 sm:py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200 text-[11px] font-extrabold transition flex items-center justify-center gap-1"
+ onClick={() => handleViewAsOwner(pg.id, pg.name)}
+ className="py-2.5 sm:py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-[11px] font-extrabold transition flex items-center justify-center gap-1 shadow-xs"
  >
- <span>View as Owner</span>
- <ArrowRight className="w-3 h-3 text-indigo-500" />
+ <span>🚀 Setup PG</span>
+ <ArrowRight className="w-3 h-3 text-white" />
  </button>
  </div>
  </div>
@@ -854,11 +858,11 @@ export function SuperAdminDashboard({
 
  <button
  type="button"
- onClick={() => handleViewAsOwner(pg.name)}
- className="py-1 px-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[10.5px] font-extrabold transition flex items-center gap-0.5 cursor-pointer"
- title="Impersonate & View as Owner"
+ onClick={() => handleViewAsOwner(pg.id, pg.name)}
+ className="py-1 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10.5px] font-extrabold transition flex items-center gap-1 cursor-pointer shadow-xs"
+ title="Setup Rooms, 80+ Tenants & Manage This PG"
  >
- <span>Owner View</span>
+ <span>Setup PG</span>
  <ArrowRight className="w-3 h-3" />
  </button>
 

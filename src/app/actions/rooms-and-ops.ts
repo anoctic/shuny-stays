@@ -181,7 +181,7 @@ export async function walkInAddTenantAction(
  formData: FormData
 ) {
  const session = await getCurrentUserSession();
- if (session.role !== "owner" && session.role !== "admin") return { error: "Unauthorized" };
+ if (session.role !== "owner" && session.role !== "admin" && session.role !== "super_admin" && !session.is_super_admin) return { error: "Unauthorized" };
 
  const name = formData.get("name") as string;
  const phone = formData.get("phone") as string;
@@ -210,10 +210,22 @@ export async function walkInAddTenantAction(
  name,
  phone,
  role: "tenant",
+ pgId: session.pg_id,
  buildingId,
  roomNumber: roomId,
  pgName: session.pg_name || "Royal Stay PG",
  });
+
+ if (creds.success && creds.userId && res?.tenantId) {
+ try {
+ const adminClient = createAdminClient();
+ await (adminClient.from("tenants" as any) as any)
+ .update({ user_id: creds.userId })
+ .eq("id", res.tenantId);
+ } catch (linkErr) {
+ console.warn("Failed to link tenant user_id after creation:", linkErr);
+ }
+ }
 
  revalidatePath("/dashboard/rooms");
  revalidatePath("/dashboard/attendance");
