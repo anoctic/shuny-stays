@@ -15,6 +15,7 @@ import {
   Lock,
 } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { computeTenantCycleStatus } from "@/lib/utils/billing-cycle";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -38,8 +39,12 @@ export default async function VerifyTenantIdPage({ params }: VerifyIdPageProps) 
         phone,
         email,
         kyc_status,
+        id_proof_type,
+        profile_photo_url,
         is_active,
         check_in_date,
+        rent_amount,
+        deposit_amount,
         emergency_contact_name,
         emergency_contact_phone,
         room_id,
@@ -52,6 +57,9 @@ export default async function VerifyTenantIdPage({ params }: VerifyIdPageProps) 
         pgs(id, name, logo_url, primary_color, city, contact_phone, contact_email)
       `)
       .or(`id.eq.${id},user_id.eq.${id}`)
+      .order("is_active", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (!error && data) {
@@ -142,6 +150,60 @@ export default async function VerifyTenantIdPage({ params }: VerifyIdPageProps) 
   const roomNumber = tenant.rooms?.room_number ? `Room ${tenant.rooms.room_number}` : "Room Assigned";
   const bedName = tenant.beds?.bed_name ? `(${tenant.beds.bed_name})` : "";
   const isActive = tenant.is_active !== false;
+
+  // Live Rent & Security Deposit lookup for scanned ID card
+  let rentPaid = false;
+  let lastPaidAt: string | null = null;
+  let depositPaidAmount = 0;
+  let depositExpectedAmount = Number(tenant.deposit_amount) || 0;
+  let depositStatus: string = depositExpectedAmount > 0 ? "pending" : "paid";
+
+  if (tenant.id && !String(tenant.id).startsWith("90000000-")) {
+    try {
+      const nowIst = new Date();
+      const currentBillingMonth = nowIst.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+      const currentYearMonth = `${nowIst.getFullYear()}-${String(nowIst.getMonth() + 1).padStart(2, "0")}`;
+
+      const [{ data: rpRows }, { data: depRow }] = await Promise.all([
+        (admin.from("rent_payments" as any) as any)
+          .select("billing_month, status, collected_at, created_at")
+          .eq("tenant_id", tenant.id)
+          .order("created_at", { ascending: false })
+          .limit(6),
+        (admin.from("security_deposits" as any) as any)
+          .select("expected_amount, paid_amount, status")
+          .eq("tenant_id", tenant.id)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+
+      for (const rp of rpRows || []) {
+        const st = (rp.status || "").toLowerCase();
+        if (!["settled_with_owner", "collected_by_admin", "paid", "verified"].includes(st)) continue;
+        const dt = rp.collected_at || rp.created_at || "";
+        if (!lastPaidAt && dt) lastPaidAt = dt;
+        const bm = (rp.billing_month || "").trim();
+        if (bm.toLowerCase() === currentBillingMonth.toLowerCase() || bm.startsWith(currentYearMonth) || (!bm && dt.startsWith(currentYearMonth))) {
+          rentPaid = true;
+        }
+      }
+
+      if (depRow) {
+        depositExpectedAmount = Number(depRow.expected_amount ?? depositExpectedAmount);
+        depositPaidAmount = Number(depRow.paid_amount ?? 0);
+        depositStatus = depRow.status || (depositPaidAmount >= depositExpectedAmount ? "paid" : "pending");
+      }
+    } catch {
+      // Safe fallback
+    }
+  }
+
+  const cycleStatus = computeTenantCycleStatus({
+    checkInDate: tenant.check_in_date,
+    rentPaid,
+    lastPaidAt,
+  });
 
   const rawKyc = (tenant.kyc_status || "").toLowerCase();
   const kycState =
@@ -263,17 +325,25 @@ export default async function VerifyTenantIdPage({ params }: VerifyIdPageProps) 
           <div className="p-4 space-y-4">
             <div className="flex items-center gap-3.5 pb-3 border-b border-slate-800">
               <div
-                className="w-13 h-13 rounded-2xl flex items-center justify-center font-black text-lg text-white shadow-md shrink-0"
+                className="w-13 h-13 rounded-2xl overflow-hidden flex items-center justify-center font-black text-lg text-white shadow-md shrink-0 border border-white/15"
                 style={{ backgroundColor: primaryColor }}
               >
-                {tenant.full_name
-                  ? tenant.full_name
-                      .split(" ")
-                      .map((w: string) => w[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()
-                  : "RS"}
+                {tenant.profile_photo_url ? (
+                  <img
+                    src={tenant.profile_photo_url}
+                    alt={tenant.full_name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : tenant.full_name ? (
+                  tenant.full_name
+                    .split(" ")
+                    .map((w: string) => w[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()
+                ) : (
+                  "RS"
+                )}
               </div>
 
               <div className="min-w-0 flex-1">
@@ -337,6 +407,42 @@ export default async function VerifyTenantIdPage({ params }: VerifyIdPageProps) 
                 </span>
                 <strong className="text-white">
                   {tenant.check_in_date || "Active Lease"}
+                </strong>
+              </div>
+
+              <div className="flex justify-between items-center text-slate-400">
+                <span className="text-[11px] flex items-center gap-1.5">
+                  <ClockIcon className="w-3.5 h-3.5 text-slate-500" />
+                  Month Ends In
+                </span>
+                <strong
+                  className={
+                    cycleStatus.bucket === "expired"
+                      ? "text-rose-400"
+                      : cycleStatus.bucket === "3days" || cycleStatus.bucket === "7days"
+                      ? "text-amber-300"
+                      : "text-emerald-400"
+                  }
+                >
+                  {cycleStatus.badgeText} ({cycleStatus.formattedEndDate})
+                </strong>
+              </div>
+
+              <div className="flex justify-between items-center text-slate-400">
+                <span className="text-[11px] flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />
+                  This Month Rent &amp; Deposit
+                </span>
+                <strong className="text-white text-[10.5px]">
+                  <span className={rentPaid ? "text-emerald-400" : "text-rose-400"}>
+                    {rentPaid ? "Rent Paid" : "Rent Due"}
+                  </span>
+                  {" • "}
+                  <span className={depositStatus === "paid" ? "text-emerald-300" : "text-amber-300"}>
+                    {depositStatus === "paid"
+                      ? `Dep ₹${depositPaidAmount.toLocaleString("en-IN")} Held`
+                      : `Dep ₹${Math.max(0, depositExpectedAmount - depositPaidAmount).toLocaleString("en-IN")} Due`}
+                  </span>
                 </strong>
               </div>
 

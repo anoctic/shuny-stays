@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { computeTenantCycleStatus } from "@/lib/utils/billing-cycle";
 import {
   QrCode,
   ArrowLeft,
@@ -18,12 +20,14 @@ import {
   ExternalLink,
   CheckCircle2,
   AlertCircle,
+  Camera,
+  Upload,
 } from "lucide-react";
 import { GatePassItem } from "@/types/schema.types";
 import { GatePassCard } from "@/components/passes/GatePassCard";
 import { RequestPassModal } from "@/components/passes/RequestPassModal";
 import { AccountSecurityCard } from "@/components/settings/AccountSecurityCard";
-import { submitVacateNoticeAction } from "@/app/actions/rooms-and-ops";
+import { submitVacateNoticeAction, updateTenantProfilePhotoAction } from "@/app/actions/rooms-and-ops";
 
 interface TenantIdNoticeViewProps {
   session: {
@@ -39,10 +43,15 @@ interface TenantIdNoticeViewProps {
     primaryColor: string;
   };
   tenantRecordId?: string;
+  pgId?: string;
+  buildingId?: string | null;
   buildingName: string;
   roomNumber: string;
   kycStatus: string;
+  initialProfilePhotoUrl?: string | null;
   joinDate: string;
+  rentPaid?: boolean;
+  lastRentPaidAt?: string | null;
   depositAmount: number;
   depositStatus?: "paid" | "pending" | "refunded" | "partially_refunded";
   depositPaidAmount?: number;
@@ -55,10 +64,15 @@ export function TenantIdNoticeView({
   session,
   pg,
   tenantRecordId,
+  pgId,
+  buildingId,
   buildingName,
   roomNumber,
   kycStatus,
+  initialProfilePhotoUrl = null,
   joinDate,
+  rentPaid = false,
+  lastRentPaidAt = null,
   depositAmount,
   depositStatus = "pending",
   depositPaidAmount,
@@ -67,6 +81,12 @@ export function TenantIdNoticeView({
   gatePassEnabled = true,
 }: TenantIdNoticeViewProps) {
   const router = useRouter();
+  useRealtimeSync(["gate_passes", "tenants", "security_deposits", "rent_payments"]);
+  const cycleStatus = computeTenantCycleStatus({
+    checkInDate: joinDate,
+    rentPaid,
+    lastPaidAt: lastRentPaidAt,
+  });
   const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -75,6 +95,16 @@ export function TenantIdNoticeView({
   const [noticeReason, setNoticeReason] = useState("Internship completed / Relocating");
   const [loading, setLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(initialProfilePhotoUrl);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setProfilePhotoUrl(initialProfilePhotoUrl);
+  }, [initialProfilePhotoUrl]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -114,11 +144,66 @@ export function TenantIdNoticeView({
     }
   };
 
+  const handlePhotoUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPhotoError(null);
+    if (!photoFile) {
+      setPhotoError("Please select an image file (JPG, PNG, or WEBP).");
+      return;
+    }
+    setPhotoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("profilePhoto", photoFile);
+      const res = await updateTenantProfilePhotoAction(fd);
+      if (res && "error" in res && res.error) {
+        setPhotoError(res.error);
+      } else if (res && "photoUrl" in res && res.photoUrl) {
+        setProfilePhotoUrl(res.photoUrl);
+        if (photoPreview) URL.revokeObjectURL(photoPreview);
+        setPhotoPreview(null);
+        setPhotoFile(null);
+        setIsPhotoModalOpen(false);
+        router.refresh();
+        showToast("Profile photo permanently saved! Synced to PG Owner portal.");
+      }
+    } catch {
+      setPhotoError("Failed to upload profile photo. Please try again.");
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
   return (
     <div className="space-y-3.5 pb-6">
       {toastMessage && (
         <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg border border-slate-700 backdrop-blur-md animate-in fade-in">
           {toastMessage}
+        </div>
+      )}
+
+      {/* Profile Photo Reminder Banner */}
+      {!profilePhotoUrl && (
+        <div
+          onClick={() => setIsPhotoModalOpen(true)}
+          className="bg-indigo-50 border border-indigo-200 rounded-2xl p-3.5 flex items-center justify-between gap-2 cursor-pointer transition hover:bg-indigo-100/70"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-indigo-600/15 flex items-center justify-center text-indigo-700 shrink-0">
+              <Camera className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-extrabold text-indigo-950">
+                Please update your profile photo
+              </div>
+              <div className="text-[10px] text-indigo-700 truncate">
+                Upload once for your permanent ID card &amp; Owner bed profile
+              </div>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-xl bg-indigo-600 text-white text-[10px] font-extrabold shrink-0 shadow-xs">
+            Upload Photo →
+          </span>
         </div>
       )}
 
@@ -129,12 +214,30 @@ export function TenantIdNoticeView({
           background: `linear-gradient(135deg, ${pg.primaryColor || "#4F46E5"}, #0F172A)`,
         }}
       >
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-extrabold uppercase opacity-80 tracking-wider">
-              {pg.name}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <button
+              type="button"
+              onClick={() => setIsPhotoModalOpen(true)}
+              title={profilePhotoUrl ? "Update Profile Photo" : "Upload Profile Photo"}
+              className="w-12 h-12 rounded-2xl bg-white/15 border border-white/25 overflow-hidden flex items-center justify-center shrink-0 cursor-pointer hover:ring-2 hover:ring-white/60 transition"
+            >
+              {profilePhotoUrl ? (
+                <img
+                  src={profilePhotoUrl}
+                  alt={session.full_name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Camera className="w-5 h-5 text-white/85" />
+              )}
+            </button>
+            <div className="min-w-0">
+              <div className="text-[10px] font-extrabold uppercase opacity-80 tracking-wider truncate">
+                {pg.name}
+              </div>
+              <div className="text-base font-extrabold truncate">{session.full_name}</div>
             </div>
-            <div className="text-base font-extrabold">{session.full_name}</div>
           </div>
 
           {/* Interactive Dynamic QR Code Button */}
@@ -157,7 +260,7 @@ export function TenantIdNoticeView({
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/20 text-[10px]">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/20 text-[10px]">
           <div>
             <span className="opacity-75 block text-[9px] uppercase">Building</span>
             <strong className="truncate block">{buildingName}</strong>
@@ -182,6 +285,20 @@ export function TenantIdNoticeView({
               {kycStatus}
             </strong>
           </div>
+          <div>
+            <span className="opacity-75 block text-[9px] uppercase">Month Ends</span>
+            <strong
+              className={`block ${
+                cycleStatus.bucket === "expired"
+                  ? "text-rose-300"
+                  : cycleStatus.bucket === "3days"
+                  ? "text-amber-300"
+                  : "text-emerald-300"
+              }`}
+            >
+              {cycleStatus.badgeText}
+            </strong>
+          </div>
         </div>
       </div>
 
@@ -190,6 +307,20 @@ export function TenantIdNoticeView({
         <div className="flex justify-between">
           <span className="text-slate-400">Joining Date</span>
           <strong className="text-slate-900">{joinDate}</strong>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-slate-400">Current Cycle Ends</span>
+          <strong
+            className={
+              cycleStatus.bucket === "expired"
+                ? "text-rose-600"
+                : cycleStatus.bucket === "3days" || cycleStatus.bucket === "7days"
+                ? "text-amber-600"
+                : "text-slate-900"
+            }
+          >
+            {cycleStatus.formattedEndDate} ({cycleStatus.badgeText})
+          </strong>
         </div>
         <div className="flex justify-between">
           <span className="text-slate-400">Security Deposit</span>
@@ -262,6 +393,9 @@ export function TenantIdNoticeView({
               userRole="tenant"
               defaultTenantName={session.full_name}
               defaultRoomNumber={roomNumber}
+              tenantId={tenantRecordId || session.id}
+              pgId={pgId}
+              buildingId={buildingId || session.building_id || undefined}
             />
           ) : (
             <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
@@ -312,6 +446,11 @@ export function TenantIdNoticeView({
               <p className="text-[11px] text-slate-500">
                 Scan with any smartphone camera to view live authenticated ID
               </p>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-extrabold">
+                <span>Month Cycle: {cycleStatus.formattedEndDate}</span>
+                <span>•</span>
+                <span>{cycleStatus.badgeText}</span>
+              </div>
             </div>
 
             {/* High-res Scannable QR Code */}
@@ -355,6 +494,71 @@ export function TenantIdNoticeView({
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Photo Upload Modal */}
+      {isPhotoModalOpen && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+          <div className="bg-white w-full max-w-[400px] rounded-3xl border border-slate-200 p-4 space-y-3.5 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Camera className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-sm font-extrabold text-slate-900">
+                  Update Permanent Profile Photo
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPhotoModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {photoError && (
+              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+                {photoError}
+              </div>
+            )}
+
+            <form onSubmit={handlePhotoUploadSubmit} className="space-y-3 text-xs">
+              <div className="w-28 h-28 mx-auto rounded-3xl bg-slate-100 border-2 border-indigo-200 overflow-hidden flex items-center justify-center">
+                {photoPreview || profilePhotoUrl ? (
+                  <img
+                    src={photoPreview || profilePhotoUrl || ""}
+                    alt="Profile Preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Camera className="w-8 h-8 text-slate-400" />
+                )}
+              </div>
+
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                required
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  if (photoPreview) URL.revokeObjectURL(photoPreview);
+                  setPhotoFile(f);
+                  setPhotoPreview(f ? URL.createObjectURL(f) : null);
+                }}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-extrabold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
+              />
+
+              <button
+                type="submit"
+                disabled={photoUploading}
+                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold shadow-xs transition flex items-center justify-center gap-1.5"
+              >
+                <Upload className="w-4 h-4" />
+                <span>{photoUploading ? "Uploading..." : "Save Profile Photo Permanently"}</span>
+              </button>
+            </form>
           </div>
         </div>
       )}

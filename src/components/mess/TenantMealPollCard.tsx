@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Utensils,
@@ -49,8 +49,17 @@ export function TenantMealPollCard({
 
   const [lunchVote, setLunchVote] = useState<"yes" | "no" | null>(initialVote);
   const [dinnerVote, setDinnerVote] = useState<"yes" | "no" | null>(dinnerInitialVote);
+  const [pendingChoice, setPendingChoice] = useState<"yes" | "no" | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLunchVote(initialVote);
+  }, [initialVote]);
+
+  useEffect(() => {
+    setDinnerVote(dinnerInitialVote);
+  }, [dinnerInitialVote]);
 
   const activePoll = selectedMeal === "dinner" ? dinnerPoll : poll;
   const activeCutoffPassed = selectedMeal === "dinner" ? dinnerIsCutoffPassed : isCutoffPassed;
@@ -87,6 +96,7 @@ export function TenantMealPollCard({
     } else {
       setLunchVote(choice);
     }
+    setPendingChoice(null);
     setIsSubmitting(true);
 
     try {
@@ -98,8 +108,8 @@ export function TenantMealPollCard({
       } else {
         showToast(
           choice === "yes"
-            ? `✅ ${isDinner ? "Dinner" : "Lunch"} confirmed for today!`
-            : `❌ Noted: You are skipping ${isDinner ? "dinner" : "lunch"} today.`
+            ? `✅ Confirmed! Aapne aaj ke ${isDinner ? "Dinner" : "Lunch"} ke liye "Haan, Khana Hai" opt kiya hai. Owner portal par live sync ho gaya!`
+            : `✅ Confirmed! Aapne aaj ke ${isDinner ? "Dinner" : "Lunch"} ke liye "Nahi Khana" opt kiya hai.`
         );
         router.refresh();
       }
@@ -206,10 +216,12 @@ export function TenantMealPollCard({
             <button
               type="button"
               disabled={isSubmitting}
-              onClick={() => handleVote("yes")}
+              onClick={() => setPendingChoice("yes")}
               className={`p-3 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition active:scale-95 shadow-xs cursor-pointer ${
                 currentVote === "yes"
                   ? "bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-500/30"
+                  : pendingChoice === "yes"
+                  ? "bg-emerald-50 text-emerald-900 border-emerald-400 ring-2 ring-emerald-300"
                   : "bg-white text-slate-800 border-slate-200 hover:border-emerald-300"
               }`}
             >
@@ -218,7 +230,7 @@ export function TenantMealPollCard({
                 <span>Haan, Khana Hai</span>
               </div>
               <span className={`text-[10px] ${currentVote === "yes" ? "text-emerald-100 font-bold" : "text-slate-400"}`}>
-                {currentVote === "yes" ? "✓ Confirmed Eating" : "Tap to Vote YES"}
+                {currentVote === "yes" ? "✓ Confirmed Eating" : "Tap to Opt In (YES)"}
               </span>
             </button>
 
@@ -226,10 +238,12 @@ export function TenantMealPollCard({
             <button
               type="button"
               disabled={isSubmitting}
-              onClick={() => handleVote("no")}
+              onClick={() => setPendingChoice("no")}
               className={`p-3 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition active:scale-95 shadow-xs cursor-pointer ${
                 currentVote === "no"
                   ? "bg-rose-600 text-white border-rose-600 ring-2 ring-rose-500/30"
+                  : pendingChoice === "no"
+                  ? "bg-rose-50 text-rose-900 border-rose-400 ring-2 ring-rose-300"
                   : "bg-white text-slate-800 border-slate-200 hover:border-rose-300"
               }`}
             >
@@ -238,10 +252,73 @@ export function TenantMealPollCard({
                 <span>Nahi Khana</span>
               </div>
               <span className={`text-[10px] ${currentVote === "no" ? "text-rose-100 font-bold" : "text-slate-400"}`}>
-                {currentVote === "no" ? "✓ Opted Out" : "Tap to Vote NO"}
+                {currentVote === "no" ? "✓ Opted Out" : "Tap to Skip (NO)"}
               </span>
             </button>
           </div>
+
+          {/* CONFIRMATION STEP PROMPT */}
+          {pendingChoice && (
+            <div className="p-3 rounded-2xl bg-slate-900 text-white space-y-2.5 shadow-lg border border-slate-700 animate-in fade-in">
+              <div className="text-xs font-extrabold flex items-start gap-2">
+                <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-amber-300 text-[10px] uppercase tracking-wider">
+                    Confirm Your Choice
+                  </div>
+                  <p className="mt-0.5 leading-snug">
+                    {pendingChoice === "yes"
+                      ? `Haan, aap aaj ke ${isDinner ? "Dinner (Raat ka Khana)" : "Lunch (Dopahar ka Khana)"} ke liye "Khana Khaunga (YES)" opt kar rahe hain. Confirm karein?`
+                      : `Aap aaj ke ${isDinner ? "Dinner (Raat ka Khana)" : "Lunch (Dopahar ka Khana)"} ko "Nahi Khana (NO)" opt kar rahe hain. Confirm karein?`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPendingChoice(null)}
+                  disabled={isSubmitting}
+                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-bold transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => handleVote(pendingChoice)}
+                  className={`px-3.5 py-1.5 rounded-xl text-[11px] font-black transition shadow-sm ${
+                    pendingChoice === "yes"
+                      ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950"
+                      : "bg-rose-500 hover:bg-rose-400 text-white"
+                  }`}
+                >
+                  {isSubmitting ? "Saving..." : pendingChoice === "yes" ? "✓ Confirm Khana Hai" : "✓ Confirm Nahi Khana"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* PERSISTENT CONFIRMATION BANNER */}
+          {!pendingChoice && currentVote && (
+            <div
+              className={`p-2.5 rounded-xl border text-[11px] font-bold flex items-center gap-2 ${
+                currentVote === "yes"
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                  : "bg-rose-50 border-rose-200 text-rose-800"
+              }`}
+            >
+              {currentVote === "yes" ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              )}
+              <span>
+                {currentVote === "yes"
+                  ? `Confirmed: Aapne aaj ke ${isDinner ? "Dinner" : "Lunch"} ke liye "Haan, Khana Hai" opt kiya hai.`
+                  : `Confirmed: Aapne aaj ke ${isDinner ? "Dinner" : "Lunch"} ke liye "Nahi Khana" opt kiya hai.`}
+              </span>
+            </div>
+          )}
 
           <div className="flex items-center justify-between text-[10.5px] text-slate-400 pt-0.5">
             <span>Aap {formatDisplayTime(cutoffTime)} se pehle apna vote change kar sakte hain.</span>

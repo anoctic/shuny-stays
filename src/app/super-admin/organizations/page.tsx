@@ -19,6 +19,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 import { ShunyStaysEmblem } from "@/components/common/ShunyStaysLogo";
 import { enterViewAsOrgAction, exitViewAsOrgAction } from "@/app/actions/auth";
+import { computePgExpiryCountdown } from "@/lib/utils/billing-cycle";
 
 export default async function SuperAdminOrganizationsPage() {
  const cookieStore = await cookies();
@@ -83,6 +84,24 @@ export default async function SuperAdminOrganizationsPage() {
  </div>
 
  <div className="flex flex-col items-end gap-1">
+ {(() => {
+ const exp = computePgExpiryCountdown(pg.plan_expires_at || pg.subscription_valid_until, pg.created_at);
+ return (
+ <span
+ className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${
+ exp.status === "expired"
+ ? "bg-rose-50 text-rose-700 border-rose-200"
+ : exp.status === "critical"
+ ? "bg-amber-100 text-rose-700 border-rose-200"
+ : exp.status === "warning"
+ ? "bg-amber-50 text-amber-800 border-amber-200"
+ : "bg-emerald-50 text-emerald-700 border-emerald-200"
+ }`}
+ >
+ Exp {exp.formattedDate} • {exp.label}
+ </span>
+ );
+ })()}
  <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
  {pg.subscription_tier}
  </span>

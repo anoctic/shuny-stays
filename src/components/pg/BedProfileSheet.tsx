@@ -27,6 +27,8 @@ import {
  FileText,
  ExternalLink,
  XCircle,
+ Camera,
+ Upload,
 } from "lucide-react";
 import { TenantProfileItem, BuildingItem, FloorItem, RoomItem, BedItem, RentPaymentRecord } from "@/lib/data/rooms";
 import {
@@ -38,6 +40,7 @@ import {
  collectSecurityDepositAction,
  refundSecurityDepositAction,
  updateTenantAndBedAction,
+ updateTenantProfilePhotoAction,
 } from "@/app/actions/rooms-and-ops";
 import { RentReceiptModal } from "@/components/tenant/RentReceiptModal";
 import { DepositReceiptModal } from "@/components/tenant/DepositReceiptModal";
@@ -107,6 +110,10 @@ export function BedProfileSheet({
  // KYC Reject State
  const [isRejectingKyc, setIsRejectingKyc] = useState(false);
  const [kycRejectReason, setKycRejectReason] = useState("");
+
+ // Profile Photo Modal & Upload State
+ const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+ const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
  // Refund Deposit State (Owner Only)
  const [isRefundingDeposit, setIsRefundingDeposit] = useState(false);
@@ -229,6 +236,27 @@ export function BedProfileSheet({
  setTimeout(() => setToastMsg(null), 3500);
  };
 
+ const handleOwnerPhotoUpload = async (file: File) => {
+ setIsUploadingPhoto(true);
+ try {
+ const fd = new FormData();
+ fd.append("tenantId", t.id);
+ fd.append("profilePhoto", file);
+ const res = await updateTenantProfilePhotoAction(fd);
+ if (res && "error" in res && res.error) {
+ setToastMsg(`❌ ${res.error}`);
+ } else if (res && "photoUrl" in res && res.photoUrl) {
+ t.profilePhotoUrl = res.photoUrl;
+ setIsPhotoModalOpen(false);
+ router.refresh();
+ setToastMsg("✅ Profile photo permanently updated & synced!");
+ }
+ } finally {
+ setIsUploadingPhoto(false);
+ setTimeout(() => setToastMsg(null), 3500);
+ }
+ };
+
  // Collect Rent Handler
  const handleConfirmCollectRent = async () => {
  setIsProcessing(true);
@@ -344,12 +372,28 @@ export function BedProfileSheet({
  <div className="space-y-3.5">
  {/* Header */}
  <div className="flex items-start justify-between gap-2">
- <div className="flex items-center gap-2.5">
- <div className="w-11 h-11 rounded-2xl bg-[#4F46E5] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
- {initials}
- </div>
- <div>
- <div className="flex items-center gap-1.5">
+ <div className="flex items-center gap-2.5 min-w-0">
+ <button
+ type="button"
+ onClick={() => setIsPhotoModalOpen(true)}
+ title={t.profilePhotoUrl ? "View or update resident profile photo" : "Upload resident profile photo"}
+ className="relative w-12 h-12 rounded-2xl bg-[#4F46E5] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs overflow-hidden border-2 border-indigo-200 hover:ring-2 hover:ring-indigo-400 transition cursor-pointer group"
+ >
+ {t.profilePhotoUrl ? (
+ <img
+ src={t.profilePhotoUrl}
+ alt={t.name}
+ className="w-full h-full object-cover"
+ />
+ ) : (
+ <span>{initials}</span>
+ )}
+ <span className="absolute inset-0 bg-slate-950/45 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+ <Camera className="w-4 h-4 text-white" />
+ </span>
+ </button>
+ <div className="min-w-0">
+ <div className="flex items-center gap-1.5 flex-wrap">
  <h3 className="text-sm font-extrabold text-slate-900">{t.name}</h3>
  <span
  className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
@@ -364,6 +408,11 @@ export function BedProfileSheet({
  >
  KYC {t.kycStatus}
  </span>
+ {!t.profilePhotoUrl && (
+ <span className="px-1.5 py-0.5 rounded-full text-[8.5px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
+ Photo Pending
+ </span>
+ )}
  </div>
  <p className="text-[10.5px] font-bold text-slate-500">
  {building.name} • {floor.name} • Room {room.number} ({bed.label})
@@ -377,6 +426,76 @@ export function BedProfileSheet({
  <X className="w-4 h-4" />
  </button>
  </div>
+
+ {/* Resident Profile Photo Enlarged / Update Modal */}
+ {isPhotoModalOpen && (
+ <div
+ className="fixed inset-0 z-[120] bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+ onClick={() => setIsPhotoModalOpen(false)}
+ >
+ <div
+ className="bg-white w-full max-w-[360px] rounded-3xl border border-slate-200 p-4 space-y-3 shadow-2xl"
+ onClick={(e) => e.stopPropagation()}
+ >
+ <div className="flex items-center justify-between">
+ <h4 className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+ <Camera className="w-4 h-4 text-indigo-600" />
+ <span>Resident Profile Photo — {t.name}</span>
+ </h4>
+ <button
+ type="button"
+ onClick={() => setIsPhotoModalOpen(false)}
+ className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"
+ >
+ <X className="w-4 h-4" />
+ </button>
+ </div>
+
+ <div className="aspect-square w-full max-h-64 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
+ {t.profilePhotoUrl ? (
+ <img
+ src={t.profilePhotoUrl}
+ alt={t.name}
+ className="w-full h-full object-cover"
+ />
+ ) : (
+ <div className="text-center space-y-1 p-4">
+ <Camera className="w-8 h-8 text-slate-400 mx-auto" />
+ <p className="text-xs font-bold text-slate-500">
+ No profile photo uploaded yet
+ </p>
+ <p className="text-[10px] text-slate-400">
+ Bulk-onboarded resident will see a reminder banner until uploaded.
+ </p>
+ </div>
+ )}
+ </div>
+
+ {(isOwner || isAdmin) && (
+ <label className="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition">
+ <Upload className="w-3.5 h-3.5" />
+ <span>
+ {isUploadingPhoto
+ ? "Uploading Photo..."
+ : t.profilePhotoUrl
+ ? "Update Resident Photo"
+ : "Upload Resident Photo"}
+ </span>
+ <input
+ type="file"
+ accept="image/jpeg,image/png,image/webp"
+ disabled={isUploadingPhoto}
+ onChange={(e) => {
+ const f = e.target.files?.[0];
+ if (f) handleOwnerPhotoUpload(f);
+ }}
+ className="hidden"
+ />
+ </label>
+ )}
+ </div>
+ </div>
+ )}
 
  {toastMsg && (
  <div className="p-2.5 rounded-xl bg-slate-900 text-white text-xs font-semibold flex items-center gap-2 animate-fade-in shadow-lg">

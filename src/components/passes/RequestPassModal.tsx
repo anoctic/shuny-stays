@@ -22,17 +22,24 @@ interface RequestPassModalProps {
  userRole: UserRole;
  defaultTenantName?: string;
  defaultRoomNumber?: string;
+ tenantId?: string;
+ pgId?: string;
+ buildingId?: string;
 }
 
 export function RequestPassModal({
  userRole,
- defaultTenantName = "Aarav Patel",
- defaultRoomNumber = "Room 101 • Bed A",
+ defaultTenantName = "Resident",
+ defaultRoomNumber = "Assigned Room",
+ tenantId,
+ pgId,
+ buildingId,
 }: RequestPassModalProps) {
  const router = useRouter();
  const [isOpen, setIsOpen] = useState(false);
  const [isSubmitting, setIsSubmitting] = useState(false);
  const [error, setError] = useState<string | null>(null);
+ const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
  // Form State
  const [passType, setPassType] = useState<GatePassType>("day_pass");
@@ -40,9 +47,9 @@ export function RequestPassModal({
  const [returnDate, setReturnDate] = useState(new Date().toISOString().split("T")[0]);
  const [departureTime, setDepartureTime] = useState("14:00");
  const [expectedReturnTime, setExpectedReturnTime] = useState("20:30");
- const [reason, setReason] = useState("University Library study and group discussion");
- const [destination, setDestination] = useState("Central Knowledge Park");
- const [emergencyPhone, setEmergencyPhone] = useState("+91 98765 43210");
+ const [reason, setReason] = useState("");
+ const [destination, setDestination] = useState("");
+ const [emergencyPhone, setEmergencyPhone] = useState("");
 
  const applyPreset = (preset: {
  type: GatePassType;
@@ -72,30 +79,47 @@ export function RequestPassModal({
  setError(null);
  setIsSubmitting(true);
 
+ try {
  const formData = new FormData();
  formData.append("pass_type", passType);
  formData.append("outing_date", outingDate);
  formData.append("expected_return_date", passType === "day_pass" ? outingDate : returnDate);
  formData.append("departure_time", departureTime);
  formData.append("expected_return_time", expectedReturnTime);
- formData.append("reason", reason);
- formData.append("destination", destination);
- formData.append("emergency_phone", emergencyPhone);
+ formData.append("reason", reason.trim());
+ formData.append("destination", destination.trim());
+ formData.append("emergency_phone", emergencyPhone.trim());
  formData.append("tenant_name", defaultTenantName);
+ formData.append("room_number", defaultRoomNumber);
+ if (tenantId) formData.append("tenant_id", tenantId);
+ if (pgId) formData.append("pg_id", pgId);
+ if (buildingId) formData.append("building_id", buildingId);
 
  const res = await requestGatePassAction(formData);
  if (res?.error) {
  setError(res.error);
- setIsSubmitting(false);
  } else {
+ setReason("");
+ setDestination("");
+ setSuccessMsg("✅ Outing Pass request submitted! Synced live with Owner/Warden.");
+ setTimeout(() => setSuccessMsg(null), 4000);
  router.refresh();
- setIsSubmitting(false);
  setIsOpen(false);
+ }
+ } catch (err: any) {
+ setError(err?.message || "Failed to submit outing pass request.");
+ } finally {
+ setIsSubmitting(false);
  }
  };
 
  return (
  <div>
+ {successMsg && (
+ <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg border border-emerald-500/40 animate-in fade-in">
+ {successMsg}
+ </div>
+ )}
  {/* Trigger Button */}
  <button
  onClick={() => setIsOpen(true)}

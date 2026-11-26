@@ -42,28 +42,45 @@ export function GatePassCard({ pass, viewerRole }: GatePassCardProps) {
   const [returnToast, setReturnToast] = useState<string | null>(null);
 
   const isDayPass = pass.pass_type === "day_pass";
-  const isPendingOwner = pass.approval_status === "pending_owner";
+  const isPendingOwner =
+    pass.approval_status === "pending_owner" ||
+    pass.approval_status === "requested" ||
+    pass.approval_status === "pending_warden";
   const isApproved = pass.approval_status === "approved";
   const isRejected = pass.approval_status === "rejected";
   const isCompleted = pass.approval_status === "completed";
 
   const handleApprove = async () => {
     setIsProcessing(true);
-    await approveGatePassAction(pass.id);
-    router.refresh();
-    setIsProcessing(false);
+    try {
+      const res = await approveGatePassAction(pass.id);
+      if (res?.error) {
+        alert(res.error);
+      } else {
+        router.refresh();
+      }
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleReject = async () => {
-    if (!rejectReason) {
+    if (!rejectReason.trim()) {
       alert("Please enter a rejection reason.");
       return;
     }
     setIsProcessing(true);
-    await rejectGatePassAction(pass.id, rejectReason);
-    router.refresh();
-    setIsProcessing(false);
-    setShowRejectInput(false);
+    try {
+      const res = await rejectGatePassAction(pass.id, rejectReason);
+      if (res?.error) {
+        alert(res.error);
+      } else {
+        router.refresh();
+        setShowRejectInput(false);
+      }
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleRecordReturn = async () => {
@@ -168,8 +185,8 @@ export function GatePassCard({ pass, viewerRole }: GatePassCardProps) {
           </div>
         )}
 
-        {/* Owner Action Buttons (Owner reviews and 1-tap approves) */}
-        {viewerRole === "owner" && (
+        {/* Owner / Admin Action Buttons */}
+        {(viewerRole === "owner" || viewerRole === "super_admin" || viewerRole === "admin") && (
           <div className="mt-3.5 pt-3 border-t border-amber-200/80 flex items-center justify-end gap-2">
             {!showRejectInput ? (
               <>
@@ -186,7 +203,11 @@ export function GatePassCard({ pass, viewerRole }: GatePassCardProps) {
                   className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md shadow-emerald-600/20 active:scale-95 transition-all flex items-center gap-1.5"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  {isProcessing ? "Approving..." : "Approve Pass (Turn Green)"}
+                  {isProcessing
+                    ? "Approving..."
+                    : viewerRole === "admin"
+                    ? "Verify & Forward to Owner"
+                    : "Approve Pass (Turn Green)"}
                 </button>
               </>
             ) : (
@@ -254,8 +275,14 @@ export function GatePassCard({ pass, viewerRole }: GatePassCardProps) {
           </div>
 
           {/* Active QR Code Graphic */}
-          <div className="p-2 rounded-2xl bg-white border border-emerald-300 shadow-xs flex flex-col items-center shrink-0">
-            <QrCode className="w-12 h-12 text-slate-900" />
+          <div className="p-1.5 rounded-2xl bg-white border border-emerald-300 shadow-xs flex flex-col items-center shrink-0">
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(
+                `PASS:${pass.pass_number}|TENANT:${pass.tenant_name}|STATUS:APPROVED|OUT:${pass.outing_date}|RET:${pass.expected_return_date}`
+              )}&color=0F172A`}
+              alt="Pass QR"
+              className="w-12 h-12 rounded-lg"
+            />
             <span className="text-[8px] font-mono font-bold text-emerald-700 mt-0.5">
               VERIFIED
             </span>

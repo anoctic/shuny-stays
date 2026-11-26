@@ -14,6 +14,7 @@ import {
  verifyTenantKyc,
  rejectTenantKyc,
  submitTenantAadhaarKyc,
+ updateTenantProfilePhoto,
  markBedRentPaid,
  collectRentPayment,
  settleRentPaymentWithOwner,
@@ -209,6 +210,22 @@ export async function walkInAddTenantAction(
  const depositPaymentMode = (formData.get("depositPaymentMode") as "cash" | "upi" | "bank_transfer") || "cash";
  const depositRef = (formData.get("depositRef") as string) || undefined;
 
+ const profilePhotoFile = formData.get("profilePhoto") as File | null;
+ if (!profilePhotoFile || typeof profilePhotoFile !== "object" || !("size" in profilePhotoFile) || profilePhotoFile.size === 0) {
+ return { error: "Please upload Resident Profile Photo (mandatory for manual onboarding)." };
+ }
+
+ const uploadedPhoto = await uploadPermanentFileToBucket(
+ profilePhotoFile,
+ "tenant-photos",
+ session.pg_id || buildingId || session.id,
+ false
+ );
+ if (uploadedPhoto.error || !uploadedPhoto.url) {
+ return { error: uploadedPhoto.error || "Failed to upload resident profile photo." };
+ }
+ const profilePhotoUrl = uploadedPhoto.url;
+
  const res = await walkInAddTenant(buildingId, floorIdx, roomId, bedIdx, {
  name,
  phone,
@@ -219,6 +236,7 @@ export async function walkInAddTenantAction(
  depositStatus,
  depositPaymentMode,
  depositRef,
+ profilePhotoUrl,
  collectorName: session.full_name,
  collectorId: session.id,
  });
@@ -240,6 +258,9 @@ export async function walkInAddTenantAction(
  await (adminClient.from("tenants" as any) as any)
  .update({ user_id: creds.userId })
  .eq("id", res.tenantId);
+ await (adminClient.from("profiles" as any) as any)
+ .update({ avatar_url: profilePhotoUrl, updated_at: new Date().toISOString() })
+ .eq("id", creds.userId);
  } catch (linkErr) {
  console.warn("Failed to link tenant user_id after creation:", linkErr);
  }
@@ -252,6 +273,7 @@ export async function walkInAddTenantAction(
  revalidatePath("/tenant");
  revalidatePath("/tenant/dues");
  revalidatePath("/tenant/passes");
+ if (res?.tenantId) revalidatePath(`/verify/id/${res.tenantId}`);
 
  return {
  ...res,
@@ -534,6 +556,37 @@ export async function submitTenantUpiScreenshotAction(formData: FormData) {
  return { success: true, upi: res };
 }
 
+async function uploadPermanentFileToBucket(
+ file: File,
+ bucket: "tenant-photos" | "kyc-documents",
+ folder: string,
+ allowPdf: boolean
+): Promise<{ url?: string; error?: string }> {
+ if (file.size > 5 * 1024 * 1024) {
+ return { error: "File size must be under 5 MB." };
+ }
+ const extRaw = (file.name || "photo.jpg").split(".").pop()?.toLowerCase() || "jpg";
+ const allowedExts = allowPdf ? ["jpg", "jpeg", "png", "webp", "pdf"] : ["jpg", "jpeg", "png", "webp"];
+ const ext = allowedExts.includes(extRaw) ? extRaw : allowPdf ? "jpg" : "";
+ if (!ext) {
+ return { error: "Please upload a valid JPG, PNG, or WEBP image." };
+ }
+ const filePath = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+ const bytes = new Uint8Array(await file.arrayBuffer());
+ const admin = createAdminClient();
+ const { error: uploadErr } = await admin.storage
+ .from(bucket)
+ .upload(filePath, bytes, {
+ contentType: file.type || (ext === "pdf" ? "application/pdf" : "image/jpeg"),
+ upsert: true,
+ });
+ if (uploadErr) {
+ return { error: `Upload failed: ${uploadErr.message}` };
+ }
+ const { data: pubData } = admin.storage.from(bucket).getPublicUrl(filePath);
+ return { url: pubData?.publicUrl || undefined };
+}
+
 export async function submitTenantKycAction(formData: FormData) {
  try {
  const session = await getCurrentUserSession();
@@ -549,25 +602,9 @@ export async function submitTenantKycAction(formData: FormData) {
  let docUrl: string | null = existingDocUrl;
 
  if (file && typeof file === "object" && "size" in file && file.size > 0) {
- if (file.size > 5 * 1024 * 1024) {
- return { error: "Aadhaar photo/PDF must be under 5 MB." };
- }
- const extRaw = (file.name || "aadhaar.jpg").split(".").pop()?.toLowerCase() || "jpg";
- const ext = ["jpg", "jpeg", "png", "webp", "pdf"].includes(extRaw) ? extRaw : "jpg";
- const filePath = `${session.id}/${Date.now()}.${ext}`;
- const bytes = new Uint8Array(await file.arrayBuffer());
- const admin = createAdminClient();
- const { error: uploadErr } = await admin.storage
- .from("kyc-documents")
- .upload(filePath, bytes, {
- contentType: file.type || (ext === "pdf" ? "application/pdf" : "image/jpeg"),
- upsert: true,
- });
- if (uploadErr) {
- return { error: `Document upload failed: ${uploadErr.message}` };
- }
- const { data: pubData } = admin.storage.from("kyc-documents").getPublicUrl(filePath);
- docUrl = pubData?.publicUrl || null;
+ const uploaded = await uploadPermanentFileToBucket(file, "kyc-documents", session.id, true);
+ if (uploaded.error) return { error: uploaded.error };
+ docUrl = uploaded.url || null;
  }
 
  if (!docUrl) {
@@ -594,6 +631,65 @@ export async function submitTenantKycAction(formData: FormData) {
  };
  } catch (err: any) {
  return { error: err?.message || "Failed to submit Aadhaar KYC." };
+ }
+}
+
+export async function updateTenantProfilePhotoAction(formData: FormData) {
+ try {
+ const session = await getCurrentUserSession();
+ if (!session?.id) return { error: "Unauthorized" };
+
+ const photoFile = formData.get("profilePhoto") as File | null;
+ if (!photoFile || typeof photoFile !== "object" || !("size" in photoFile) || photoFile.size === 0) {
+ return { error: "Please choose an image file (JPG, PNG, or WEBP)." };
+ }
+
+ const requestedTenantId = ((formData.get("tenantId") as string) || "").trim();
+ const isManagement = session.role === "owner" || session.role === "admin" || session.role === "super_admin";
+ const targetId = isManagement && requestedTenantId ? requestedTenantId : session.id;
+
+ // Enforce tenant isolation if owner/admin updates for someone else
+ if (isManagement && requestedTenantId && session.role !== "super_admin") {
+ const admin = createAdminClient();
+ const { data: tRow } = await (admin.from("tenants" as any) as any)
+ .select("pg_id")
+ .eq("id", requestedTenantId)
+ .maybeSingle();
+ if (tRow && session.pg_id && tRow.pg_id !== session.pg_id) {
+ return { error: "Unauthorized: Resident belongs to a different PG." };
+ }
+ }
+
+ const uploaded = await uploadPermanentFileToBucket(
+ photoFile,
+ "tenant-photos",
+ isManagement && session.pg_id ? session.pg_id : session.id,
+ false
+ );
+ if (uploaded.error || !uploaded.url) {
+ return { error: uploaded.error || "Failed to upload profile photo." };
+ }
+
+ const res = await updateTenantProfilePhoto({
+ tenantOrUserId: targetId,
+ phone: !isManagement || !requestedTenantId ? session.phone : undefined,
+ photoUrl: uploaded.url,
+ });
+
+ revalidatePath("/tenant");
+ revalidatePath("/tenant/passes");
+ revalidatePath("/dashboard");
+ revalidatePath("/dashboard/rooms");
+ if (res?.tenantId) revalidatePath(`/verify/id/${res.tenantId}`);
+ revalidatePath(`/verify/id/${session.id}`);
+
+ return {
+ success: true,
+ photoUrl: res.photoUrl,
+ tenantId: res.tenantId,
+ };
+ } catch (err: any) {
+ return { error: err?.message || "Failed to save profile photo." };
  }
 }
 

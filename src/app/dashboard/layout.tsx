@@ -124,6 +124,8 @@ export default async function DashboardLayout({
  "attendance_logs",
  "complaints",
  "mess_menu",
+ "meal_polls",
+ "meal_poll_responses",
  "gate_passes",
  "platform_broadcasts",
  "pgs",

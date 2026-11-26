@@ -278,7 +278,7 @@ export interface PlatformBroadcast {
 }
 
 export type GatePassType = 'day_pass' | 'night_pass';
-export type GatePassApprovalStatus = 'pending_warden' | 'pending_owner' | 'approved' | 'rejected' | 'completed';
+export type GatePassApprovalStatus = 'requested' | 'pending_warden' | 'pending_owner' | 'approved' | 'rejected' | 'completed';
 
 export interface GatePass {
  id: string;

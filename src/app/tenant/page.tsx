@@ -54,8 +54,8 @@ export default async function TenantDashboardPage() {
  };
 
  const [lunchPollStatus, dinnerPollStatus] = await Promise.all([
- getTenantMealPollStatus(pg.id, session.id, "lunch"),
- getTenantMealPollStatus(pg.id, session.id, "dinner"),
+ getTenantMealPollStatus(pg.id, lookupId, "lunch"),
+ getTenantMealPollStatus(pg.id, lookupId, "dinner"),
  ]);
 
  const expectedDep = dbDeposit?.expectedAmount ?? liveProfile?.depositAmount ?? 0;
@@ -86,9 +86,11 @@ export default async function TenantDashboardPage() {
  const currentBillingMonth = now.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
  const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
+ let lastRentPaidAt: string | null = null;
  const rentPaid = invoices.some((inv) => {
  const st = (inv.status || "").toLowerCase();
  if (!["settled_with_owner", "collected_by_admin", "paid", "verified"].includes(st)) return false;
+ if (!lastRentPaidAt && inv.collectedAt) lastRentPaidAt = inv.collectedAt;
  const bm = (inv.billingMonth || "").trim();
  const dt = inv.collectedAt || "";
  return (
@@ -97,6 +99,12 @@ export default async function TenantDashboardPage() {
  (!bm && dt.startsWith(currentYearMonth))
  );
  });
+ if (!lastRentPaidAt) {
+ const latestPaid = invoices.find((inv) =>
+ ["settled_with_owner", "collected_by_admin", "paid", "verified"].includes((inv.status || "").toLowerCase())
+ );
+ lastRentPaidAt = latestPaid?.collectedAt || null;
+ }
 
  return (
  <TenantHomeExplorer
@@ -106,7 +114,7 @@ export default async function TenantDashboardPage() {
  email: liveProfile?.email || session.email,
  phone: liveProfile?.phone || session.phone || undefined,
  room_id: session.room_id || undefined,
- building_id: session.building_id || undefined,
+ building_id: liveProfile?.buildingId || session.building_id || undefined,
  }}
  pg={{
  id: pg.id,
@@ -131,10 +139,14 @@ export default async function TenantDashboardPage() {
  }}
  initialDinnerPoll={dinnerPoll}
  tenantRecordId={liveProfile?.tenantId || session.id}
+ buildingId={liveProfile?.buildingId || session.building_id || null}
+ joinDate={liveProfile?.joinDate}
+ lastRentPaidAt={lastRentPaidAt}
  initialKycStatus={liveProfile?.kycStatus || "Pending"}
  initialAadhaarNumber={liveProfile?.aadhaarNumber || null}
  initialKycDocUrl={liveProfile?.kycDocUrl || null}
  initialKycRejectionReason={liveProfile?.kycRejectionReason || null}
+ initialProfilePhotoUrl={liveProfile?.profilePhotoUrl || null}
  roomNumber={
  liveProfile
  ? `${liveProfile.roomNumber} • ${liveProfile.bedLabel}`

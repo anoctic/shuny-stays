@@ -107,20 +107,26 @@ export async function deleteBroadcastAction(id: string) {
  * Tenant or Warden Action: Request or Issue a Day/Night Pass
  */
 export async function requestGatePassAction(formData: FormData) {
+ try {
  const session = await getCurrentUserSession();
+ if (!session?.id) {
+ return { error: "Session expired. Please log in again." };
+ }
 
  const passType = (formData.get("pass_type") as GatePassType) || "day_pass";
- const outingDate = formData.get("outing_date") as string;
- const expectedReturnDate = (formData.get("expected_return_date") as string) || outingDate;
- const departureTime = (formData.get("departure_time") as string) || "10:00";
- const expectedReturnTime = (formData.get("expected_return_time") as string) || "20:30";
- const reason = (formData.get("reason") as string) || "Outing";
- const destination = (formData.get("destination") as string) || "City Center";
- const emergencyPhone = (formData.get("emergency_phone") as string) || session.phone || "+91 98765 00000";
+ const outingDate = ((formData.get("outing_date") as string) || "").trim();
+ const expectedReturnDate = ((formData.get("expected_return_date") as string) || "").trim() || outingDate;
+ const departureTime = ((formData.get("departure_time") as string) || "").trim() || "10:00";
+ const expectedReturnTime = ((formData.get("expected_return_time") as string) || "").trim() || "20:30";
+ const reason = ((formData.get("reason") as string) || "").trim() || "Outing";
+ const destination = ((formData.get("destination") as string) || "").trim() || "City Center";
+ const emergencyPhone = ((formData.get("emergency_phone") as string) || "").trim() || session.phone || "";
 
- // If warden/owner is creating for a tenant or tenant self-request
- const tenantId = (formData.get("tenant_id") as string) || session.id;
- const tenantName = (formData.get("tenant_name") as string) || session.full_name;
+ // Prefer explicit tenant record ID / pg / building passed or session lookup
+ const tenantId = ((formData.get("tenant_id") as string) || "").trim() || session.id;
+ const tenantName = ((formData.get("tenant_name") as string) || "").trim() || session.full_name;
+ const buildingId = ((formData.get("building_id") as string) || "").trim() || session.building_id || "";
+ const pgId = ((formData.get("pg_id") as string) || "").trim() || session.pg_id || "";
 
  if (!outingDate || !reason) {
  return { error: "Please enter outing date and reason." };
@@ -129,11 +135,11 @@ export async function requestGatePassAction(formData: FormData) {
  const pass = await requestGatePass({
  tenantId,
  tenantName,
- tenantPhone: session.phone || "+91 91234 56789",
- roomNumber: session.room_id ? "Room 101 • Bed A" : "Room 101",
- buildingId: session.building_id || "20000000-0000-0000-0000-000000000001",
- buildingName: "Block A - Krishna Bhawan (Boys)",
- pgId: session.pg_id || "10000000-0000-0000-0000-000000000001",
+ tenantPhone: session.phone || "",
+ roomNumber: ((formData.get("room_number") as string) || "").trim() || "Assigned Room",
+ buildingId,
+ buildingName: "Main Block",
+ pgId,
  passType,
  outingDate,
  expectedReturnDate,
@@ -151,6 +157,10 @@ export async function requestGatePassAction(formData: FormData) {
  revalidatePath("/dashboard");
  revalidatePath("/dashboard/passes");
  return { success: true, pass };
+ } catch (err: any) {
+ console.error("requestGatePassAction error:", err);
+ return { error: err?.message || "Failed to submit outing pass request." };
+ }
 }
 
 /**
@@ -159,36 +169,47 @@ export async function requestGatePassAction(formData: FormData) {
  * When Warden approves, status becomes 'pending_owner' (YELLOW)
  */
 export async function approveGatePassAction(passId: string) {
+ try {
  const session = await getCurrentUserSession();
- if (session.role !== "owner" && session.role !== "admin") {
+ if (session.role !== "owner" && session.role !== "admin" && session.role !== "super_admin") {
  return { error: "Unauthorized to approve passes." };
  }
 
- const updated = await approveGatePass(passId, session.role, session.id);
+ const effectiveRole = session.role === "super_admin" ? "owner" : session.role;
+ const updated = await approveGatePass(passId, effectiveRole, session.id);
 
  revalidatePath("/tenant");
  revalidatePath("/tenant/passes");
  revalidatePath("/dashboard");
  revalidatePath("/dashboard/passes");
  return { success: true, pass: updated };
+ } catch (err: any) {
+ console.error("approveGatePassAction error:", err);
+ return { error: err?.message || "Failed to approve pass." };
+ }
 }
 
 /**
  * PG Owner or Warden Action: Reject Gate Pass (turns RED)
  */
 export async function rejectGatePassAction(passId: string, reason: string) {
+ try {
  const session = await getCurrentUserSession();
- if (session.role !== "owner" && session.role !== "admin") {
+ if (session.role !== "owner" && session.role !== "admin" && session.role !== "super_admin") {
  return { error: "Unauthorized to reject passes." };
  }
 
- const updated = await rejectGatePass(passId, reason || "Rejected by authority");
+ const updated = await rejectGatePass(passId, (reason || "").trim() || "Rejected by authority");
 
  revalidatePath("/tenant");
  revalidatePath("/tenant/passes");
  revalidatePath("/dashboard");
  revalidatePath("/dashboard/passes");
  return { success: true, pass: updated };
+ } catch (err: any) {
+ console.error("rejectGatePassAction error:", err);
+ return { error: err?.message || "Failed to reject pass." };
+ }
 }
 
 

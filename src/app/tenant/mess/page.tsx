@@ -2,6 +2,7 @@ import { Utensils, Clock } from "lucide-react";
 import { getCurrentUserSession } from "@/lib/auth/session";
 import { getWeeklyMessMenu } from "@/lib/data/mess-menu";
 import { getTenantMealPollStatus } from "@/lib/data/meal-polls";
+import { getTenantLiveProfile } from "@/lib/data/rooms";
 import { TenantMealPollCard } from "@/components/mess/TenantMealPollCard";
 import { WeeklyMessExplorer } from "@/components/mess/WeeklyMessExplorer";
 
@@ -11,12 +12,14 @@ export const revalidate = 0;
 
 export default async function TenantMessPage() {
   const session = await getCurrentUserSession();
-  const pgId = session.pg_id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
+  const liveProfile = await getTenantLiveProfile(session.id, session.phone);
+  const pgId = liveProfile?.pgId || session.pg_id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
+  const tenantLookupId = liveProfile?.tenantId || session.id;
 
   const [weeklyMenu, lunchPollStatus, dinnerPollStatus] = await Promise.all([
     getWeeklyMessMenu(pgId),
-    getTenantMealPollStatus(pgId, session.id, "lunch"),
-    getTenantMealPollStatus(pgId, session.id, "dinner"),
+    getTenantMealPollStatus(pgId, tenantLookupId, "lunch"),
+    getTenantMealPollStatus(pgId, tenantLookupId, "dinner"),
   ]);
 
   return (
@@ -37,7 +40,7 @@ export default async function TenantMessPage() {
           dinnerIsCutoffPassed={dinnerPollStatus.isCutoffPassed}
           initialVote={lunchPollStatus.tenantVote}
           dinnerInitialVote={dinnerPollStatus.tenantVote}
-          tenantId={session.id}
+          tenantId={tenantLookupId}
           scheduleStatus={lunchPollStatus.scheduleStatus}
           dinnerScheduleStatus={dinnerPollStatus.scheduleStatus}
         />

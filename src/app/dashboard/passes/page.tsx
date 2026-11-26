@@ -6,6 +6,7 @@ import { getAllBroadcasts } from "@/lib/data/broadcasts";
 import { GatePassCard } from "@/components/passes/GatePassCard";
 import { BroadcastCreatorModal } from "@/components/broadcasts/BroadcastCreatorModal";
 import { PassTemplateModal } from "@/components/passes/PassTemplateModal";
+import { RealtimeSyncSubscriber } from "@/components/common/RealtimeSyncSubscriber";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,7 @@ export default async function DashboardPassesPage() {
 
   return (
     <div className="space-y-4">
+      <RealtimeSyncSubscriber tables={["gate_passes", "tenants", "platform_broadcasts"]} />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Link

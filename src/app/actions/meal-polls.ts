@@ -131,23 +131,36 @@ export async function voteMealPollAction(
  const session = await getCurrentUserSession();
  const admin = createAdminClient();
 
- let resolvedTenantId = providedTenantId;
+ let resolvedTenantId: string | undefined;
 
- // If tenant ID not directly passed, resolve it from session.id or tenants table
- if (!resolvedTenantId) {
+ // Always canonicalize to the active tenants.id (even if client passed auth user_id)
+ const candidateId = providedTenantId || session.id;
  const { data: tenantRecord } = await (admin.from("tenants" as any) as any)
  .select("id, pg_id")
- .or(`user_id.eq.${session.id},id.eq.${session.id}`)
+ .or(`id.eq.${candidateId},user_id.eq.${session.id},user_id.eq.${candidateId}`)
  .eq("is_active", true)
+ .order("created_at", { ascending: false })
  .limit(1)
  .maybeSingle();
 
  if (tenantRecord?.id) {
  resolvedTenantId = tenantRecord.id;
+ } else if (session.phone) {
+ const digits = session.phone.replace(/\D/g, "").slice(-10);
+ if (digits.length === 10) {
+ const { data: phoneTenant } = await (admin.from("tenants" as any) as any)
+ .select("id")
+ .ilike("phone", `%${digits}`)
+ .eq("is_active", true)
+ .order("created_at", { ascending: false })
+ .limit(1)
+ .maybeSingle();
+ resolvedTenantId = phoneTenant?.id || candidateId;
  } else {
- // Fallback: If in demo mode or tenant record id matches session
- resolvedTenantId = session.id;
+ resolvedTenantId = candidateId;
  }
+ } else {
+ resolvedTenantId = candidateId;
  }
 
  if (!resolvedTenantId) {

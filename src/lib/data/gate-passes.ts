@@ -193,23 +193,47 @@ export async function requestGatePass(params: {
  initialStatus = "pending_owner";
  }
 
+ const isRealUuid = (v?: string | null) =>
+ Boolean(v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v) && !v.startsWith("10000000-") && !v.startsWith("20000000-"));
+
  const admin = createAdminClient();
 
- const { data: activeTenant } = await db(admin, "tenants")
- .select("id, pg_id, building_id, full_name, phone, rooms(room_number), buildings(name)")
+ let { data: activeTenant } = await db(admin, "tenants")
+ .select("id, pg_id, building_id, room_id, full_name, phone, rooms(room_number, building_id), buildings(name)")
  .or(`id.eq.${params.tenantId},user_id.eq.${params.tenantId}`)
  .eq("is_active", true)
  .order("created_at", { ascending: false })
  .limit(1)
  .maybeSingle();
 
+ if (!activeTenant && params.tenantPhone) {
+ const digits = params.tenantPhone.replace(/\D/g, "").slice(-10);
+ if (digits.length === 10) {
+ const { data: byPhone } = await db(admin, "tenants")
+ .select("id, pg_id, building_id, room_id, full_name, phone, rooms(room_number, building_id), buildings(name)")
+ .ilike("phone", `%${digits}`)
+ .eq("is_active", true)
+ .order("created_at", { ascending: false })
+ .limit(1)
+ .maybeSingle();
+ activeTenant = byPhone;
+ }
+ }
+
+ if (!activeTenant && params.createdByRole === "tenant") {
+ throw new Error("Active resident profile not found. Please contact PG Owner to link your bed before requesting a Gate Pass.");
+ }
+
  const effectiveTenantId = activeTenant?.id || params.tenantId;
- const effectivePgId = activeTenant?.pg_id || params.pgId;
- const effectiveBuildingId = activeTenant?.building_id || params.buildingId;
+ const effectivePgId = activeTenant?.pg_id || (isRealUuid(params.pgId) ? params.pgId : null);
+ const effectiveBuildingId =
+ activeTenant?.building_id ||
+ activeTenant?.rooms?.building_id ||
+ (isRealUuid(params.buildingId) ? params.buildingId : null);
  const effectiveBuildingName = activeTenant?.buildings?.name || params.buildingName || "Main Building";
  const effectiveRoomNumber = activeTenant?.rooms?.room_number
  ? `Room ${activeTenant.rooms.room_number}`
- : params.roomNumber || "Room 101";
+ : params.roomNumber || "Assigned Room";
 
  const { error } = await db(admin, "gate_passes").insert({
  id: passId,
@@ -246,8 +270,8 @@ export async function requestGatePass(params: {
 
  const createdPass: GatePass = {
  id: passId,
- pg_id: effectivePgId,
- building_id: effectiveBuildingId,
+ pg_id: effectivePgId || "",
+ building_id: effectiveBuildingId || "",
  building_name: effectiveBuildingName,
  tenant_id: effectiveTenantId,
  tenant_name: activeTenant?.full_name || params.tenantName,
@@ -285,7 +309,7 @@ export async function approveGatePass(passId: string, approverRole: UserRole, ap
  updated_at: new Date().toISOString(),
  };
 
- if (approverRole === "owner") {
+ if (approverRole === "owner" || approverRole === "super_admin") {
  updateData.approval_status = "approved";
  updateData.owner_approved_by = approverId || "Owner";
  updateData.owner_approved_at = new Date().toISOString();

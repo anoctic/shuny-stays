@@ -419,10 +419,12 @@ export async function getMealPollSummary(
 
  const responseMap = new Map<string, { vote: "yes" | "no"; votedAt: string }>();
  responses.forEach((r) => {
- responseMap.set(r.tenant_id, {
+ const val = {
  vote: r.vote as "yes" | "no",
  votedAt: r.updated_at || r.created_at,
- });
+ };
+ if (r.tenant_id) responseMap.set(r.tenant_id, val);
+ if (r.user_id && !responseMap.has(r.user_id)) responseMap.set(r.user_id, val);
  });
 
  // 5. Categorize into 3 sections (YES, NO, NOT ANSWERED)
@@ -431,7 +433,7 @@ export async function getMealPollSummary(
  const notAnsweredList: TenantHeadcountItem[] = [];
 
  tenants.forEach((t: any) => {
- const resp = responseMap.get(t.id);
+ const resp = responseMap.get(t.id) || (t.user_id ? responseMap.get(t.user_id) : undefined);
  const roomNum = t.rooms?.room_number ? `Room ${t.rooms.room_number}` : "Room Assigned";
  const bedName = t.beds?.bed_name ? `• ${t.beds.bed_name}` : "";
 
@@ -511,16 +513,18 @@ export async function getMealPollHistory(
  return [];
  }
 
- // 2. Fetch all tenants for this PG
+ // 2. Fetch all active tenants for this PG
  const { data: tenantsData } = await (admin.from("tenants" as any) as any)
  .select(`
  id,
+ user_id,
  full_name,
  phone,
  rooms (room_number),
  beds (bed_name)
  `)
  .eq("pg_id", pgId)
+ .eq("is_active", true)
  .order("full_name", { ascending: true });
 
  const tenants = tenantsData || [];
@@ -528,19 +532,21 @@ export async function getMealPollHistory(
  // 3. Fetch responses for all these polls in one batch
  const pollIds = pollsData.map((p: any) => p.id);
  const { data: responsesData } = await (admin.from("meal_poll_responses" as any) as any)
- .select("poll_id, tenant_id, vote, updated_at, created_at")
+ .select("poll_id, tenant_id, user_id, vote, updated_at, created_at")
  .in("poll_id", pollIds);
 
- // Map: poll_id -> Map<tenant_id, voteInfo>
+ // Map: poll_id -> Map<tenant_id_or_user_id, voteInfo>
  const pollResponsesMap = new Map<string, Map<string, { vote: "yes" | "no"; votedAt: string }>>();
  (responsesData || []).forEach((r: any) => {
  if (!pollResponsesMap.has(r.poll_id)) {
  pollResponsesMap.set(r.poll_id, new Map());
  }
- pollResponsesMap.get(r.poll_id)!.set(r.tenant_id, {
+ const val = {
  vote: r.vote as "yes" | "no",
  votedAt: r.updated_at || r.created_at,
- });
+ };
+ if (r.tenant_id) pollResponsesMap.get(r.poll_id)!.set(r.tenant_id, val);
+ if (r.user_id && !pollResponsesMap.get(r.poll_id)!.has(r.user_id)) pollResponsesMap.get(r.poll_id)!.set(r.user_id, val);
  });
 
  // 4. Construct history items
@@ -551,7 +557,7 @@ export async function getMealPollHistory(
  const notAnsweredList: TenantHeadcountItem[] = [];
 
  tenants.forEach((t: any) => {
- const resp = respMap.get(t.id);
+ const resp = respMap.get(t.id) || (t.user_id ? respMap.get(t.user_id) : undefined);
  const roomNum = t.rooms?.room_number ? `Room ${t.rooms.room_number}` : "Room Assigned";
  const bedName = t.beds?.bed_name ? `• ${t.beds.bed_name}` : "";
 
@@ -642,13 +648,30 @@ export async function getTenantMealPollStatus(
 
  const admin = createAdminClient();
 
- // Fetch tenant's vote if any
+ // Fetch tenant's vote if any (support matching either tenant.id or auth user_id)
  let vote: "yes" | "no" | null = null;
  if (poll.id && !poll.id.startsWith("auto-")) {
+ const { data: tenantRow } = await (admin.from("tenants" as any) as any)
+ .select("id, user_id")
+ .or(`id.eq.${tenantId},user_id.eq.${tenantId}`)
+ .eq("is_active", true)
+ .order("created_at", { ascending: false })
+ .limit(1)
+ .maybeSingle();
+
+ const matchIds = Array.from(
+ new Set([tenantId, tenantRow?.id, tenantRow?.user_id].filter(Boolean))
+ );
+ const orFilter = matchIds
+ .flatMap((mid) => [`tenant_id.eq.${mid}`, `user_id.eq.${mid}`])
+ .join(",");
+
  const { data: response } = await (admin.from("meal_poll_responses" as any) as any)
  .select("vote")
  .eq("poll_id", poll.id)
- .eq("tenant_id", tenantId)
+ .or(orFilter)
+ .order("updated_at", { ascending: false })
+ .limit(1)
  .maybeSingle();
 
  vote = response?.vote || null;

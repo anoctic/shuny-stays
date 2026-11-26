@@ -30,6 +30,8 @@ export interface TenantProfileItem {
  depositRefundedAmount?: number;
  depositRefundedAt?: string;
  rentPaid: boolean;
+ lastRentPaidAt?: string | null;
+ profilePhotoUrl?: string | null;
  kycStatus: "Verified" | "Under Review" | "Pending" | "Rejected";
  aadhaarNumber?: string | null;
  kycDocUrl?: string | null;
@@ -205,7 +207,7 @@ export const getAllBuildings = cache(async (selectedBuildingId?: string | null):
  beds (
  id, bed_name, status, monthly_rent,
  tenants (
- id, full_name, phone, emergency_contact_phone, work_or_college, check_in_date, rent_amount, deposit_amount, is_active, kyc_status, id_proof_type, id_proof_number, id_proof_doc_url, kyc_rejection_reason, created_at
+ id, full_name, phone, emergency_contact_phone, work_or_college, check_in_date, rent_amount, deposit_amount, is_active, kyc_status, id_proof_type, id_proof_number, id_proof_doc_url, kyc_rejection_reason, profile_photo_url, created_at
  )
  )
  )
@@ -244,13 +246,17 @@ export const getAllBuildings = cache(async (selectedBuildingId?: string | null):
  }
 
  const paidRentTenantIds = new Set<string>();
+ const lastRentPaidAtByTenant = new Map<string, string>();
  for (const rp of rentPaymentsData || []) {
  if (!rp.tenant_id) continue;
  const st = (rp.status || "").toLowerCase();
  const isPaidStatus = ["settled_with_owner", "collected_by_admin", "paid", "verified"].includes(st);
  if (!isPaidStatus) continue;
- const bm = (rp.billing_month || "").trim();
  const dt = rp.collected_at || rp.created_at || "";
+ if (dt && !lastRentPaidAtByTenant.has(rp.tenant_id)) {
+ lastRentPaidAtByTenant.set(rp.tenant_id, dt);
+ }
+ const bm = (rp.billing_month || "").trim();
  const matchesMonth =
  bm.toLowerCase() === currentBillingMonth.toLowerCase() ||
  bm.startsWith(currentYearMonth) ||
@@ -354,6 +360,8 @@ export const getAllBuildings = cache(async (selectedBuildingId?: string | null):
  depositRefundedAmount: depRow?.refunded_amount ? Number(depRow.refunded_amount) : undefined,
  depositRefundedAt: depRow?.refunded_at || undefined,
  rentPaid: paidRentTenantIds.has(rawTenant.id),
+ lastRentPaidAt: lastRentPaidAtByTenant.get(rawTenant.id) || null,
+ profilePhotoUrl: rawTenant.profile_photo_url || null,
  kycStatus: mappedKyc,
  aadhaarNumber: rawTenant.id_proof_number || null,
  kycDocUrl: rawTenant.id_proof_doc_url || null,
@@ -777,6 +785,7 @@ export async function walkInAddTenant(
  depositStatus?: "paid" | "pending";
  depositPaymentMode?: "cash" | "upi" | "bank_transfer";
  depositRef?: string;
+ profilePhotoUrl?: string | null;
  collectorName?: string;
  collectorId?: string;
  }
@@ -829,6 +838,8 @@ export async function walkInAddTenant(
  rent_amount: roomRent,
  deposit_amount: depAmount,
  check_in_date: data.joinDate || new Date().toISOString().split("T")[0],
+ profile_photo_url: data.profilePhotoUrl || null,
+ profile_photo_updated_at: data.profilePhotoUrl ? new Date().toISOString() : null,
  kyc_status: "pending",
  is_active: true,
  });
@@ -1013,6 +1024,73 @@ export async function submitTenantAadhaarKyc(params: {
  } catch {}
 
  return { success: true, tenantId: tenant.id, kycStatus: "Under Review" as const };
+}
+
+export async function updateTenantProfilePhoto(params: {
+ tenantOrUserId: string;
+ phone?: string | null;
+ photoUrl: string;
+}) {
+ const admin = createAdminClient();
+ const cleanUrl = (params.photoUrl || "").trim();
+ if (!cleanUrl) throw new Error("Profile photo URL is required.");
+
+ let tenant: any = null;
+ const { data: byId } = await db(admin, "tenants")
+ .select("id, user_id, full_name, pg_id, building_id")
+ .or(`id.eq.${params.tenantOrUserId},user_id.eq.${params.tenantOrUserId}`)
+ .eq("is_active", true)
+ .order("created_at", { ascending: false })
+ .limit(1)
+ .maybeSingle();
+ tenant = byId;
+
+ if (!tenant && params.phone) {
+ const digits = params.phone.replace(/\D/g, "").slice(-10);
+ if (digits.length === 10) {
+ const { data: byPhone } = await db(admin, "tenants")
+ .select("id, user_id, full_name, pg_id, building_id")
+ .ilike("phone", `%${digits}`)
+ .eq("is_active", true)
+ .order("created_at", { ascending: false })
+ .limit(1)
+ .maybeSingle();
+ tenant = byPhone;
+ }
+ }
+
+ if (!tenant) throw new Error("Active resident profile not found.");
+
+ const nowIso = new Date().toISOString();
+ const { error: uErr } = await db(admin, "tenants")
+ .update({
+ profile_photo_url: cleanUrl,
+ profile_photo_updated_at: nowIso,
+ updated_at: nowIso,
+ })
+ .eq("id", tenant.id);
+
+ if (uErr) throw new Error(`Failed to save profile photo: ${uErr.message}`);
+
+ if (tenant.user_id) {
+ await db(admin, "profiles")
+ .update({ avatar_url: cleanUrl, updated_at: nowIso })
+ .eq("id", tenant.user_id);
+ }
+
+ try {
+ await db(admin, "pg_audit_logs").insert({
+ id: crypto.randomUUID(),
+ pg_id: tenant.pg_id,
+ building_id: tenant.building_id,
+ action: `Profile photo permanently updated for ${tenant.full_name}`,
+ entity_table: "tenants",
+ entity_id: tenant.id,
+ created_at: nowIso,
+ });
+ } catch {}
+
+ return { success: true, tenantId: tenant.id, pgId: tenant.pg_id, photoUrl: cleanUrl };
 }
 
 export async function verifyTenantKyc(tenantId: string) {
@@ -2337,6 +2415,7 @@ export async function updateTenantAndBed(
 export interface TenantLiveProfile {
   tenantId: string;
   pgId: string;
+  buildingId: string | null;
   fullName: string;
   phone: string;
   email: string;
@@ -2350,6 +2429,7 @@ export interface TenantLiveProfile {
   aadhaarNumber: string | null;
   kycDocUrl: string | null;
   kycRejectionReason: string | null;
+  profilePhotoUrl: string | null;
   upiId: string | null;
 }
 
@@ -2361,8 +2441,8 @@ export async function getTenantLiveProfile(
   try {
     const admin = createAdminClient();
     const selectStr = `
-      id, pg_id, full_name, phone, email, rent_amount, deposit_amount, check_in_date,
-      kyc_status, id_proof_type, id_proof_number, id_proof_doc_url, kyc_rejection_reason,
+      id, pg_id, building_id, full_name, phone, email, rent_amount, deposit_amount, check_in_date,
+      kyc_status, id_proof_type, id_proof_number, id_proof_doc_url, kyc_rejection_reason, profile_photo_url,
       buildings(name),
       rooms(room_number),
       beds(bed_name),
@@ -2410,6 +2490,7 @@ export async function getTenantLiveProfile(
     return {
       tenantId: tenant.id,
       pgId: tenant.pg_id,
+      buildingId: tenant.building_id || null,
       fullName: tenant.full_name,
       phone: tenant.phone,
       email: tenant.email || "",
@@ -2423,6 +2504,7 @@ export async function getTenantLiveProfile(
       aadhaarNumber: tenant.id_proof_number || null,
       kycDocUrl: tenant.id_proof_doc_url || null,
       kycRejectionReason: tenant.kyc_rejection_reason || null,
+      profilePhotoUrl: tenant.profile_photo_url || null,
       upiId: tenant.pgs?.upi_id || null,
     };
   } catch (err) {

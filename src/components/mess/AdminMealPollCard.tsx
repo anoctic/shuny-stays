@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import {
  Utensils,
  Clock,
@@ -46,6 +47,7 @@ export function AdminMealPollCard({
   pgId,
 }: AdminMealPollCardProps) {
   const router = useRouter();
+  useRealtimeSync(["meal_polls", "meal_poll_responses", "tenants"]);
   const [selectedMeal, setSelectedMeal] = useState<"lunch" | "dinner">(() => {
     return new Date().getHours() >= 12 && dinnerSummary ? "dinner" : "lunch";
   });

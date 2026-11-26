@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { computeTenantCycleStatus } from "@/lib/utils/billing-cycle";
 import {
  Sparkles,
  IdCard,
@@ -22,6 +23,9 @@ import {
  Check,
  ShieldCheck,
  ArrowRight,
+ ExternalLink,
+ Camera,
+ Upload,
 } from "lucide-react";
 import { GatePassItem, PlatformBroadcast } from "@/types/schema.types";
 import { ActiveBroadcastBanner } from "@/components/broadcasts/ActiveBroadcastBanner";
@@ -35,6 +39,7 @@ import { MealPoll } from "@/types/meal-poll.types";
 import {
  submitTenantUpiScreenshotAction,
  submitTenantKycAction,
+ updateTenantProfilePhotoAction,
 } from "@/app/actions/rooms-and-ops";
 
 interface TenantHomeExplorerProps {
@@ -72,7 +77,11 @@ interface TenantHomeExplorerProps {
  initialAadhaarNumber?: string | null;
  initialKycDocUrl?: string | null;
  initialKycRejectionReason?: string | null;
+ initialProfilePhotoUrl?: string | null;
  tenantRecordId?: string;
+ buildingId?: string | null;
+ joinDate?: string;
+ lastRentPaidAt?: string | null;
  roomNumber?: string;
  buildingName?: string;
  rentAmount?: number;
@@ -112,7 +121,11 @@ export function TenantHomeExplorer({
  initialAadhaarNumber = null,
  initialKycDocUrl = null,
  initialKycRejectionReason = null,
+ initialProfilePhotoUrl = null,
  tenantRecordId,
+ buildingId = null,
+ joinDate,
+ lastRentPaidAt = null,
  roomNumber = "Pending Room",
  buildingName = "Main Block",
  rentAmount = 0,
@@ -128,7 +141,46 @@ export function TenantHomeExplorer({
  dinnerPollStatus = null,
 }: TenantHomeExplorerProps) {
  const router = useRouter();
- useRealtimeSync(["tenants", "rent_payments", "security_deposits", "gate_passes", "complaints", "rooms", "pg_attendance_logs"]);
+ useRealtimeSync([
+ "tenants",
+ "rent_payments",
+ "security_deposits",
+ "gate_passes",
+ "meal_polls",
+ "meal_poll_responses",
+ "complaints",
+ "rooms",
+ "pg_attendance_logs",
+ ]);
+
+ const [isIdQrModalOpen, setIsIdQrModalOpen] = useState(false);
+ const [copiedIdLink, setCopiedIdLink] = useState(false);
+ const [origin, setOrigin] = useState("https://shunystays.com");
+
+ const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(initialProfilePhotoUrl);
+ const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+ const [photoFile, setPhotoFile] = useState<File | null>(null);
+ const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+ const [photoUploading, setPhotoUploading] = useState(false);
+ const [photoError, setPhotoError] = useState<string | null>(null);
+
+ useEffect(() => {
+ setProfilePhotoUrl(initialProfilePhotoUrl);
+ }, [initialProfilePhotoUrl]);
+
+ useEffect(() => {
+ if (typeof window !== "undefined") {
+ setOrigin(window.location.origin);
+ }
+ }, []);
+
+ const activeTenantId = tenantRecordId || session.id;
+ const verifyIdUrl = `${origin}/verify/id/${activeTenantId}`;
+ const cycleStatus = computeTenantCycleStatus({
+ checkInDate: joinDate,
+ rentPaid,
+ lastPaidAt: lastRentPaidAt,
+ });
 
  const [showHistory, setShowHistory] = useState(false);
  const [kycStatus, setKycStatus] = useState<"Verified" | "Under Review" | "Pending" | "Rejected">(initialKycStatus);
@@ -201,6 +253,36 @@ export function TenantHomeExplorer({
  setKycError("Failed to upload Aadhaar KYC. Please try again.");
  } finally {
  setKycLoading(false);
+ }
+ };
+
+ const handleProfilePhotoSubmit = async (e: React.FormEvent) => {
+ e.preventDefault();
+ setPhotoError(null);
+ if (!photoFile) {
+ setPhotoError("Please select your profile photo (JPG, PNG, or WEBP).");
+ return;
+ }
+ setPhotoUploading(true);
+ try {
+ const fd = new FormData();
+ fd.append("profilePhoto", photoFile);
+ const res = await updateTenantProfilePhotoAction(fd);
+ if (res && "error" in res && res.error) {
+ setPhotoError(res.error);
+ } else if (res && "photoUrl" in res && res.photoUrl) {
+ setProfilePhotoUrl(res.photoUrl);
+ if (photoPreview) URL.revokeObjectURL(photoPreview);
+ setPhotoPreview(null);
+ setPhotoFile(null);
+ setIsPhotoModalOpen(false);
+ router.refresh();
+ showToast("Profile photo saved permanently! Synced to PG Owner portal.");
+ }
+ } catch {
+ setPhotoError("Failed to upload profile photo. Please try again.");
+ } finally {
+ setPhotoUploading(false);
  }
  };
 
@@ -289,6 +371,31 @@ export function TenantHomeExplorer({
  </span>
  </div>
 
+ {/* Profile Photo Reminder Banner (only if resident has not uploaded photo yet) */}
+ {!profilePhotoUrl && (
+ <div
+ onClick={() => setIsPhotoModalOpen(true)}
+ className="bg-indigo-50 border border-indigo-200 rounded-2xl p-3.5 flex items-center justify-between gap-2 cursor-pointer transition hover:bg-indigo-100/70"
+ >
+ <div className="flex items-center gap-2.5 min-w-0">
+ <div className="w-8 h-8 rounded-xl bg-indigo-600/15 flex items-center justify-center text-indigo-700 shrink-0">
+ <Camera className="w-4 h-4" />
+ </div>
+ <div className="min-w-0">
+ <div className="text-xs font-extrabold text-indigo-950">
+ Please update your profile photo
+ </div>
+ <div className="text-[10px] text-indigo-700 truncate">
+ Upload once for your permanent ID card &amp; Owner bed profile
+ </div>
+ </div>
+ </div>
+ <span className="px-2.5 py-1 rounded-xl bg-indigo-600 text-white text-[10px] font-extrabold shrink-0 shadow-xs">
+ Upload Photo →
+ </span>
+ </div>
+ )}
+
  {/* KYC Alert / Status Banner when not yet Verified */}
  {kycStatus !== "Verified" && (
  <div
@@ -367,19 +474,54 @@ export function TenantHomeExplorer({
  background: `linear-gradient(135deg, ${brandColor}, #0F172A)`,
  }}
  >
- <div className="flex items-center justify-between">
- <div>
- <div className="text-[10px] font-extrabold uppercase tracking-widest opacity-80">
+ <div className="flex items-center justify-between gap-2">
+ <div className="flex items-center gap-2.5 min-w-0">
+ <button
+ type="button"
+ onClick={() => setIsPhotoModalOpen(true)}
+ title={profilePhotoUrl ? "Update Profile Photo" : "Upload Profile Photo"}
+ className="w-11 h-11 rounded-2xl bg-white/15 border border-white/25 overflow-hidden flex items-center justify-center shrink-0 cursor-pointer hover:ring-2 hover:ring-white/60 transition"
+ >
+ {profilePhotoUrl ? (
+ <img
+ src={profilePhotoUrl}
+ alt={session.full_name}
+ className="w-full h-full object-cover"
+ />
+ ) : (
+ <Camera className="w-5 h-5 text-white/85" />
+ )}
+ </button>
+ <div className="min-w-0">
+ <div className="text-[10px] font-extrabold uppercase tracking-widest opacity-80 truncate">
  {pg.name}
  </div>
- <div className="text-base font-extrabold">{session.full_name}</div>
+ <div className="text-base font-extrabold truncate">{session.full_name}</div>
+ <div className="text-[10px] text-white/75 mt-0.5">
+ Month Cycle Ends: <strong className="text-white">{cycleStatus.formattedEndDate}</strong>
  </div>
- <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center text-slate-900 shadow-sm shrink-0">
- <QrCode className="w-8 h-8" />
  </div>
+ </div>
+ <button
+ type="button"
+ onClick={() => setIsIdQrModalOpen(true)}
+ title="Tap to enlarge & scan dynamic Resident ID QR"
+ className="w-12 h-12 rounded-xl bg-white p-1 flex flex-col items-center justify-center text-slate-900 shadow-sm shrink-0 hover:ring-2 hover:ring-white/80 active:scale-95 transition cursor-pointer"
+ >
+ <img
+ src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(
+ verifyIdUrl
+ )}&color=0F172A`}
+ alt="Resident ID QR"
+ className="w-8 h-8 object-contain"
+ />
+ <span className="text-[6.5px] font-black text-indigo-700 leading-none mt-0.5">
+ SCAN ID
+ </span>
+ </button>
  </div>
 
- <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/20 text-[10px]">
+ <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/20 text-[10px]">
  <div>
  <span className="opacity-75 block text-[9px] uppercase">Building</span>
  <strong className="truncate block">{buildingName}</strong>
@@ -402,6 +544,20 @@ export function TenantHomeExplorer({
  }`}
  >
  {kycStatus}
+ </strong>
+ </div>
+ <div>
+ <span className="opacity-75 block text-[9px] uppercase">Month Ends</span>
+ <strong
+ className={`block ${
+ cycleStatus.bucket === "expired"
+ ? "text-rose-300"
+ : cycleStatus.bucket === "3days"
+ ? "text-amber-300"
+ : "text-emerald-300"
+ }`}
+ >
+ {cycleStatus.badgeText}
  </strong>
  </div>
  </div>
@@ -469,7 +625,7 @@ export function TenantHomeExplorer({
  dinnerIsCutoffPassed={dinnerPollStatus?.isCutoffPassed ?? false}
  initialVote={mealPollStatus?.tenantVote || null}
  dinnerInitialVote={dinnerPollStatus?.tenantVote || null}
- tenantId={session.id}
+ tenantId={activeTenantId}
  scheduleStatus={mealPollStatus?.scheduleStatus}
  dinnerScheduleStatus={dinnerPollStatus?.scheduleStatus}
  />
@@ -764,7 +920,7 @@ export function TenantHomeExplorer({
  dinnerIsCutoffPassed={dinnerPollStatus?.isCutoffPassed ?? false}
  initialVote={mealPollStatus?.tenantVote || null}
  dinnerInitialVote={dinnerPollStatus?.tenantVote || null}
- tenantId={session.id}
+ tenantId={activeTenantId}
  scheduleStatus={mealPollStatus?.scheduleStatus}
  dinnerScheduleStatus={dinnerPollStatus?.scheduleStatus}
  />
@@ -791,47 +947,60 @@ export function TenantHomeExplorer({
           <ArrowRight className="w-4 h-4 text-orange-600 group-hover:translate-x-0.5 transition-transform shrink-0" />
         </Link>
 
- {/* 6. Day/Night Gate Pass Cards (Yellow when issued by Warden, Green when approved by Owner) */}
+ {/* 6. Day/Night Gate Pass Cards */}
  <div className="space-y-2.5">
  <div className="flex items-center justify-between px-0.5">
  <h3 className="text-xs font-extrabold text-slate-900">
- Outing & Gate Passes
+ Outing &amp; Gate Passes
  </h3>
  <RequestPassModal
  userRole="tenant"
  defaultTenantName={session.full_name}
  defaultRoomNumber={roomNumber}
+ tenantId={activeTenantId}
+ pgId={pg.id}
+ buildingId={buildingId || session.building_id || undefined}
  />
  </div>
 
- {passes.length > 0 &&
+ {passes.length > 0 ? (
  passes.map((gp) => {
- const isYellow = gp.approval_status === "pending_owner" || gp.approval_status === "pending_warden";
+ const isYellow =
+ gp.approval_status === "pending_owner" ||
+ gp.approval_status === "requested" ||
+ gp.approval_status === "pending_warden";
+ const isRejected = gp.approval_status === "rejected";
  const isApproved = gp.approval_status === "approved";
-
- if (gp.approval_status === "rejected") return null;
 
  return (
  <div
  key={gp.id}
  className={`border rounded-2xl p-4 shadow-sm space-y-2.5 transition ${
- isYellow
+ isRejected
+ ? "bg-rose-50 border-rose-200 text-rose-950"
+ : isYellow
  ? "bg-amber-50 border-amber-200 text-amber-950"
  : "bg-emerald-50 border-emerald-200 text-emerald-950"
  }`}
  >
- <div className="flex items-center justify-between">
+ <div className="flex items-center justify-between gap-2">
  <span
  className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${
- isYellow
+ isRejected
+ ? "bg-rose-100 text-rose-800 border-rose-300"
+ : isYellow
  ? "bg-amber-100 text-amber-800 border-amber-300"
  : "bg-emerald-100 text-emerald-800 border-emerald-300"
  }`}
  >
- {isYellow ? "🟡 Issued by Warden • Pending Owner Approval" : "🟢 Approved & Active Pass"}
+ {isRejected
+ ? "🔴 Rejected by Owner / Authority"
+ : isYellow
+ ? "🟡 Waiting for Owner Approval"
+ : "🟢 Approved & Active Pass"}
  </span>
  <span className="font-mono text-[10px] font-extrabold">
- {gp.id.slice(0, 8).toUpperCase()} • {gp.pass_type === "day_pass" ? "DAY" : "NIGHT"}
+ {gp.pass_number || gp.id.slice(0, 8).toUpperCase()} • {gp.pass_type === "day_pass" ? "DAY" : "NIGHT"}
  </span>
  </div>
 
@@ -844,21 +1013,32 @@ export function TenantHomeExplorer({
  <div className="text-[10px] text-slate-600">
  Return: <strong>{gp.expected_return_date || gp.outing_date} • {gp.expected_return_time}</strong>
  </div>
+ {isRejected && gp.rejection_reason && (
+ <div className="text-[10px] text-rose-700 font-bold pt-0.5">
+ Rejection Reason: {gp.rejection_reason}
+ </div>
+ )}
  </div>
 
- {!isYellow && (
- <div className="w-11 h-11 rounded-xl bg-white p-1 flex items-center justify-center text-slate-900 border border-emerald-200 shrink-0 shadow-2xs">
- <QrCode className="w-8 h-8" />
+ {isApproved && (
+ <div className="w-12 h-12 rounded-xl bg-white p-1 flex items-center justify-center border border-emerald-200 shrink-0 shadow-2xs">
+ <img
+ src={`https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(
+ `PASS:${gp.pass_number || gp.id}|TENANT:${session.full_name}|STATUS:APPROVED`
+ )}&color=0F172A`}
+ alt="Pass QR"
+ className="w-10 h-10 object-contain"
+ />
  </div>
  )}
  </div>
 
  <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px]">
  <span className="text-slate-600">
- Issued by: <strong>{gp.created_by_role === "admin" ? "Warden Suresh" : "PG Owner (Vikram)"}</strong>
+ Requested by: <strong>{gp.created_by_role === "admin" ? "Warden" : gp.created_by_role === "owner" ? "PG Owner" : session.full_name}</strong>
  </span>
 
- {!isYellow ? (
+ {isApproved ? (
  <a
  href={`https://wa.me/?text=${encodeURIComponent(
  `*Active Gate Pass: ${gp.pass_type === "day_pass" ? "Day Pass" : "Night Pass"}*\nResident: ${session.full_name}\nProperty: ${pg.name}\nOut: ${gp.outing_date} ${gp.departure_time}\nReturn: ${gp.expected_return_date || gp.outing_date} ${gp.expected_return_time}\nStatus: Officially Approved & Logged`
@@ -871,13 +1051,20 @@ export function TenantHomeExplorer({
  <Share2 className="w-3 h-3" />
  <span>Share w/ Parents</span>
  </a>
+ ) : isRejected ? (
+ <span className="font-extrabold text-rose-700">Not Approved</span>
  ) : (
  <span className="font-extrabold text-amber-800">Waiting for Owner</span>
  )}
  </div>
  </div>
  );
- })}
+ })
+ ) : (
+ <div className="p-3 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center text-[11px] text-slate-400">
+ No gate passes requested yet. Tap &quot;Request Outing Pass&quot; above to apply.
+ </div>
+ )}
  </div>
 
  {/* Quick Maintenance Complaint Card */}
@@ -904,6 +1091,147 @@ export function TenantHomeExplorer({
  </div>
  </div>
  </div>
+
+ {/* Profile Photo Upload Modal */}
+ {isPhotoModalOpen && (
+ <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+ <div className="bg-white w-full max-w-[400px] rounded-3xl border border-slate-200 p-4 space-y-3.5 shadow-2xl">
+ <div className="flex items-center justify-between">
+ <div className="flex items-center gap-2">
+ <Camera className="w-5 h-5 text-indigo-600" />
+ <h3 className="text-sm font-extrabold text-slate-900">
+ Update Permanent Profile Photo
+ </h3>
+ </div>
+ <button
+ type="button"
+ onClick={() => setIsPhotoModalOpen(false)}
+ className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"
+ >
+ <X className="w-4 h-4" />
+ </button>
+ </div>
+
+ {photoError && (
+ <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+ {photoError}
+ </div>
+ )}
+
+ <form onSubmit={handleProfilePhotoSubmit} className="space-y-3 text-xs">
+ <div className="w-28 h-28 mx-auto rounded-3xl bg-slate-100 border-2 border-indigo-200 overflow-hidden flex items-center justify-center">
+ {photoPreview || profilePhotoUrl ? (
+ <img
+ src={photoPreview || profilePhotoUrl || ""}
+ alt="Profile Preview"
+ className="w-full h-full object-cover"
+ />
+ ) : (
+ <Camera className="w-8 h-8 text-slate-400" />
+ )}
+ </div>
+
+ <div>
+ <label className="text-[11px] font-bold text-slate-600 block mb-1">
+ Select Profile Photo (JPG, PNG, WEBP) *
+ </label>
+ <input
+ type="file"
+ accept="image/jpeg,image/png,image/webp"
+ required
+ onChange={(e) => {
+ const f = e.target.files?.[0] || null;
+ if (photoPreview) URL.revokeObjectURL(photoPreview);
+ setPhotoFile(f);
+ setPhotoPreview(f ? URL.createObjectURL(f) : null);
+ }}
+ className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-extrabold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
+ />
+ </div>
+
+ <div className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-[10.5px] text-indigo-800 font-semibold">
+ Stored permanently on your Digital ID Card and synced live to your PG Owner&apos;s bed profile.
+ </div>
+
+ <button
+ type="submit"
+ disabled={photoUploading}
+ className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold shadow-xs transition flex items-center justify-center gap-1.5"
+ >
+ <Upload className="w-4 h-4" />
+ <span>{photoUploading ? "Uploading..." : "Save Profile Photo Permanently"}</span>
+ </button>
+ </form>
+ </div>
+ </div>
+ )}
+
+ {/* Dynamic Resident ID QR Modal */}
+ {isIdQrModalOpen && (
+ <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+ <div className="bg-white w-full max-w-[380px] rounded-3xl border border-slate-200 p-5 space-y-4 shadow-2xl text-center">
+ <div className="flex items-center justify-between">
+ <div className="flex items-center gap-1.5 text-xs font-black text-slate-900 uppercase">
+ <ShieldCheck className="w-4 h-4 text-emerald-600" />
+ Resident Digital ID QR
+ </div>
+ <button
+ type="button"
+ onClick={() => setIsIdQrModalOpen(false)}
+ className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200"
+ >
+ <X className="w-4 h-4" />
+ </button>
+ </div>
+
+ <div className="space-y-1">
+ <h3 className="text-base font-black text-slate-900">{session.full_name}</h3>
+ <p className="text-xs font-bold text-indigo-600">
+ {pg.name} • {roomNumber}
+ </p>
+ <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-extrabold">
+ <span>Month Ends: {cycleStatus.formattedEndDate}</span>
+ <span>•</span>
+ <span>{cycleStatus.badgeText}</span>
+ </div>
+ </div>
+
+ <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 inline-block shadow-inner">
+ <img
+ src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
+ verifyIdUrl
+ )}&color=0F172A`}
+ alt="Resident ID Verification QR Code"
+ className="w-48 h-48 mx-auto rounded-lg"
+ />
+ </div>
+
+ <div className="space-y-2 pt-1">
+ <button
+ type="button"
+ onClick={() => {
+ navigator.clipboard.writeText(verifyIdUrl);
+ setCopiedIdLink(true);
+ setTimeout(() => setCopiedIdLink(false), 2500);
+ }}
+ className="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
+ >
+ {copiedIdLink ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+ <span>{copiedIdLink ? "ID Verification Link Copied!" : "Copy Digital ID URL"}</span>
+ </button>
+ <a
+ href={verifyIdUrl}
+ target="_blank"
+ rel="noopener noreferrer"
+ className="inline-flex w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold items-center justify-center gap-1 transition"
+ >
+ <span>Open Live Resident ID Card</span>
+ <ExternalLink className="w-3.5 h-3.5" />
+ </a>
+ </div>
+ </div>
+ </div>
+ )}
 
  {/* KYC Upload Modal */}
  {isKycModalOpen && (

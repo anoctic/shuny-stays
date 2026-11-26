@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Layers, Plus, FileSpreadsheet, UserPlus, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, Layers, Plus, FileSpreadsheet, UserPlus, CheckCircle2, AlertCircle, Camera } from "lucide-react";
 import { BuildingItem, FloorItem, RoomItem } from "@/lib/data/rooms";
 import {
  addAutoBuildingAction,
@@ -39,6 +39,8 @@ export function WalkInSheet({
  const [isSubmitting, setIsSubmitting] = useState(false);
  const [error, setError] = useState<string | null>(null);
  const [depositStatusInput, setDepositStatusInput] = useState<"paid" | "pending">("paid");
+ const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+ const [photoFileName, setPhotoFileName] = useState<string | null>(null);
  const [createdCreds, setCreatedCreds] = useState<{
  name: string;
  role: "tenant";
@@ -56,6 +58,11 @@ export function WalkInSheet({
  setCreatedCreds(null);
  setError(null);
  setDepositStatusInput("paid");
+ if (photoPreviewUrl) {
+ URL.revokeObjectURL(photoPreviewUrl);
+ }
+ setPhotoPreviewUrl(null);
+ setPhotoFileName(null);
  onClose();
  };
 
@@ -145,6 +152,47 @@ export function WalkInSheet({
  ) : (
 
  <form onSubmit={handleSubmit} className="space-y-2.5 text-xs">
+ {/* Permanent Profile Photo Upload (Mandatory for manual onboarding) */}
+ <div className="p-3 rounded-2xl bg-indigo-50/70 border border-indigo-200 flex items-center gap-3">
+ <div className="w-12 h-12 rounded-2xl bg-white border border-indigo-200 overflow-hidden flex items-center justify-center shrink-0 shadow-2xs">
+ {photoPreviewUrl ? (
+ <img
+ src={photoPreviewUrl}
+ alt="Resident Preview"
+ className="w-full h-full object-cover"
+ />
+ ) : (
+ <Camera className="w-5 h-5 text-indigo-500" />
+ )}
+ </div>
+ <div className="min-w-0 flex-1 space-y-1">
+ <label className="font-extrabold text-[#0F172A] block text-[11px]">
+ Resident Profile Photo * <span className="text-indigo-600 font-bold">(Permanent ID Photo)</span>
+ </label>
+ <input
+ name="profilePhoto"
+ type="file"
+ accept="image/jpeg,image/png,image/webp"
+ required
+ onChange={(e) => {
+ const f = e.target.files?.[0];
+ if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+ if (f) {
+ setPhotoPreviewUrl(URL.createObjectURL(f));
+ setPhotoFileName(f.name);
+ } else {
+ setPhotoPreviewUrl(null);
+ setPhotoFileName(null);
+ }
+ }}
+ className="w-full text-[10.5px] font-semibold text-slate-700 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-extrabold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
+ />
+ <p className="text-[9.5px] text-slate-500 truncate">
+ {photoFileName ? `Selected: ${photoFileName}` : "Saved permanently to PG portal & resident Digital ID card."}
+ </p>
+ </div>
+ </div>
+
  <div>
  <label className="font-bold text-[#64748B] block mb-1">1. Tenant Full Name *</label>
  <input

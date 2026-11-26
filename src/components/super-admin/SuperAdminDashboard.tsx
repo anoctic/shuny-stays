@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { computePgExpiryCountdown } from "@/lib/utils/billing-cycle";
 import {
  Sparkles,
  Building2,
@@ -488,6 +489,58 @@ export function SuperAdminDashboard({
  </div>
  </div>
 
+ {/* PG Subscription Expiry Alerts */}
+ <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-sm">
+ <div className="flex items-center justify-between gap-2">
+ <h3 className="text-xs font-extrabold text-slate-900">
+ PG Subscription &amp; Expiry Watch
+ </h3>
+ <button
+ type="button"
+ onClick={() => handleTabChange("pgs")}
+ className="text-[10.5px] font-extrabold text-indigo-600 hover:underline"
+ >
+ View All PGs →
+ </button>
+ </div>
+ <div className="space-y-1.5 max-h-[220px] overflow-y-auto phone-scroll">
+ {[...pgsList]
+ .map((p) => ({
+ pg: p,
+ exp: computePgExpiryCountdown(p.plan_expires_at || p.subscription_valid_until, p.created_at),
+ }))
+ .sort((a, b) => a.exp.daysLeft - b.exp.daysLeft)
+ .slice(0, 8)
+ .map(({ pg: p, exp }) => (
+ <div
+ key={p.id}
+ onClick={() => setSelectedPgForDetails(p)}
+ className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50/50 border border-slate-100 cursor-pointer transition text-[11px]"
+ >
+ <div className="min-w-0">
+ <span className="font-extrabold text-slate-900 truncate block">{p.name}</span>
+ <span className="text-[10px] text-slate-500">
+ {p.owner_name} • Expires {exp.formattedDate}
+ </span>
+ </div>
+ <span
+ className={`px-2 py-0.5 rounded-full text-[9.5px] font-black border shrink-0 ${
+ exp.status === "expired"
+ ? "bg-rose-50 text-rose-700 border-rose-200"
+ : exp.status === "critical"
+ ? "bg-amber-100 text-rose-700 border-rose-200"
+ : exp.status === "warning"
+ ? "bg-amber-50 text-amber-800 border-amber-200"
+ : "bg-emerald-50 text-emerald-700 border-emerald-200"
+ }`}
+ >
+ {exp.label}
+ </span>
+ </div>
+ ))}
+ </div>
+ </div>
+
  {/* City Footprint Card */}
  <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-sm">
  <h3 className="text-xs font-extrabold text-slate-900">City Footprint</h3>
@@ -594,23 +647,34 @@ export function SuperAdminDashboard({
  </div>
 
  {/* PLAN EXPIRY & PRICING BAR */}
+ {(() => {
+ const exp = computePgExpiryCountdown(pg.plan_expires_at || pg.subscription_valid_until, pg.created_at);
+ return (
  <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-100 text-[10.5px]">
  <span className="font-medium text-slate-600 truncate">
- Expires:{" "}
- <strong className={pg.plan_expires_at && new Date(pg.plan_expires_at) < new Date() ? "text-rose-600" : "text-slate-800"}>
- {pg.plan_expires_at
- ? new Date(pg.plan_expires_at).toLocaleDateString("en-IN", {
- day: "2-digit",
- month: "short",
- year: "numeric",
- })
- : "30 Days"}
- </strong>
+ Expires: <strong className="text-slate-800">{exp.formattedDate}</strong>
  </span>
- <span className="font-extrabold text-indigo-600 shrink-0">
+ <div className="flex items-center gap-1.5 shrink-0">
+ <span
+ className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${
+ exp.status === "expired"
+ ? "bg-rose-50 text-rose-700 border-rose-200"
+ : exp.status === "critical"
+ ? "bg-amber-100 text-rose-700 border-rose-200"
+ : exp.status === "warning"
+ ? "bg-amber-50 text-amber-800 border-amber-200"
+ : "bg-emerald-50 text-emerald-700 border-emerald-200"
+ }`}
+ >
+ {exp.label}
+ </span>
+ <span className="font-extrabold text-indigo-600">
  ₹{pg.plan_price || 1999}/mo
  </span>
  </div>
+ </div>
+ );
+ })()}
 
  {/* ACTION BUTTONS ROW */}
  <div className="flex items-center gap-1.5 flex-wrap">
@@ -758,18 +822,29 @@ export function SuperAdminDashboard({
  ₹{pg.plan_price || 1999}/mo
  </span>
  </div>
- <div className="text-[10px] text-slate-400 mt-1">
- Expires:{" "}
- <span className={pg.plan_expires_at && new Date(pg.plan_expires_at) < new Date() ? "text-rose-600 font-bold" : "text-slate-600 font-medium"}>
- {pg.plan_expires_at
- ? new Date(pg.plan_expires_at).toLocaleDateString("en-IN", {
- day: "2-digit",
- month: "short",
- year: "numeric",
- })
- : "30 Days"}
+ {(() => {
+ const exp = computePgExpiryCountdown(pg.plan_expires_at || pg.subscription_valid_until, pg.created_at);
+ return (
+ <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+ <span className="text-[10px] text-slate-500 font-medium">
+ Expires: {exp.formattedDate}
+ </span>
+ <span
+ className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${
+ exp.status === "expired"
+ ? "bg-rose-50 text-rose-700 border-rose-200"
+ : exp.status === "critical"
+ ? "bg-amber-100 text-rose-700 border-rose-200"
+ : exp.status === "warning"
+ ? "bg-amber-50 text-amber-800 border-amber-200"
+ : "bg-emerald-50 text-emerald-700 border-emerald-200"
+ }`}
+ >
+ {exp.label}
  </span>
  </div>
+ );
+ })()}
  </td>
 
  {/* Status */}
