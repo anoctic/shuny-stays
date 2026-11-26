@@ -35,7 +35,7 @@ export interface PgDetailItem {
 export const getAllPgs = cache(async (): Promise<PgDetailItem[]> => {
  try {
  const admin = createAdminClient();
- const { data, error } = await (admin.from("pgs" as any) as any)
+ let { data, error } = await (admin.from("pgs" as any) as any)
  .select(`
  id,
  name,
@@ -54,14 +54,35 @@ export const getAllPgs = cache(async (): Promise<PgDetailItem[]> => {
  owner_initial_password,
  city,
  meal_poll_enabled,
-  gate_pass_enabled,
+ gate_pass_enabled,
  created_at
  `)
  .order("created_at", { ascending: false });
 
+ // Defensive fallback: if any column is missing or query fails, retry with essential columns
  if (error) {
- console.error("getAllPgs Supabase query error:", error);
+ console.warn("getAllPgs primary select warning, retrying with core columns:", error?.message);
+ const fallback = await (admin.from("pgs" as any) as any)
+ .select(`
+ id,
+ name,
+ slug,
+ logo_url,
+ primary_color,
+ contact_email,
+ contact_phone,
+ owner_id,
+ status,
+ subscription_tier,
+ created_at
+ `)
+ .order("created_at", { ascending: false });
+
+ if (fallback.error) {
+ console.error("getAllPgs fallback error:", fallback.error);
  return [];
+ }
+ data = fallback.data;
  }
 
  if (!data || data.length === 0) {
@@ -253,6 +274,8 @@ export async function onboardNewPg(data: {
  city: data.city || "Bengaluru",
  created_at: now,
  owner_initial_password: data.owner_initial_password || null,
+ meal_poll_enabled: true,
+ gate_pass_enabled: true,
  };
 
  const admin = createAdminClient();
@@ -288,6 +311,8 @@ export async function onboardNewPg(data: {
  subscription_tier: newPg.subscription_tier.toLowerCase().replace(" ", "_"),
  owner_initial_password: data.owner_initial_password || null,
  city: data.city || "Bengaluru",
+ meal_poll_enabled: true,
+ gate_pass_enabled: true,
  } as any);
  if (pgErr) {
  console.error("onboardNewPg pgs step 2 error:", pgErr.message);
