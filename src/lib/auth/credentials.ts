@@ -32,7 +32,7 @@ export interface GeneratedCredentials {
  * Generates a clean, readable initial password:
  * When name & phone are supplied (e.g. Tenant onboarding):
  * FirstName (Initial Cap) + "@" + last 4 digits of phone
- * Example: ("sakshi", "8273138872") -> "Sakshi@8872"
+ * Example: ("harshit", "9867456788") -> "Harshit@6788"
  * Fallback: random "Shuny@4821"
  */
 export function generateReadablePassword(name?: string | null, phone?: string | null): string {

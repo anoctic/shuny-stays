@@ -150,7 +150,7 @@ export function WalkInSheet({
  type="text"
  required
  autoComplete="off"
- placeholder="e.g. Sakshi Verma"
+ placeholder="e.g. Harshit"
  className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A] placeholder:text-slate-400 placeholder:font-medium focus:outline-none focus:border-indigo-500"
  />
  </div>
@@ -161,11 +161,11 @@ export function WalkInSheet({
  type="tel"
  required
  autoComplete="off"
- placeholder="e.g. 8273138872"
+ placeholder="e.g. 9867456788"
  className="w-full px-3 py-2 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] font-bold text-[#0F172A] placeholder:text-slate-400 placeholder:font-medium focus:outline-none focus:border-indigo-500"
  />
  <p className="text-[10px] text-indigo-600 font-semibold mt-1">
- 🔑 Auto Login ID = Mobile No. • Password = FirstName@Last4Digits (e.g. Sakshi@8872)
+ 🔑 Auto Login ID = Mobile No. • Password = FirstName@Last4Digits (e.g. Harshit@6788)
  </p>
  </div>
  <div>

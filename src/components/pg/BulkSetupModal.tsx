@@ -822,8 +822,8 @@ export function BulkSetupModal({
                               type="text"
                               value={row.tenantName}
                               onChange={(e) => updateGridRow(row.id, "tenantName", e.target.value)}
-                              placeholder="Student Name"
-                              className="w-full px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 font-bold text-slate-900 focus:bg-white focus:border-indigo-500 focus:outline-none"
+                              placeholder="e.g. Harshit"
+                              className="w-full px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-medium focus:bg-white focus:border-indigo-500 focus:outline-none"
                             />
                           </td>
                           <td className="px-1.5 py-1.5">
@@ -831,8 +831,8 @@ export function BulkSetupModal({
                               type="tel"
                               value={row.phone}
                               onChange={(e) => updateGridRow(row.id, "phone", e.target.value)}
-                              placeholder="9876543210"
-                              className={`w-full px-2 py-1.5 rounded-lg font-mono font-bold focus:bg-white focus:outline-none border ${
+                              placeholder="e.g. 9867456788"
+                              className={`w-full px-2 py-1.5 rounded-lg font-mono font-bold placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:outline-none border ${
                                 phoneBad
                                   ? "bg-rose-50 border-rose-400 text-rose-800"
                                   : "bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500"
@@ -1012,7 +1012,7 @@ export function BulkSetupModal({
                   onChange={(e) => setCreateLogins(e.target.checked)}
                   className="w-4 h-4 accent-indigo-600 rounded"
                 />
-                <span>Auto-Create App Login Passwords for All Students</span>
+                <span>Auto-Create App Login Passwords (e.g. Harshit@6788)</span>
               </label>
               <div className="text-[10.5px] font-bold flex items-center gap-2">
                 <span className="text-emerald-700">✓ {validRowsOnly.length} Ready to Import</span>
