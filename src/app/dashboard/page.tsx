@@ -16,11 +16,12 @@ export default async function DashboardPage() {
  const session = await getCurrentUserSession();
  const pgId = session.pg_id || "23594b9e-da90-4884-95aa-5f978d91a0d2";
 
- const [buildings, passes, broadcasts, pollSummary] = await Promise.all([
+ const [buildings, passes, broadcasts, lunchSummary, dinnerSummary] = await Promise.all([
  getAllBuildings(),
  getPassesForManagement({ pgId: session.pg_id || undefined }),
  getActiveBroadcastsForRole(session.role),
- getMealPollSummary(pgId),
+ getMealPollSummary(pgId, "lunch"),
+ getMealPollSummary(pgId, "dinner"),
  ]);
 
  const activePasses = passes.map((p) => ({
@@ -29,13 +30,17 @@ export default async function DashboardPage() {
  status: p.approval_status,
  }));
 
+ const isAfternoonOrEvening = new Date().getHours() >= 12;
+ const primarySummary = isAfternoonOrEvening ? dinnerSummary : lunchSummary;
+ const primaryLabel = isAfternoonOrEvening ? "Raat Ka Khana (Dinner)" : "Dopahar Ka Khana (Lunch)";
+
  return (
  <div className="space-y-3.5">
  {/* Targeted Platform Broadcast Banner */}
  <ActiveBroadcastBanner broadcasts={broadcasts} userRole={session.role} />
 
- {/* Lunch Headcount Quick Link (Direct to dedicated /dashboard/meal-poll section) */}
- {pollSummary.isFacilityEnabled !== false && (
+ {/* Daily Meal Headcount Live Banner (Lunch + Dinner) */}
+ {lunchSummary.isFacilityEnabled !== false && (
  <Link
  href="/dashboard/meal-poll"
  className="p-3 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 border border-amber-200/90 rounded-2xl flex items-center justify-between gap-2 transition hover:bg-amber-100/50 shadow-2xs group"
@@ -46,12 +51,10 @@ export default async function DashboardPage() {
  </div>
  <div className="min-w-0">
  <div className="text-xs font-black text-slate-900 truncate">
- Dopahar Ka Khana: {pollSummary.totalYes} Plates Confirmed
+ {primaryLabel}: {primarySummary.totalYes} Eating • {primarySummary.totalNo} Skip
  </div>
  <div className="text-[10px] text-slate-500 truncate">
- {pollSummary.scheduleStatus === "open"
- ? `🟢 Voting Open till ${pollSummary.cutoffTime} AM`
- : `Cut-off ${pollSummary.cutoffTime} AM passed • Cook for ${pollSummary.totalYes} Only`}
+ ☀️ Lunch: {lunchSummary.totalYes} Yes ({lunchSummary.totalNo} No) • 🌙 Dinner: {dinnerSummary.totalYes} Yes ({dinnerSummary.totalNo} No)
  </div>
  </div>
  </div>

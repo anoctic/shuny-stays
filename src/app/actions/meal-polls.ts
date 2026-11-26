@@ -132,11 +132,12 @@ export async function voteMealPollAction(
  const admin = createAdminClient();
 
  let resolvedTenantId: string | undefined;
+ let resolvedUserId: string | undefined = !session.id.startsWith("90000000-") ? session.id : undefined;
 
  // Always canonicalize to the active tenants.id (even if client passed auth user_id)
  const candidateId = providedTenantId || session.id;
  const { data: tenantRecord } = await (admin.from("tenants" as any) as any)
- .select("id, pg_id")
+ .select("id, user_id, pg_id")
  .or(`id.eq.${candidateId},user_id.eq.${session.id},user_id.eq.${candidateId}`)
  .eq("is_active", true)
  .order("created_at", { ascending: false })
@@ -145,17 +146,19 @@ export async function voteMealPollAction(
 
  if (tenantRecord?.id) {
  resolvedTenantId = tenantRecord.id;
+ resolvedUserId = tenantRecord.user_id || resolvedUserId;
  } else if (session.phone) {
  const digits = session.phone.replace(/\D/g, "").slice(-10);
  if (digits.length === 10) {
  const { data: phoneTenant } = await (admin.from("tenants" as any) as any)
- .select("id")
+ .select("id, user_id")
  .ilike("phone", `%${digits}`)
  .eq("is_active", true)
  .order("created_at", { ascending: false })
  .limit(1)
  .maybeSingle();
  resolvedTenantId = phoneTenant?.id || candidateId;
+ resolvedUserId = phoneTenant?.user_id || resolvedUserId;
  } else {
  resolvedTenantId = candidateId;
  }
@@ -172,7 +175,7 @@ export async function voteMealPollAction(
  pollId,
  resolvedTenantId,
  vote,
- session.id
+ resolvedUserId
  );
 
  if (res.error) {

@@ -503,24 +503,26 @@ export async function processBulkImportChunk(params: {
       rent_amount: item.rent,
       deposit_amount: item.depositAmount,
       check_in_date: item.row.joinDate || nowIso.split("T")[0],
+      kyc_status: "pending",
       is_active: true,
     });
 
     bedIdsToOccupy.push(item.bedId);
 
-    if (item.depositAmount > 0 && item.row.depositPaid !== false) {
+    if (item.depositAmount > 0) {
+      const isDepPaid = item.row.depositPaid !== false;
       depositsPayload.push({
         id: crypto.randomUUID(),
         pg_id: pgId,
         building_id: item.buildingId,
         tenant_id: tenantId,
         expected_amount: item.depositAmount,
-        paid_amount: item.depositAmount,
-        status: "paid",
+        paid_amount: isDepPaid ? item.depositAmount : 0,
+        status: isDepPaid ? "paid" : "pending",
         payment_mode: "cash",
-        collected_by: collectorId || null,
-        collected_by_name: collectorName,
-        collected_at: nowIso,
+        collected_by: isDepPaid ? (collectorId || null) : null,
+        collected_by_name: isDepPaid ? collectorName : "Pending Collection",
+        collected_at: isDepPaid ? nowIso : null,
         created_at: nowIso,
         updated_at: nowIso,
       });

@@ -61,9 +61,29 @@ export function useRealtimeSync(
 
  channel.subscribe();
 
+ const handleVisibility = () => {
+ if (document.visibilityState === "visible") {
+ triggerRefresh();
+ }
+ };
+ const handleFocus = () => triggerRefresh();
+
+ if (typeof document !== "undefined") {
+ document.addEventListener("visibilitychange", handleVisibility);
+ }
+ if (typeof window !== "undefined") {
+ window.addEventListener("focus", handleFocus);
+ }
+
  return () => {
  if (debounceTimerRef.current) {
  clearTimeout(debounceTimerRef.current);
+ }
+ if (typeof document !== "undefined") {
+ document.removeEventListener("visibilitychange", handleVisibility);
+ }
+ if (typeof window !== "undefined") {
+ window.removeEventListener("focus", handleFocus);
  }
  supabase.removeChannel(channel);
  };

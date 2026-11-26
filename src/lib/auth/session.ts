@@ -239,14 +239,40 @@ export const getCurrentUserSession = cache(async (): Promise<CurrentUserSession>
  hasPg = true;
  }
  } else if (role === "tenant") {
- const { data: tenant } = await (supabase.from("tenants" as any) as any)
- .select("pg_id, building_id, room_id, bed_id")
+ const admin = createAdminClient();
+ let { data: tenant } = await (admin.from("tenants" as any) as any)
+ .select("id, user_id, pg_id, building_id, room_id, bed_id, pgs(name)")
  .eq("user_id", user.id)
  .eq("is_active", true)
+ .order("created_at", { ascending: false })
+ .limit(1)
  .maybeSingle();
+
+ if (!tenant && cleanPhone.length >= 10) {
+ const digits = cleanPhone.slice(-10);
+ const { data: byPhone } = await (admin.from("tenants" as any) as any)
+ .select("id, user_id, pg_id, building_id, room_id, bed_id, pgs(name)")
+ .ilike("phone", `%${digits}`)
+ .eq("is_active", true)
+ .order("created_at", { ascending: false })
+ .limit(1)
+ .maybeSingle();
+
+ if (byPhone) {
+ tenant = byPhone;
+ if (!byPhone.user_id) {
+ try {
+ await (admin.from("tenants" as any) as any)
+ .update({ user_id: user.id, updated_at: new Date().toISOString() })
+ .eq("id", byPhone.id);
+ } catch {}
+ }
+ }
+ }
 
  if (tenant) {
  pgId = tenant.pg_id;
+ pgName = (tenant.pgs as any)?.name || pgName;
  buildingId = tenant.building_id;
  roomId = tenant.room_id;
  bedId = tenant.bed_id;
