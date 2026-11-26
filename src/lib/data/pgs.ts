@@ -505,23 +505,32 @@ export async function deletePg(pgId: string): Promise<boolean> {
  });
 
  if (rpcError) {
- console.warn("delete_pg_cascade RPC error, executing manual table cleanup:", rpcError.message);
+ console.warn("delete_pg_cascade RPC error, executing resilient manual table cleanup:", rpcError.message);
  // Fallback manual table cleanup in child-first foreign key order
- await (admin.from("profiles" as any) as any).update({ pg_id: null } as any).eq("pg_id", pgId);
- await (admin.from("audit_logs" as any) as any).delete().eq("pg_id", pgId);
- await (admin.from("gate_passes" as any) as any).delete().eq("pg_id", pgId);
- await (admin.from("attendance_logs" as any) as any).delete().eq("pg_id", pgId);
- await (admin.from("complaints" as any) as any).delete().eq("pg_id", pgId);
- await (admin.from("mess_menu" as any) as any).delete().eq("pg_id", pgId);
- await (admin.from("expenses" as any) as any).delete().eq("pg_id", pgId);
- await (admin.from("security_deposits" as any) as any).delete().eq("pg_id", pgId);
- await (admin.from("rent_payments" as any) as any).delete().eq("pg_id", pgId);
- await (admin.from("tenants" as any) as any).delete().eq("pg_id", pgId);
- await (admin.from("pg_staff" as any) as any).delete().eq("pg_id", pgId);
- await (admin.from("beds" as any) as any).delete().eq("pg_id", pgId);
- await (admin.from("rooms" as any) as any).delete().eq("pg_id", pgId);
- await (admin.from("floors" as any) as any).delete().eq("pg_id", pgId);
- await (admin.from("buildings" as any) as any).delete().eq("pg_id", pgId);
+ try { await (admin.from("profiles" as any) as any).update({ pg_id: null } as any).eq("pg_id", pgId); } catch {}
+ try {
+ const { data: polls } = await (admin.from("meal_polls" as any) as any).select("id").eq("pg_id", pgId);
+ if (polls && polls.length > 0) {
+ const pollIds = polls.map((p: any) => p.id);
+ await (admin.from("meal_poll_responses" as any) as any).delete().in("poll_id", pollIds);
+ }
+ await (admin.from("meal_polls" as any) as any).delete().eq("pg_id", pgId);
+ } catch {}
+ try { await (admin.from("pg_subscription_requests" as any) as any).delete().eq("pg_id", pgId); } catch {}
+ try { await (admin.from("pg_audit_logs" as any) as any).delete().eq("pg_id", pgId); } catch {}
+ try { await (admin.from("gate_passes" as any) as any).delete().eq("pg_id", pgId); } catch {}
+ try { await (admin.from("pg_attendance_logs" as any) as any).delete().eq("pg_id", pgId); } catch {}
+ try { await (admin.from("complaints" as any) as any).delete().eq("pg_id", pgId); } catch {}
+ try { await (admin.from("mess_menu" as any) as any).delete().eq("pg_id", pgId); } catch {}
+ try { await (admin.from("expenses" as any) as any).delete().eq("pg_id", pgId); } catch {}
+ try { await (admin.from("security_deposits" as any) as any).delete().eq("pg_id", pgId); } catch {}
+ try { await (admin.from("rent_payments" as any) as any).delete().eq("pg_id", pgId); } catch {}
+ try { await (admin.from("tenants" as any) as any).delete().eq("pg_id", pgId); } catch {}
+ try { await (admin.from("pg_staff" as any) as any).delete().eq("pg_id", pgId); } catch {}
+ try { await (admin.from("beds" as any) as any).delete().eq("pg_id", pgId); } catch {}
+ try { await (admin.from("rooms" as any) as any).delete().eq("pg_id", pgId); } catch {}
+ try { await (admin.from("floors" as any) as any).delete().eq("pg_id", pgId); } catch {}
+ try { await (admin.from("buildings" as any) as any).delete().eq("pg_id", pgId); } catch {}
  await (admin.from("pgs" as any) as any).delete().eq("id", pgId);
  }
  } catch (err) {

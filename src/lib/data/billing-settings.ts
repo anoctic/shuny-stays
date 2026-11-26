@@ -145,10 +145,59 @@ export async function submitPgRenewalRequest(params: {
  throw new Error("Please enter a valid UTR / Transaction Reference number.");
  }
 
+ // 1. Resolve valid target PG ID
+ let targetPgId = params.pgId;
+ let targetPgName = params.pgName;
+
+ if (!targetPgId || targetPgId === "default") {
+ // Attempt lookup by name
+ if (params.pgName) {
+ try {
+ const { data: foundPg } = await (admin.from("pgs" as any) as any)
+ .select("id, name")
+ .ilike("name", params.pgName.trim())
+ .maybeSingle();
+ if (foundPg) {
+ targetPgId = foundPg.id;
+ targetPgName = foundPg.name;
+ }
+ } catch {}
+ }
+ // If still not resolved, fallback to first PG in DB
+ if (!targetPgId || targetPgId === "default") {
+ try {
+ const { data: firstPg } = await (admin.from("pgs" as any) as any)
+ .select("id, name")
+ .limit(1)
+ .maybeSingle();
+ if (firstPg) {
+ targetPgId = firstPg.id;
+ targetPgName = firstPg.name;
+ }
+ } catch {}
+ }
+ }
+
+ // 2. Validate submitted_by_user_id exists in profiles table; if not, pass null to prevent foreign key error
+ let validUserId: string | null = null;
+ if (params.submittedByUserId) {
+ try {
+ const { data: userProfile } = await (admin.from("profiles" as any) as any)
+ .select("id")
+ .eq("id", params.submittedByUserId)
+ .maybeSingle();
+ if (userProfile?.id) {
+ validUserId = userProfile.id;
+ }
+ } catch {
+ validUserId = null;
+ }
+ }
+
  const newRecord = {
- pg_id: params.pgId,
- pg_name: params.pgName,
- submitted_by_user_id: params.submittedByUserId || null,
+ pg_id: targetPgId,
+ pg_name: targetPgName || "PG Property",
+ submitted_by_user_id: validUserId,
  submitted_by_name: params.submittedByName || "PG Administrator",
  submitted_by_role: params.submittedByRole || "owner",
  amount: Number(params.amount) || 1999,

@@ -18,6 +18,10 @@ import {
  Clock,
  ChevronRight,
  ShieldAlert,
+ MessageSquare,
+ HelpCircle,
+ ShieldCheck,
+ Smartphone,
 } from "lucide-react";
 import { PlatformBillingSettings } from "@/lib/data/billing-settings";
 import { submitPgRenewalUtrAction } from "@/app/actions/billing";
@@ -63,6 +67,12 @@ export function SubscriptionStatusGuard({
  const [utrInput, setUtrInput] = useState("");
  const [isSubmittingUtr, setIsSubmittingUtr] = useState(false);
  const [submittedUtrSuccess, setSubmittedUtrSuccess] = useState<string | null>(null);
+ const [submittedDetails, setSubmittedDetails] = useState<{
+ pgName: string;
+ utr: string;
+ amount: number;
+ submittedAt: string;
+ } | null>(null);
 
  useEffect(() => {
  if (isExpiringSoon) {
@@ -112,7 +122,8 @@ export function SubscriptionStatusGuard({
 
  const handleSubmitUtr = async (e: React.FormEvent) => {
  e.preventDefault();
- if (!utrInput.trim() || utrInput.trim().length < 4) {
+ const cleanUtr = utrInput.trim().toUpperCase();
+ if (!cleanUtr || cleanUtr.length < 4) {
  showToast("Please enter a valid 12-digit UTR number.");
  return;
  }
@@ -122,15 +133,30 @@ export function SubscriptionStatusGuard({
  const res = await submitPgRenewalUtrAction(
  pg.id,
  pg.name,
- utrInput.trim().toUpperCase(),
+ cleanUtr,
  renewalPrice
  );
 
  if (res?.error) {
  showToast(`Failed: ${res.error}`);
  } else {
- setSubmittedUtrSuccess(utrInput.trim().toUpperCase());
- showToast("UTR submitted successfully! Super Admin is verifying.");
+ const submittedTime = new Date().toLocaleString("en-IN", {
+ day: "2-digit",
+ month: "short",
+ year: "numeric",
+ hour: "2-digit",
+ minute: "2-digit",
+ hour12: true,
+ });
+ setSubmittedUtrSuccess(cleanUtr);
+ setSubmittedDetails({
+ pgName: pg.name,
+ utr: cleanUtr,
+ amount: renewalPrice,
+ submittedAt: submittedTime,
+ });
+ setIsTapToPayOpen(false);
+ showToast("UTR submitted successfully! Super Admin verification pending.");
  router.refresh();
  }
  } catch (err: any) {
@@ -509,17 +535,17 @@ export function SubscriptionStatusGuard({
  {/* 3. Submit UTR Section */}
  <form
  onSubmit={handleSubmitUtr}
- className="p-3.5 rounded-2xl bg-slate-900 text-white space-y-2.5"
+ className="p-4 rounded-3xl bg-slate-900 text-white space-y-3.5 shadow-xl border border-slate-800"
  >
- <div className="flex items-center justify-between">
+ <div className="flex items-center justify-between pb-1 border-b border-slate-800">
  <span className="text-xs font-black text-white flex items-center gap-1.5">
  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
  Payment Done? Submit UTR
  </span>
- <span className="text-[10px] text-slate-300 font-bold">Step 2 of 2</span>
+ <span className="text-[10px] text-amber-300 font-extrabold px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20">Step 2 of 2</span>
  </div>
- <p className="text-[10.5px] text-slate-300">
- Payment karne ke baad apna 12-digit UTR ya Reference number yahan enter karein.
+ <p className="text-[11px] text-slate-300">
+ Payment karne ke baad apna <strong>12-digit UTR ya UPI Reference number</strong> yahan enter karke submit karein.
  </p>
 
  <div>
@@ -529,18 +555,192 @@ export function SubscriptionStatusGuard({
  onChange={(e) => setUtrInput(e.target.value)}
  placeholder="Enter 12-digit UTR Number (e.g. 409823910283)"
  required
- className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-xs font-bold placeholder:text-slate-500 focus:outline-none focus:border-indigo-400"
+ className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-xs font-bold placeholder:text-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition"
  />
  </div>
 
  <button
  type="submit"
  disabled={isSubmittingUtr}
- className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-98 transition disabled:opacity-50"
+ className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 active:scale-98 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/20 transition disabled:opacity-50"
  >
  <span>{isSubmittingUtr ? "Submitting UTR..." : "Payment Done — Submit UTR Number"}</span>
  </button>
+
+ {/* Guide: UTR kya hota hai & Kaise check karein */}
+ <div className="pt-2 border-t border-slate-800/80 space-y-2 text-left">
+ <div className="flex items-center gap-1.5 text-amber-300 text-[11px] font-black">
+ <HelpCircle className="w-4 h-4 text-amber-400 shrink-0" />
+ <span>UTR / UPI Ref Number Kya Hota Hai?</span>
+ </div>
+ <p className="text-[10.5px] text-slate-300 leading-relaxed">
+ UTR (Unique Transaction Reference) ya UPI Ref No ek <strong>12-digit ka transaction code</strong> hota hai jo aapki UPI app (GPay, PhonePe, Paytm) ya Bank payment complete hone ke baad receipt par show karta hai.
+ </p>
+
+ {/* 3 Apps Cheatsheet */}
+ <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-[10px]">
+ <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+ <div className="font-black text-indigo-300 flex items-center gap-1 mb-0.5">
+ <Smartphone className="w-3 h-3" /> PhonePe
+ </div>
+ <span className="text-slate-400">History ➔ Transaction ➔ <strong>UTR (12 Digits)</strong></span>
+ </div>
+ <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+ <div className="font-black text-emerald-300 flex items-center gap-1 mb-0.5">
+ <Smartphone className="w-3 h-3" /> Google Pay
+ </div>
+ <span className="text-slate-400">Payment click karein ➔ <strong>UPI transaction ID</strong></span>
+ </div>
+ <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+ <div className="font-black text-cyan-300 flex items-center gap-1 mb-0.5">
+ <Smartphone className="w-3 h-3" /> Paytm / Bank
+ </div>
+ <span className="text-slate-400">Receipt kholein ➔ <strong>UPI Ref No.</strong> (12 digits)</span>
+ </div>
+ </div>
+
+ {/* Visual Screenshot Reference Mockup */}
+ <div className="pt-1">
+ <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+ Visual Reference Screenshot (Aisa Dikhta Hai Receipt Par):
+ </span>
+ <div className="p-2.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
+ <div className="flex items-center justify-between pb-1 border-b border-slate-800/80">
+ <div className="flex items-center gap-1.5">
+ <div className="w-4 h-4 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center text-[9px] font-black">
+ ✓
+ </div>
+ <span className="font-bold text-white text-[10px]">Paid to Shuny Stays Admin</span>
+ </div>
+ <span className="text-emerald-400 font-black text-[11px]">₹{renewalPrice}</span>
+ </div>
+
+ <div className="p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex items-center justify-between">
+ <div>
+ <span className="text-[9px] font-bold text-emerald-300 block uppercase">
+ UPI Ref No. / UTR
+ </span>
+ <span className="font-mono font-black text-amber-300 text-xs tracking-wider">
+ 4098 2391 0283
+ </span>
+ </div>
+ <span className="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[9px] font-black">
+ 👈 Yeh Number Daalein
+ </span>
+ </div>
+ </div>
+ </div>
+ </div>
  </form>
+ </div>
+ </div>
+ )}
+
+ {/* =========================================================================
+ CASE 4: DEDICATED SUCCESS MODAL POPUP AFTER UTR SUBMISSION
+ Shows: Payment details, UTR number, Verification pending status, 
+ and a 1-tap WhatsApp message button directly to Super Admin!
+ ========================================================================= */}
+ {submittedDetails && (
+ <div className="fixed inset-0 z-[120] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+ <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-emerald-200 p-5 sm:p-6 space-y-4 animate-scale-in text-center">
+ {/* Glowing Green Success Check Icon */}
+ <div className="relative mx-auto w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30">
+ <CheckCircle2 className="w-9 h-9" />
+ <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 text-slate-900 flex items-center justify-center text-[10px] font-black">
+ ✓
+ </div>
+ </div>
+
+ <div>
+ <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1">
+ <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+ Payment & UTR Submitted
+ </span>
+ <h2 className="text-base font-black text-slate-900 mt-2">
+ Renewal Request Bhej Diya Gaya Hai!
+ </h2>
+ <p className="text-xs text-slate-500 mt-1">
+ Aapka payment UTR record ho chuka hai. Super Admin ke verify karte hi aapka PG account reactivate ho jayega.
+ </p>
+ </div>
+
+ {/* Receipt Summary Card */}
+ <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-2 text-xs">
+ <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+ <span className="text-[10px] font-bold text-slate-400 uppercase">PG Property</span>
+ <strong className="text-slate-900 font-extrabold">{submittedDetails.pgName}</strong>
+ </div>
+
+ <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+ <span className="text-[10px] font-bold text-slate-400 uppercase">Amount Paid</span>
+ <strong className="text-emerald-600 font-black text-sm">
+ ₹{submittedDetails.amount.toLocaleString("en-IN")}
+ </strong>
+ </div>
+
+ <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+ <div>
+ <span className="text-[10px] font-bold text-slate-400 uppercase block">UTR / Ref Number</span>
+ <span className="font-mono font-black text-slate-900 tracking-wider text-xs">
+ {submittedDetails.utr}
+ </span>
+ </div>
+ <button
+ type="button"
+ onClick={() => copyToClipboard(submittedDetails.utr, "submitted_utr")}
+ className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 text-[10.5px] font-bold hover:bg-slate-100 transition flex items-center gap-1"
+ >
+ {copiedKey === "submitted_utr" ? (
+ <>
+ <Check className="w-3 h-3 text-emerald-600" />
+ <span>Copied</span>
+ </>
+ ) : (
+ <>
+ <Copy className="w-3 h-3" />
+ <span>Copy</span>
+ </>
+ )}
+ </button>
+ </div>
+
+ <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+ <span className="text-[10px] font-bold text-slate-400 uppercase">Submission Time</span>
+ <span className="text-slate-600 font-bold text-[11px]">{submittedDetails.submittedAt}</span>
+ </div>
+
+ <div className="flex items-center justify-between pt-0.5">
+ <span className="text-[10px] font-bold text-slate-400 uppercase">Status</span>
+ <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[10px] font-extrabold border border-amber-200">
+ <Clock className="w-3 h-3 text-amber-600" />
+ Verification Pending
+ </span>
+ </div>
+ </div>
+
+ {/* Direct WhatsApp Confirmation Button */}
+ <div className="space-y-2 pt-1">
+ <a
+ href={`https://wa.me/919027003865?text=${encodeURIComponent(
+ `🔔 *Shuny Stays - Subscription Payment Submission*\n\n🏢 *PG Name:* ${submittedDetails.pgName}\n💰 *Amount Paid:* ₹${submittedDetails.amount}\n🔢 *UTR / Transaction No:* ${submittedDetails.utr}\n⏰ *Time:* ${submittedDetails.submittedAt}\n\nHello Super Admin, I have completed the renewal payment for my PG on Shuny Stays. Please verify the UTR and reactivate my account. Thank you!`
+ )}`}
+ target="_blank"
+ rel="noopener noreferrer"
+ className="w-full py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] active:scale-98 text-white text-xs font-black flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition"
+ >
+ <MessageSquare className="w-4 h-4 fill-white" />
+ <span>Super Admin ko WhatsApp par Bhejein</span>
+ </a>
+
+ <button
+ type="button"
+ onClick={() => setSubmittedDetails(null)}
+ className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
+ >
+ Done / Theek Hai
+ </button>
+ </div>
  </div>
  </div>
  )}

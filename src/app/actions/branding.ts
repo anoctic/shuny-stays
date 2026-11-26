@@ -287,6 +287,11 @@ export async function deletePgAction(pgId: string) {
  return { error: auth.error };
  }
 
+ if (!pgId) {
+ return { error: "Missing PG identifier." };
+ }
+
+ try {
  const { deletePg } = await import("@/lib/data/pgs");
  await deletePg(pgId);
 
@@ -295,6 +300,10 @@ export async function deletePgAction(pgId: string) {
  revalidatePath("/dashboard");
 
  return { success: true, pgId };
+ } catch (err: any) {
+ console.error("deletePgAction error:", err);
+ return { error: err?.message || "Failed to permanently delete PG." };
+ }
 }
 
 /**
